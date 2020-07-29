@@ -8,6 +8,7 @@
 from opencog.atomspace import AtomSpace, TruthValue
 from opencog.atomspace import types
 from opencog.type_constructors import *
+from opencog.nlp_types import *
 
 a = AtomSpace()
 
@@ -71,7 +72,7 @@ env = gym.make('CartPole-v0')
 # help(env.unwrapped)
 observation = env.reset()
 for i in range(20):
-    env.render()
+    # env.render()
     action = env.action_space.sample()
     print("action =", action)
     observation, reward, done, info = env.step(action)
