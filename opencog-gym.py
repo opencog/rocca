@@ -62,7 +62,8 @@ def to_atomese(observation):
             EvaluationLink(PredicateNode("Cart Velocity At Tip"), pvat)]
 
 def timestamp(atom, i):
-    return AtTimeLink(atom, TimeNode(str(i)))
+    TRUE_TV = TruthValue(1.0, 1.0);
+    return AtTimeLink(atom, TimeNode(str(i)), tv=TRUE_TV)
 
 import gym
 env = gym.make('CartPole-v0')
