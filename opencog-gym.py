@@ -5,15 +5,37 @@
 # generalized to any env, and the user will have to overload of the
 # various methods of that wrapper for specific env.
 
+##############
+# Initialize #
+##############
+
+# OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
 from opencog.atomspace import types
 from opencog.type_constructors import *
 from opencog.nlp_types import *
-
 a = AtomSpace()
-
-# Tell the type constructors which atomspace to use.
 set_default_atomspace(a)
+
+# OpenAI Gym
+import gym
+env = gym.make('CartPole-v0')
+# Uncomment the following to get a description of env
+# help(env.unwrapped)
+
+# Other
+import os
+
+#############
+# Constants #
+#############
+
+TRUE_TV = TruthValue(1, 1)
+X_ENABLED = 'DISPLAY' in os.environ
+
+#############
+# Functions #
+#############
 
 def observation_to_atomese(observation):
     """Translate gym observation to Atomese
@@ -75,42 +97,67 @@ def reward_to_atomese(reward):
     """
 
     rn = NumberNode(str(reward))
-
     return EvaluationLink(PredicateNode("Reward"), rn)
 
 
-def timestamp(atom, i):
-    TRUE_TV = TruthValue(1.0, 1.0);
-    return AtTimeLink(atom, TimeNode(str(i)), tv=TRUE_TV)
+def make_goal(ci):
+    """Define the goal of the current iteration.
+
+    Informally the goal of the current iteration is to have a reward
+    of 1 for the next iteration.
+
+    AtTime
+      Evaluation
+        Predicate "Reward"
+        Number 1
+      TimeNode str(ci + 1)
+    """
+
+    return timestamp(reward_to_atomese(1), ci + 1)
 
 
-import gym
-env = gym.make('CartPole-v0')
-# Uncomment the following to get a description of env
-# help(env.unwrapped)
+def timestamp(atom, i, tv=None):
+    """Timestamp a given atom.  Optionally set its TV
+
+    AtTimeLink tv               # if tv is provided
+      atom
+      TimeNode str(i)
+    """
+
+    return AtTimeLink(atom, TimeNode(str(i)), tv=tv)
+
+
+########
+# Main #
+########
+
 observation = env.reset()
 for i in range(20):
-    # env.render()
+    # Translate to atomese and timestamp observations
+    atomese_obs = observation_to_atomese(observation)
+    timestamped_obs = [timestamp(o, i, tv=TRUE_TV) for o in atomese_obs]
+    print("timestamped_obs =", timestamped_obs)
+
+    # Make the goal for that iteration
+    goal = make_goal(i)
+    print("goal =", goal)
+
+    # Render the environment if X is running
+    if X_ENABLED:
+        env.render()
+
+    # NEXT: plan the next action (for now randomly selected).
     action = env.action_space.sample()
     print("action =", action)
+
+    # Run the next step of the environment
     observation, reward, done, info = env.step(action)
     print("observation =", observation)
     print("reward =", reward)
     print("info =", info)
 
-    # Translate and timestamp observations to atomese
-    atomese_obs = observation_to_atomese(observation)
-    timestamped_obs = list(map(lambda o : timestamp(o, i), atomese_obs))
-    print("timestamped_obs =", timestamped_obs)
-
-    # Translate and timestamp reward to atomese
-    timestamped_reward = timestamp(reward_to_atomese(reward), i)
+    # Translate to atomese and timestamp reward
+    timestamped_reward = timestamp(reward_to_atomese(reward), i, tv=TRUE_TV)
     print("timestamped_reward =", timestamped_reward)
-
-    # TODO: formally express goal as sum of reward
-
-    # if done:
-    #     observation = env.reset()
-    #     break
 
 env.close()
