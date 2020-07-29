@@ -15,7 +15,7 @@ a = AtomSpace()
 # Tell the type constructors which atomspace to use.
 set_default_atomspace(a)
 
-def to_atomese(observation):
+def observation_to_atomese(observation):
     """Translate gym observation to Atomese
 
     There are 4 observations (taken from CartPoleEnv help)
@@ -62,9 +62,27 @@ def to_atomese(observation):
             EvaluationLink(PredicateNode("Pole Angle"), pa),
             EvaluationLink(PredicateNode("Cart Velocity At Tip"), pvat)]
 
+
+def reward_to_atomese(reward):
+    """Translate gym reward to Atomese
+
+    Evaluation
+      Predicate "Reward"
+      Number reward
+
+    The reward representation is neither tv-set nor timestamped. It is
+    up to the caller to do it.
+    """
+
+    rn = NumberNode(str(reward))
+
+    return EvaluationLink(PredicateNode("Reward"), rn)
+
+
 def timestamp(atom, i):
     TRUE_TV = TruthValue(1.0, 1.0);
     return AtTimeLink(atom, TimeNode(str(i)), tv=TRUE_TV)
+
 
 import gym
 env = gym.make('CartPole-v0')
@@ -80,13 +98,17 @@ for i in range(20):
     print("reward =", reward)
     print("info =", info)
 
-    atomese_obs = to_atomese(observation)
-    print("atomese_obs =", atomese_obs)
-
-    # Timestamp the atomese observations
+    # Translate and timestamp observations to atomese
+    atomese_obs = observation_to_atomese(observation)
     timestamped_obs = list(map(lambda o : timestamp(o, i), atomese_obs))
     print("timestamped_obs =", timestamped_obs)
-    
+
+    # Translate and timestamp reward to atomese
+    timestamped_reward = timestamp(reward_to_atomese(reward), i)
+    print("timestamped_reward =", timestamped_reward)
+
+    # TODO: formally express goal as sum of reward
+
     # if done:
     #     observation = env.reset()
     #     break
