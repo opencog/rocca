@@ -127,6 +127,56 @@ def timestamp(atom, i, tv=None):
     return AtTimeLink(atom, TimeNode(str(i)), tv=tv)
 
 
+def plan(goal):
+    """Plan the next actions given a goal.
+
+    Return a python list of cognivite schematics
+
+    PredictiveImplication
+
+    If the goal has a timestamp (like the next iteration), such as
+
+    AtTime
+      atemporal-goal
+      T + 1
+
+    given that the current time is T, then a cognitive schematics is
+
+    NEXT
+
+    Subset
+      SubjectivePaths
+        CrisptLogicalClosure
+          AtTime
+            And
+              context
+              action-plan
+            T
+      SubjectivePaths
+        CrisptLogicalClosure
+          AtTime
+            atemporal-goal
+            T + 1
+
+    """
+
+    # NEXT
+    return None
+
+
+def decide(cogschs):
+    """Select an action given a list of cognitive schematics
+
+    The action selection uses Thomspon sampling leveraging the second
+    order distribution of the cognitive schematics, combined with the
+    context if not completely certain, to balance exploitation and
+    exploration.
+    """
+
+    # NEXT
+    return env.action_space.sample()
+
+
 ########
 # Main #
 ########
@@ -146,8 +196,12 @@ for i in range(20):
     if X_ENABLED:
         env.render()
 
-    # NEXT: plan the next action (for now randomly selected).
-    action = env.action_space.sample()
+    # Plan, i.e. comme up with cognitive schematics as plans
+    cogschs = plan(goal)
+    print("cogschs =", cogschs)
+
+    # Select the next action
+    action = decide(cogschs)
     print("action =", action)
 
     # Run the next step of the environment
