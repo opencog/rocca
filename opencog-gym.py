@@ -72,6 +72,7 @@ def observation_to_atomese(observation):
 
     A python list (not an atomese list) is returned with these 4
     Atomese observations.
+
     """
 
     cp = NumberNode(str(observation[0]))
@@ -94,6 +95,7 @@ def reward_to_atomese(reward):
 
     The reward representation is neither tv-set nor timestamped. It is
     up to the caller to do it.
+
     """
 
     rn = NumberNode(str(reward))
@@ -106,11 +108,15 @@ def make_goal(ci):
     Informally the goal of the current iteration is to have a reward
     of 1 for the next iteration.
 
+    TODO: the goal should probably not be timestamped at this point.
+    Instead a "deadline" should be provided to the planner.
+
     AtTime
       Evaluation
         Predicate "Reward"
         Number 1
       TimeNode str(ci + 1)
+
     """
 
     return timestamp(reward_to_atomese(1), ci + 1)
@@ -122,6 +128,7 @@ def timestamp(atom, i, tv=None):
     AtTimeLink tv               # if tv is provided
       atom
       TimeNode str(i)
+
     """
 
     return AtTimeLink(atom, TimeNode(str(i)), tv=tv)
@@ -130,7 +137,13 @@ def timestamp(atom, i, tv=None):
 def plan(goal):
     """Plan the next actions given a goal.
 
-    Return a python list of cognivite schematics
+    Return a python list of cognivite schematics.  Whole cognitive
+    schematics are output instead of action plans in order to make a
+    decision based on their truth values.  Alternatively it could
+    return a pair (action plan, tv), where tv has been evaluated to
+    take into account the truth value of the context as well (which
+    would differ from the truth value of rule in case the context is
+    uncertain).
 
     PredictiveImplication
 
@@ -165,12 +178,13 @@ def plan(goal):
 
 
 def decide(cogschs):
-    """Select an action given a list of cognitive schematics
+    """Select the next action given a list of cognitive schematics.
 
     The action selection uses Thomspon sampling leveraging the second
     order distribution of the cognitive schematics, combined with the
     context if not completely certain, to balance exploitation and
     exploration.
+
     """
 
     # NEXT
