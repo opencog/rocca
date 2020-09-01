@@ -19,7 +19,7 @@ set_default_atomspace(a)
 
 # OpenAI Gym
 import gym
-env = gym.make('CartPole-v0')
+env = gym.make('CartPole-v1')
 # Uncomment the following to get a description of env
 # help(env.unwrapped)
 
@@ -191,12 +191,22 @@ def decide(cogschs):
     return env.action_space.sample()
 
 
-########
-# Main #
-########
+###########
+# OpenPsi #
+###########
+import time
+from opencog.openpsi import OpenPsi
+
+op = OpenPsi(a)
 
 observation = env.reset()
-for i in range(20):
+cartpole_step_count =0
+def cartpole_step():
+    global observation
+    global cartpole_step_count
+    i = cartpole_step_count
+    time.sleep(1)
+
     # Translate to atomese and timestamp observations
     atomese_obs = observation_to_atomese(observation)
     timestamped_obs = [timestamp(o, i, tv=TRUE_TV) for o in atomese_obs]
@@ -210,7 +220,7 @@ for i in range(20):
     if X_ENABLED:
         env.render()
 
-    # Plan, i.e. comme up with cognitive schematics as plans
+    # Plan, i.e. come up with cognitive schematics as plans
     cogschs = plan(goal)
     print("cogschs =", cogschs)
 
@@ -228,4 +238,22 @@ for i in range(20):
     timestamped_reward = timestamp(reward_to_atomese(reward), i, tv=TRUE_TV)
     print("timestamped_reward =", timestamped_reward)
 
-env.close()
+    cartpole_step_count += 1
+    if done:
+        print("Stopping the openpsi loop")
+        env.close()
+        return TruthValue(0, 1)
+
+    return TruthValue(1, 1)
+
+cartpole_stepper = EvaluationLink(
+    GroundedPredicateNode("py: cartpole_step"), ListLink()
+)
+
+cartpole_component = op.create_component("cartpole", cartpole_stepper)
+
+########
+# Main #
+########
+def main():
+    op.run(cartpole_component)
