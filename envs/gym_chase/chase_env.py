@@ -15,6 +15,12 @@ from gym.utils import seeding
 
 FPS = 30
 
+class Action(Enum):
+    LEFT = 0
+    RIGHT = 1
+    STAY = 2
+    EAT = 3
+
 class Position(Enum):
     LEFT = 0
     RIGHT = 1
@@ -53,8 +59,35 @@ class ChaseEnv(gym.Env):
     def _get_ob(self):
         return np.array([self.player_position.value, self.food_position.value])
 
+    def _update_state(self, action):
+        done = False
+        reward = 0
+        pfp = self.food_position
+
+        if action == Action.EAT and self.player_position == self.food_position:
+            reward = 1
+            self.prev_food_position = self.food_position
+            self.food_position = Position.NONE
+        elif action == Action.LEFT:
+            self.player_position = Position.LEFT
+        elif action == Action.RIGHT:
+            self.player_position = Position.RIGHT
+
+        # wait til next step to reset food if eaten.
+        if pfp == Position.NONE:
+            if self.prev_food_position == Position.LEFT:
+                self.food_position = Position.RIGHT
+            else:
+                self.food_position = Position.LEFT
+
+        # TODO calculate termination criteria
+        return reward, done
+
     def step(self, action):
-        pass
+        assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
+
+        reward, done = self._update_state(Action(action))
+        return self._get_ob(), reward, done, {}
 
     def reset(self):
         self._setup()
