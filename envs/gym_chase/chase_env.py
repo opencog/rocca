@@ -10,10 +10,14 @@ import numpy as np
 
 # OpenAI Gym
 import gym
+import pyglet
 from gym import error, spaces, utils
 from gym.utils import seeding
 
 FPS = 30
+
+WINDOW_W = 500
+WINDOW_H = 400
 
 class Action(Enum):
     LEFT = 0
@@ -94,7 +98,14 @@ class ChaseEnv(gym.Env):
         return self._get_ob()
 
     def render(self, mode='human'):
-        pass
+        from gym.envs.classic_control import rendering
+
+        if self.viewer is None:
+            self.viewer = rendering.Viewer(WINDOW_W, WINDOW_H)
+        # TODO Draw objects.
+        return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def close(self):
-        pass
+        if self.viewer is not None:
+            self.viewer.close()
+            self.viewer = None
