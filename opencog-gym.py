@@ -14,8 +14,13 @@ from opencog.atomspace import AtomSpace, TruthValue
 from opencog.atomspace import types
 from opencog.type_constructors import *
 from opencog.nlp_types import *
+from opencog.scheme_wrapper import *
 a = AtomSpace()
 set_default_atomspace(a)
+
+# OpenPsi
+from opencog.openpsi import OpenPsi
+op = OpenPsi(a)
 
 # OpenAI Gym
 import gym
@@ -25,6 +30,7 @@ env = gym.make('CartPole-v1')
 
 # Other
 import os
+import time
 
 #############
 # Constants #
@@ -173,7 +179,28 @@ def plan(goal):
 
     """
 
-    # NEXT
+    # For now provide 2 hardwired rules
+    #
+    # 1. Push cart to the left (0) if angle is negative
+    # 2. Push cart to the right (1) if angle is positive
+    #
+    # PredictiveImplicationScope
+    #   TypedVariable
+    #     Variable "$angle"
+    #     Type "NumberNode"
+    #   Time "1"
+    #   And (or SimultaneousAnd)
+    #     Evaluation
+    #       Predicate "Pole Angle"
+    #       Variable "$angle"
+    #     GreaterThan
+    #       Variable "$angle"
+    #       0
+    #     Execution
+    #       Schema "Go Right"
+    #   Evaluation
+    #     Predicate "Reward"
+    #     Number "1"
     return None
 
 
@@ -189,15 +216,6 @@ def decide(cogschs):
 
     # NEXT
     return env.action_space.sample()
-
-
-###########
-# OpenPsi #
-###########
-import time
-from opencog.openpsi import OpenPsi
-
-op = OpenPsi(a)
 
 observation = env.reset()
 cartpole_step_count =0
