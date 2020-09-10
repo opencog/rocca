@@ -9,22 +9,29 @@
 # Initialize #
 ##############
 
+# Python
+import os
+import time
+import random
+
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
 from opencog.atomspace import types
 from opencog.type_constructors import *
-from opencog.nlp_types import *
+from opencog.pln import *
+from opencog.scheme_wrapper import *
 a = AtomSpace()
 set_default_atomspace(a)
+
+# OpenPsi
+from opencog.openpsi import OpenPsi
+op = OpenPsi(a)
 
 # OpenAI Gym
 import gym
 env = gym.make('CartPole-v1')
 # Uncomment the following to get a description of env
 # help(env.unwrapped)
-
-# Other
-import os
 
 #############
 # Constants #
@@ -102,24 +109,60 @@ def reward_to_atomese(reward):
     return EvaluationLink(PredicateNode("Reward"), rn)
 
 
-def make_goal(ci):
-    """Define the goal of the current iteration.
+def action_to_gym(action):
+    """Map atomese actions to gym actions
 
-    Informally the goal of the current iteration is to have a reward
-    of 1 for the next iteration.
+    In CartPole-v1 the mapping is as follows
 
-    TODO: the goal should probably not be timestamped at this point.
-    Instead a "deadline" should be provided to the planner.
-
-    AtTime
-      Evaluation
-        Predicate "Reward"
-        Number 1
-      TimeNode str(ci + 1)
+    SchemaNode("Go Right") -> 0
+    SchemaNode("Go Left") -> 1
 
     """
 
-    return timestamp(reward_to_atomese(1), ci + 1)
+    if SchemaNode("Go Right") == action:
+        return 0
+    if SchemaNode("Go Left") == action:
+        return 1
+
+
+def get_action(cs):
+    """extract the action of a cognitive schematic.
+
+    Given a cognitive schematic of that format
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <expiry>
+      And (or SimultaneousAnd?)
+        <context>
+        Execution
+          <action>
+          <input> [optional]
+          <output> [optional]
+      <goal>
+
+    extract <action>. Ideally the input and output should also be
+    extracted, for now only the action.
+
+    """
+
+    cnjs = cs.get_out()[2].get_out()
+    execution = next(x for x in cnjs if x.type == types.ExecutionLink)
+    return execution.get_out()[0]
+
+
+def make_goal(ci):
+    """Define the goal of the current iteration.
+
+    Here the goal of the current iteration is to have a reward of 1.
+
+    Evaluation
+      Predicate "Reward"
+      Number 1
+
+    """
+
+    return reward_to_atomese(1)
 
 
 def timestamp(atom, i, tv=None):
@@ -134,50 +177,121 @@ def timestamp(atom, i, tv=None):
     return AtTimeLink(atom, TimeNode(str(i)), tv=tv)
 
 
-def plan(goal):
-    """Plan the next actions given a goal.
+def plan(goal, expiry):
+    """Plan the next actions given a goal and its expiry time offset
 
     Return a python list of cognivite schematics.  Whole cognitive
-    schematics are output instead of action plans in order to make a
+    schematics are output (instead of action plans) in order to make a
     decision based on their truth values.  Alternatively it could
     return a pair (action plan, tv), where tv has been evaluated to
     take into account the truth value of the context as well (which
     would differ from the truth value of rule in case the context is
     uncertain).
 
-    PredictiveImplication
+    The format for a cognitive schematic is as follows
 
-    If the goal has a timestamp (like the next iteration), such as
-
-    AtTime
-      atemporal-goal
-      T + 1
-
-    given that the current time is T, then a cognitive schematics is
-
-    NEXT
-
-    Subset
-      SubjectivePaths
-        CrisptLogicalClosure
-          AtTime
-            And
-              context
-              action-plan
-            T
-      SubjectivePaths
-        CrisptLogicalClosure
-          AtTime
-            atemporal-goal
-            T + 1
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <expiry>
+      And (or SimultaneousAnd?)
+        <context>
+        Execution
+          <action>
+          <input> [optional]
+          <output> [optional]
+      <goal>
 
     """
 
-    # NEXT
-    return None
+    # For now we provide 2 hardwired rules
+    #
+    # 1. Push cart to the left (0) if angle is negative
+    # 2. Push cart to the right (1) if angle is positive
+    #
+    # with some arbitrary truth value (stv 0.9, 0.1)
+    angle = VariableNode("$angle")
+    numt = TypeNode("NumberNode")
+    time_offset = NumberNode(str(expiry))
+    pole_angle = PredicateNode("Pole Angle")
+    go_right = SchemaNode("Go Right")
+    go_left = SchemaNode("Go Left")
+    reward = PredicateNode("Reward")
+    zero = NumberNode("0")
+    unit = NumberNode("1")
+    TV = TruthValue(0.9, 0.1)
+
+    # PredictiveImplicationScope
+    #   TypedVariable
+    #     Variable "$angle"
+    #     Type "NumberNode"
+    #   Time "1"
+    #   And (or SimultaneousAnd?)
+    #     Evaluation
+    #       Predicate "Pole Angle"
+    #       Variable "$angle"
+    #     GreaterThan
+    #       Variable "$angle"
+    #       0
+    #     Execution
+    #       Schema "Go Right"
+    #   Evaluation
+    #     Predicate "Reward"
+    #     Number "1"
+    cs_r = \
+        PredictiveImplicationScopeLink(
+            TypedVariableLink(angle, numt),
+            time_offset,
+            AndLink(
+                # Context
+                EvaluationLink(pole_angle, angle),
+                GreaterThanLink(angle, zero),
+                # Action
+                ExecutionLink(go_right)),
+            # Goal
+            EvaluationLink(reward, unit),
+            # TV
+            tv=TV)
+
+    # PredictiveImplicationScope
+    #   TypedVariable
+    #     Variable "$angle"
+    #     Type "NumberNode"
+    #   Time "1"
+    #   And (or SimultaneousAnd?)
+    #     Evaluation
+    #       Predicate "Pole Angle"
+    #       Variable "$angle"
+    #     GreaterThan
+    #       0
+    #       Variable "$angle"
+    #     Execution
+    #       Schema "Go Left"
+    #   Evaluation
+    #     Predicate "Reward"
+    #     Number "1"
+    cs_l = \
+        PredictiveImplicationScopeLink(
+            TypedVariableLink(angle, numt),
+            time_offset,
+            AndLink(
+                # Context
+                EvaluationLink(pole_angle, angle),
+                GreaterThanLink(zero, angle),
+                # Action
+                ExecutionLink(go_left)),
+            # Goal
+            EvaluationLink(reward, unit),
+            # TV
+            tv=TV)
+
+    # Ideally we want to return only relevant cognitive schematics
+    # (i.e. with contexts probabilistically currently true) for now
+    # however we return everything and let to the decision progress
+    # deal with it, as it should be able to.
+    return [cs_l, cs_r]
 
 
-def decide(cogschs):
+def decide(css):
     """Select the next action given a list of cognitive schematics.
 
     The action selection uses Thomspon sampling leveraging the second
@@ -187,17 +301,15 @@ def decide(cogschs):
 
     """
 
-    # NEXT
-    return env.action_space.sample()
+    # For now randomly sample from the list of cognitive schematics
+    cs = random.choice(css)
 
+    # Extract action from the selected cognitive schematics
+    action = get_action(cs)
 
-###########
-# OpenPsi #
-###########
-import time
-from opencog.openpsi import OpenPsi
+    # Translate atomese action to gym action
+    return action_to_gym(action)
 
-op = OpenPsi(a)
 
 observation = env.reset()
 cartpole_step_count =0
@@ -220,12 +332,14 @@ def cartpole_step():
     if X_ENABLED:
         env.render()
 
-    # Plan, i.e. come up with cognitive schematics as plans
-    cogschs = plan(goal)
-    print("cogschs =", cogschs)
+    # Plan, i.e. come up with cognitive schematics as plans.  Here the
+    # goal expiry is 1, i.e. set for the next iteration.
+    expiry = 1
+    css = plan(goal, expiry)
+    print("css =", css)
 
     # Select the next action
-    action = decide(cogschs)
+    action = decide(css)
     print("action =", action)
 
     # Run the next step of the environment
@@ -246,9 +360,11 @@ def cartpole_step():
 
     return TruthValue(1, 1)
 
+
 cartpole_stepper = EvaluationLink(
     GroundedPredicateNode("py: cartpole_step"), ListLink()
 )
+
 
 cartpole_component = op.create_component("cartpole", cartpole_stepper)
 
@@ -257,3 +373,7 @@ cartpole_component = op.create_component("cartpole", cartpole_stepper)
 ########
 def main():
     op.run(cartpole_component)
+
+# Launching main() from here produces a Segmentation fault
+# if __name__ == "__main__":
+#     main()
