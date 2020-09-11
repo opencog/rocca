@@ -14,6 +14,9 @@ import os
 import time
 import random
 
+# SciPy
+from scipy.stats import beta
+
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
 from opencog.atomspace import types
@@ -43,6 +46,49 @@ X_ENABLED = 'DISPLAY' in os.environ
 #############
 # Functions #
 #############
+
+def tv_to_beta(tv, prior_a=1, prior_b=1):
+    """Convert a truth value to a beta distribution.
+
+    Given a truth value, return the beta distribution that best fits
+    it.  Two optional parameters are provided to set the prior of the
+    beta-distribution, the default values are prior_a=1 and prior_b=1
+    corresponding to the Bayesian prior.
+
+    """
+
+    count = tv.count
+    pos_count = count * tv.mean # the mean is actually the mode
+    a = prior_a + pos_count
+    b = prior_b + count - pos_count
+    return beta(a, b)
+
+
+def tv_rv(tv):
+    """Return a first order probability variate of a truth value.
+
+    Return a first order probability variate of the beta-distribution
+    representing the second order distribution of tv.
+
+    """
+
+    beta = tv_to_beta(tv)
+    return beta.rvs()
+
+
+def thompson_sample(actdist):
+    """Perform Thompson sampling over the action distribution.
+
+    Meaning, for each action truth value, sample its second order
+    distribution to obtain a first order probability variate, and
+    return the pair (action, pblty) corresponding to the highest
+    variate pblty.
+
+    """
+
+    actps = [(action, tv_rv(tv)) for (action, tv) in actdist]
+    return max(actps, key=lambda actp: actp[1])
+
 
 def observation_to_atomese(observation):
     """Translate gym observation to Atomese
@@ -146,9 +192,9 @@ def get_action(cs):
 
     """
 
-    cnjs = cs.get_out()[2].get_out()
+    cnjs = cs.out[2].out
     execution = next(x for x in cnjs if x.type == types.ExecutionLink)
-    return execution.get_out()[0]
+    return execution.out[0]
 
 
 def make_goal(ci):
@@ -291,24 +337,65 @@ def plan(goal, expiry):
     return [cs_l, cs_r]
 
 
-def decide(css):
-    """Select the next action given a list of cognitive schematics.
+def deduce(css):
+    """Return an action distribution given a list cognitive schematics.
 
-    The action selection uses Thomspon sampling leveraging the second
-    order distribution of the cognitive schematics, combined with the
-    context if not completely certain, to balance exploitation and
-    exploration.
+    The action distribution is actually a second order distribution,
+    i.e. each action is weighted with a truth value.  Such truth
+    value, called the action truth value, corresponds to the second
+    order probability of acheiving the goal if the action is taken
+    right now.
+
+    Formally the meaning of the action truth value can be expressed as
+    follows:
+
+    Subset <action-tv>
+      SubjectivePaths
+        AtTime <now>
+          Execute
+            <action>
+      SubjectivePaths
+        AtTime <now + offset>
+          <goal>
+
+    where
+
+    SubjectivePaths
+      <P>
+
+    is the set of all subjective paths compatible with <P>, and a
+    subjective path is a sequence of sujective states (atomspace
+    snapshots) indexed by time.
+
+    In order to infer such action truth value one needs to perform
+    deduction (or modus ponens) on the cognitive schematics, combining
+    the probability of the context being currently true.
 
     """
 
-    # For now randomly sample from the list of cognitive schematics
-    cs = random.choice(css)
+    # For now assign a default TV to all actions.
+    actions = {get_action(cs) for cs in css}
+    tv = TruthValue(1, 0)
+    return [(action, tv) for action in actions]
 
-    # Extract action from the selected cognitive schematics
-    action = get_action(cs)
 
-    # Translate atomese action to gym action
-    return action_to_gym(action)
+def decide(actdist):
+
+    """Select the next action to enact from an action distribution.
+
+    The action is selected from the action distribution, a list of
+    pairs (action, tv), obtained from deduce.  The selection uses
+    Thompson sampling leveraging the second order distribution to
+    balance exploitation and exploration.
+
+    """
+
+    # Select the pair of action and its first order probability of
+    # success according to Thompson sampling
+    (action, pblty) = thompson_sample(actdist)
+
+    # Return the action (we don't need the probability for now)
+    return (action, pblty)
 
 
 observation = env.reset()
@@ -317,7 +404,7 @@ def cartpole_step():
     global observation
     global cartpole_step_count
     i = cartpole_step_count
-    time.sleep(1)
+    time.sleep(0.2)
 
     # Translate to atomese and timestamp observations
     atomese_obs = observation_to_atomese(observation)
@@ -338,12 +425,20 @@ def cartpole_step():
     css = plan(goal, expiry)
     print("css =", css)
 
+    # Deduce the action distribution
+    actdist = deduce(css)
+    print("actdist =", actdist)
+
     # Select the next action
-    action = decide(css)
-    print("action =", action)
+    action, pblty = decide(actdist)
+    print("(action, pblty) =", (action, pblty))
+
+    # Convert atomese action to openai gym action
+    gym_action = action_to_gym(action)
+    print("gym_action =", gym_action)
 
     # Run the next step of the environment
-    observation, reward, done, info = env.step(action)
+    observation, reward, done, info = env.step(gym_action)
     print("observation =", observation)
     print("reward =", reward)
     print("info =", info)
