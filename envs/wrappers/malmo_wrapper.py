@@ -10,6 +10,13 @@ from malmo import MalmoPython
 from .utils import *
 from .wrapper import Wrapper
 
+if sys.version_info[0] == 2:
+    sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)  # flush print output immediately
+else:
+    import functools
+
+    print = functools.partial(print, flush=True)
+
 
 class MalmoWrapper(Wrapper):
     def __init__(self, missionXML, validate, setup_mission=None):
