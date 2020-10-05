@@ -13,11 +13,22 @@ import gym
 import pyglet
 from gym import error, spaces, utils
 from gym.utils import seeding
+from gym.envs.classic_control import rendering
+
+from envs.gym_chase.game_objects import Player, Table, Plate
 
 FPS = 30
 
-WINDOW_W = 500
+SCALE = 500
+WINDOW_W = 600
 WINDOW_H = 400
+
+LEFT_TRANS_X = -0.5
+RIGHT_TRANS_X = 0.5
+
+TABLE_TRANS_X = 0.0
+TABLE_TRANS_Y = -0.3
+PLAYER_TRANS_Y = 0.6
 
 class Action(Enum):
     LEFT = 0
@@ -49,16 +60,29 @@ class ChaseEnv(gym.Env):
         self.action_space = spaces.Discrete(4)
         self.observation_space = spaces.Tuple((
             spaces.Discrete(2), # Agent Position
-            spaces.Discrete(3)  # Food pellet
+            spaces.Discrete(3)  # Food plate
         ))
         self.food_position = None
         self.player_position = None
         self.prev_food_position = None
         self.viewer = None
+        self.reset()
 
     def _setup(self):
         self.player_position = Position(np.random.choice(2))
         self.food_position = Position.LEFT
+
+    def get_player_transform(self):
+        if self.player_position == Position.LEFT:
+            return LEFT_TRANS_X, PLAYER_TRANS_Y
+        else:
+            return RIGHT_TRANS_X, PLAYER_TRANS_Y
+
+    def get_plate_transform(self):
+        if self.food_position == Position.LEFT:
+            return LEFT_TRANS_X, TABLE_TRANS_Y
+        else:
+            return RIGHT_TRANS_X, TABLE_TRANS_Y
 
     def _get_ob(self):
         return np.array([self.player_position.value, self.food_position.value])
@@ -91,18 +115,26 @@ class ChaseEnv(gym.Env):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
 
         reward, done = self._update_state(Action(action))
+        self.player.set_pos(*self.get_player_transform())
+        self.plate.set_pos(*self.get_plate_transform())
         return self._get_ob(), reward, done, {}
 
     def reset(self):
         self._setup()
+        self.table = Table(TABLE_TRANS_X, TABLE_TRANS_Y)
+        self.player = Player(*self.get_player_transform())
+        self.plate = Plate(*self.get_plate_transform())
         return self._get_ob()
 
     def render(self, mode='human'):
-        from gym.envs.classic_control import rendering
-
         if self.viewer is None:
             self.viewer = rendering.Viewer(WINDOW_W, WINDOW_H)
-        # TODO Draw objects.
+            self.viewer.set_bounds(-WINDOW_W/SCALE, WINDOW_W/SCALE,
+                                   -WINDOW_H/SCALE, WINDOW_H/SCALE)
+
+        self.table.draw(self.viewer)
+        self.player.draw(self.viewer)
+        self.plate.draw(self.viewer)
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def close(self):
