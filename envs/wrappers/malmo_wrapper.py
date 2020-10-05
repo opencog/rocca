@@ -1,11 +1,14 @@
-from .wrapper import Wrapper
 from functools import wraps
 from builtins import range
-
-from malmo import MalmoPython
 import os
 import sys
 import time
+import json
+
+from malmo import MalmoPython
+
+from .utils import *
+from .wrapper import Wrapper
 
 
 class MalmoWrapper(Wrapper):
@@ -35,18 +38,43 @@ class MalmoWrapper(Wrapper):
         return cls(missionXML, validate, setup_mission=setup_mission)
 
     @staticmethod
+    def parse_world_state(ws):
+        if not ws.rewards:
+            rw = 0
+        else:
+            rw = ws.rewards[-1].getValue()  # TODO Take all rewards if multi-agent.
+
+        obs_list = []
+        if ws.number_of_observations_since_last_state > 0:
+            observations = json.loads(ws.observations[-1].text)
+            for k in observations:
+                if isinstance(observations[k], list):
+                    obs_list.append(mk_evaluation(k, *observations[k]))
+                else:
+                    obs_list.append(mk_evaluation(k, observations[k]))
+        else:
+            obs_list = []
+
+        return mk_evaluation("Reward", rw), \
+               SetLink(*obs_list), \
+               not ws.is_mission_running
+
+    @staticmethod
     def restart_decorator(restart):
         @wraps(restart)
         def wrapper(*args, **kwargs):
-            return restart(*args, **kwargs)
+            ws = restart(*args, **kwargs)
+            return MalmoWrapper.parse_world_state(ws)
 
         return wrapper
 
     @staticmethod
     def step_decorator(step):
         @wraps(step)
-        def wrapper(*args, **kwargs):
-            return step(*args, **kwargs)
+        def wrapper(ref, action, update_callback=None):
+            name, value = action.out[0], action.out[1]
+            ws = step(ref, name.name + " " + value.name, update_callback)
+            return MalmoWrapper.parse_world_state(ws)
 
         return wrapper
 
@@ -82,6 +110,10 @@ class MalmoWrapper(Wrapper):
             self.agent_host.sendCommand(action)
             time.sleep(0.2)
             self.world_state = self.agent_host.getWorldState()
+
+            for error in self.world_state.errors:
+                print("Error: ", error.text)
+
             if (update_callback is not None):
                 update_callback(action, self.world_state)
         except RuntimeError as e:
