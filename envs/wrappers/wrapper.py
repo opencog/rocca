@@ -1,5 +1,6 @@
 import abc
 
+
 class Wrapper(abc.ABC):
     @staticmethod
     @abc.abstractmethod
