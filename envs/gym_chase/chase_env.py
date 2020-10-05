@@ -109,3 +109,43 @@ class ChaseEnv(gym.Env):
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
+
+if __name__ == '__main__':
+    from pyglet.window import key
+
+    a = np.array([2])
+    def key_press(k, mod):
+        if k == key.LEFT:
+            a[0] = 0
+        elif k == key.RIGHT:
+            a[0] = 1
+        elif k == key.DOWN:
+            a[0] = 2
+        elif k == key.RETURN:
+            a[0] = 3
+
+        print("pressed {}".format(a))
+
+    treward = 0
+    nsteps = 0
+
+    env = ChaseEnv()
+    env.render()
+    env.viewer.window.on_key_press = key_press
+    env.reset()
+    while True:
+        obs, r, done, info = env.step(a[0])
+        a[0] = 2
+        treward += r
+
+        isopen = env.render()
+        if isopen == False: break
+
+        nsteps += 1
+        if nsteps % 200 == 0:
+            print("observations:", " ".join(["{:+0.2f}".format(x) for x in obs]))
+            print("step {} total_reward {:+0.2f}".format(nsteps, treward))
+            print("current action is {}".format(a[0]))
+
+        if done or treward > 5: break
+    env.close()
