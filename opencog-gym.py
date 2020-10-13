@@ -589,7 +589,9 @@ def decide(actdist):
     The action is selected from the action distribution, a list of
     pairs (action, tv), obtained from deduce.  The selection uses
     Thompson sampling leveraging the second order distribution to
-    balance exploitation and exploration.
+    balance exploitation and exploration. See
+    http://auai.org/uai2016/proceedings/papers/20.pdf for more details
+    about Thompson Sampling.
 
     """
 
