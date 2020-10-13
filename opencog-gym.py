@@ -13,6 +13,7 @@
 import os
 import time
 import random
+from orderedmultidict import omdict
 
 # SciPy
 from scipy.stats import beta
@@ -20,6 +21,7 @@ from scipy.stats import beta
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
 from opencog.atomspace import types
+from opencog.exec import execute_atom
 from opencog.type_constructors import *
 from opencog.pln import *
 from opencog.scheme_wrapper import *
@@ -89,6 +91,17 @@ def thompson_sample(actdist):
     actps = [(action, tv_rv(tv)) for (action, tv) in actdist]
     return max(actps, key=lambda actp: actp[1])
 
+
+def weighted_average_tv(weighted_tvs):
+    """Given a list of pairs (weight, tv) return the weighted average tv.
+
+    Return a Simple Truth Value with mean and variance equivalent to
+    that of a distributional truth value built with the weighted
+    average of the input tvs.
+
+    """
+
+    TODO
 
 def observation_to_atomese(observation):
     """Translate gym observation to Atomese
@@ -171,8 +184,56 @@ def action_to_gym(action):
         return 1
 
 
+def get_vardecl(cs):
+    """Extract the vardecl of a cognitive schematic.
+
+    Given a cognitive schematic of that format
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <expiry>
+      And (or SimultaneousAnd?)
+        <context>
+        Execution
+          <action>
+          <input> [optional]
+          <output> [optional]
+      <goal>
+
+    return <vardecl>.
+
+    """
+
+    return cs.out[0]
+
+
+def get_context(cs):
+    """Extract the context of a cognitive schematic.
+
+    Given a cognitive schematic of that format
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <expiry>
+      And (or SimultaneousAnd?)
+        <context>
+        Execution
+          <action>
+          <input> [optional]
+          <output> [optional]
+      <goal>
+
+    return <context>.
+
+    """
+
+    cnjs = cs.out[2].out
+    neg_exec = next(x for x in cnjs if x.type != types.ExecutionLink)
+    return execution.out[0]
+
+
 def get_action(cs):
-    """extract the action of a cognitive schematic.
+    """Extract the action of a cognitive schematic.
 
     Given a cognitive schematic of that format
 
@@ -197,7 +258,40 @@ def get_action(cs):
     return execution.out[0]
 
 
+def get_context_actual_truth(cs, i):
+    """Calculate tv of the context of cognitive schematic sc at time i.
+
+    Given a cognitive schematic of that format
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <expiry>
+      And (or SimultaneousAnd?)
+        <context>
+        Execution
+          <action>
+          <input> [optional]
+          <output> [optional]
+      <goal>
+
+    calculate the truth value of <context> at time i, where the
+    variables have been properly instantiated.
+
+    For now the calculation is crisp, either a context is completely
+    true (stv 1 1) or completely false (stv 0 1).
+
+    """
+
+    # Build and run a query to check if the context is true
+    vardecl = get_vardecl(cs)
+    context = get_context(cs)
+    stamped_context = timestamp(context, i)
+    context_query = SatisfactionLink(vardecl, stamped_context)
+    return execute_atom(context_query)
+
+
 def make_goal(ci):
+
     """Define the goal of the current iteration.
 
     Here the goal of the current iteration is to have a reward of 1.
@@ -264,9 +358,10 @@ def plan(goal, expiry):
     reward = PredicateNode("Reward")
     zero = NumberNode("0")
     unit = NumberNode("1")
-    TV = TruthValue(0.9, 0.1)
+    hTV = TruthValue(0.9, 0.1)  # High TV
+    lTV = TruthValue(0.1, 0.1)  # Low TV
 
-    # PredictiveImplicationScope
+    # PredictiveImplicationScope <high TV>
     #   TypedVariable
     #     Variable "$angle"
     #     Type "NumberNode"
@@ -283,7 +378,7 @@ def plan(goal, expiry):
     #   Evaluation
     #     Predicate "Reward"
     #     Number "1"
-    cs_r = \
+    cs_rr = \
         PredictiveImplicationScopeLink(
             TypedVariableLink(angle, numt),
             time_offset,
@@ -296,9 +391,9 @@ def plan(goal, expiry):
             # Goal
             EvaluationLink(reward, unit),
             # TV
-            tv=TV)
+            tv=hTV)
 
-    # PredictiveImplicationScope
+    # PredictiveImplicationScope <high TV>
     #   TypedVariable
     #     Variable "$angle"
     #     Type "NumberNode"
@@ -315,7 +410,7 @@ def plan(goal, expiry):
     #   Evaluation
     #     Predicate "Reward"
     #     Number "1"
-    cs_l = \
+    cs_ll = \
         PredictiveImplicationScopeLink(
             TypedVariableLink(angle, numt),
             time_offset,
@@ -328,16 +423,84 @@ def plan(goal, expiry):
             # Goal
             EvaluationLink(reward, unit),
             # TV
-            tv=TV)
+            tv=gTV)
+
+    # To cover all possibilities we shouldn't forget the complementary
+    # actions, i.e. going left when the pole is falling to the right
+    # and such, which should make the situation worse.
+
+    # PredictiveImplicationScope <low TV>
+    #   TypedVariable
+    #     Variable "$angle"
+    #     Type "NumberNode"
+    #   Time "1"
+    #   And (or SimultaneousAnd?)
+    #     Evaluation
+    #       Predicate "Pole Angle"
+    #       Variable "$angle"
+    #     GreaterThan
+    #       Variable "$angle"
+    #       0
+    #     Execution
+    #       Schema "Go Left"
+    #   Evaluation
+    #     Predicate "Reward"
+    #     Number "1"
+    cs_rl = \
+        PredictiveImplicationScopeLink(
+            TypedVariableLink(angle, numt),
+            time_offset,
+            AndLink(
+                # Context
+                EvaluationLink(pole_angle, angle),
+                GreaterThanLink(angle, zero),
+                # Action
+                ExecutionLink(go_left)),
+            # Goal
+            EvaluationLink(reward, unit),
+            # TV
+            tv=lTV)
+
+    # PredictiveImplicationScope <low TV>
+    #   TypedVariable
+    #     Variable "$angle"
+    #     Type "NumberNode"
+    #   Time "1"
+    #   And (or SimultaneousAnd?)
+    #     Evaluation
+    #       Predicate "Pole Angle"
+    #       Variable "$angle"
+    #     GreaterThan
+    #       0
+    #       Variable "$angle"
+    #     Execution
+    #       Schema "Go Right"
+    #   Evaluation
+    #     Predicate "Reward"
+    #     Number "1"
+    cs_lr = \
+        PredictiveImplicationScopeLink(
+            TypedVariableLink(angle, numt),
+            time_offset,
+            AndLink(
+                # Context
+                EvaluationLink(pole_angle, angle),
+                GreaterThanLink(zero, angle),
+                # Action
+                ExecutionLink(go_right)),
+            # Goal
+            EvaluationLink(reward, unit),
+            # TV
+            tv=lTV)
 
     # Ideally we want to return only relevant cognitive schematics
     # (i.e. with contexts probabilistically currently true) for now
-    # however we return everything and let to the decision progress
+    # however we return everything and let to the deduction process
     # deal with it, as it should be able to.
-    return [cs_l, cs_r]
+    return [cs_ll, cs_rr, cs_rl, cs_lr]
 
 
-def deduce(css):
+def deduce(css, i):
     """Return an action distribution given a list cognitive schematics.
 
     The action distribution is actually a second order distribution,
@@ -351,12 +514,14 @@ def deduce(css):
 
     Subset <action-tv>
       SubjectivePaths
-        AtTime <now>
-          Execute
+        AtTime
+          Execution
             <action>
+          <i>
       SubjectivePaths
-        AtTime <now + offset>
+        AtTime
           <goal>
+          <i + offset>
 
     where
 
@@ -373,6 +538,44 @@ def deduce(css):
 
     """
 
+    # For each cognitive schematic estimate the probability of its
+    # context to be true and multiply it by the truth value of the
+    # cognitive schematic, then calculate its weight based on
+    # https://github.com/ngeiswei/papers/blob/master/PartialBetaOperatorInduction/PartialBetaOperatorInduction.pdf
+    # and use it to perform a Bayesian Model Averaging to obtain the
+    # second order distribution of each action.
+    #
+    # Important Notes:
+
+    # 1. Adding an unknown component (with flat or such prior) in the
+    #    BMA can flatten the resulting distribution and be used to
+    #    user-tune exploration vs exploitation in a justified
+    #    manner. This is probably equivalent to (or better than)
+    #    Epsilon-best.
+    #
+    # 2. We actually don't need to build the mixture model, rather we
+    #    just need to hand the convex combination of models to the
+    #    decide function which will do the Thompson sampling.
+    #
+    # 3. It's unclear if the probability of the context should altern
+    #    the model TV or its weight. We need to think of generalizing
+    #    the inactive models as well.
+
+    # For now discretize context truth into valid and invalid and only
+    # consider valid cognitive schematics in the BMA (Bayesian Model
+    # Averaging). It's not entirely clear what to do with the invalid
+    # cognitive schematics, maybe they should be taken into account to
+    # lower the confidence of the final result, as they allegedly
+    # exert an unknown influence (via their invalid parts).
+    valid_ccs = [cs for cs in css
+                 if 0.9 < get_context_actual_truth(cs, i).tv.mean]
+
+    # For now we have a uniform weighting across valid cognitive
+    # schematics
+    a2bma = omdict([(get_action(cs), (1.0, cs.tv)) for cs in valid_css])
+
+
+
     # For now assign a default TV to all actions.
     actions = {get_action(cs) for cs in css}
     tv = TruthValue(1, 0)
@@ -386,7 +589,9 @@ def decide(actdist):
     The action is selected from the action distribution, a list of
     pairs (action, tv), obtained from deduce.  The selection uses
     Thompson sampling leveraging the second order distribution to
-    balance exploitation and exploration.
+    balance exploitation and exploration. See
+    http://auai.org/uai2016/proceedings/papers/20.pdf for more details
+    about Thompson Sampling.
 
     """
 
@@ -426,7 +631,7 @@ def cartpole_step():
     print("css =", css)
 
     # Deduce the action distribution
-    actdist = deduce(css)
+    actdist = deduce(css, i)
     print("actdist =", actdist)
 
     # Select the next action
