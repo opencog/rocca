@@ -30,16 +30,19 @@ TABLE_TRANS_X = 0.0
 TABLE_TRANS_Y = -0.3
 PLAYER_TRANS_Y = 0.6
 
+
 class Action(Enum):
     LEFT = 0
     RIGHT = 1
     STAY = 2
     EAT = 3
 
+
 class Position(Enum):
     LEFT = 0
     RIGHT = 1
     NONE = 2
+
 
 class ChaseEnv(gym.Env):
     """
@@ -53,13 +56,13 @@ class ChaseEnv(gym.Env):
 
     metadata = {
         'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second' : FPS
+        'video.frames_per_second': FPS
     }
 
     def __init__(self):
         self.action_space = spaces.Discrete(4)
         self.observation_space = spaces.Tuple((
-            spaces.Discrete(2), # Agent Position
+            spaces.Discrete(2),  # Agent Position
             spaces.Discrete(3)  # Food plate
         ))
         self.food_position = None
@@ -129,8 +132,8 @@ class ChaseEnv(gym.Env):
     def render(self, mode='human'):
         if self.viewer is None:
             self.viewer = rendering.Viewer(WINDOW_W, WINDOW_H)
-            self.viewer.set_bounds(-WINDOW_W/SCALE, WINDOW_W/SCALE,
-                                   -WINDOW_H/SCALE, WINDOW_H/SCALE)
+            self.viewer.set_bounds(-WINDOW_W / SCALE, WINDOW_W / SCALE,
+                                   -WINDOW_H / SCALE, WINDOW_H / SCALE)
 
         self.table.draw(self.viewer)
         self.player.draw(self.viewer)
@@ -142,10 +145,13 @@ class ChaseEnv(gym.Env):
             self.viewer.close()
             self.viewer = None
 
+
 if __name__ == '__main__':
     from pyglet.window import key
 
     a = np.array([2])
+
+
     def key_press(k, mod):
         if k == key.LEFT:
             a[0] = 0
@@ -157,6 +163,7 @@ if __name__ == '__main__':
             a[0] = 3
 
         print("pressed {}".format(a))
+
 
     treward = 0
     nsteps = 0
