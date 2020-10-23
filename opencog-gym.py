@@ -72,6 +72,8 @@ def tv_rv(tv):
     Return a first order probability variate of the beta-distribution
     representing the second order distribution of tv.
 
+    rv stands for Random Variate.
+
     """
 
     beta = tv_to_beta(tv)
