@@ -21,8 +21,10 @@ from scipy.stats import beta
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
 from opencog.atomspace import types
+from opencog.atomspace import get_type, is_a
 from opencog.exec import execute_atom
 from opencog.type_constructors import *
+from opencog.spacetime import *
 from opencog.pln import *
 from opencog.scheme_wrapper import *
 a = AtomSpace()
@@ -43,6 +45,7 @@ env = gym.make('CartPole-v1')
 #############
 
 TRUE_TV = TruthValue(1, 1)
+DEFAULT_TV = TruthValue(1, 0)
 X_ENABLED = 'DISPLAY' in os.environ
 
 #############
@@ -72,6 +75,8 @@ def tv_rv(tv):
     Return a first order probability variate of the beta-distribution
     representing the second order distribution of tv.
 
+    rv stands for Random Variate.
+
     """
 
     beta = tv_to_beta(tv)
@@ -81,15 +86,39 @@ def tv_rv(tv):
 def thompson_sample(actdist):
     """Perform Thompson sampling over the action distribution.
 
-    Meaning, for each action truth value, sample its second order
-    distribution to obtain a first order probability variate, and
-    return the pair (action, pblty) corresponding to the highest
-    variate pblty.
+    Meaning, for each action
+
+    1. Select a TV according to its likelihood (derived from its
+    cognitive schematic).
+
+    2. From that TV, sample its second order distribution to obtain a
+    first order probability variate, and return the pair (action,
+    pblty) corresponding to the highest variate.
+
+    Then return the action with the highest probability of success.
 
     """
 
-    actps = [(action, tv_rv(tv)) for (action, tv) in actdist]
+    # 1. For each action select its TV according its weight
+    actvs = [(action, weighted_sampling(w8d_tvs))
+              for (action, w8d_tvs) in actdist.listitems()]
+
+    # 2. For each action select its first order probability given its tv
+    actps = [(action, tv_rv(tv)) for (action, tv) in actvs]
+
+    # Return an action with highest probability of success (TODO: take
+    # case of ties)
     return max(actps, key=lambda actp: actp[1])
+
+
+def weighted_sampling(weighted_list):
+    """Given list of pairs (weight, element) weight-randomly select an element.
+
+    """
+
+    w8s = [weight for (weight, _) in weighted_list]
+    elements = [element for (_, element) in weighted_list]
+    return random.choices(elements, weights=w8s)[0]
 
 
 def weighted_average_tv(weighted_tvs):
@@ -103,7 +132,7 @@ def weighted_average_tv(weighted_tvs):
 
     TODO
 
-def observation_to_atomese(observation):
+def gym_observation_to_atomese(observation):
     """Translate gym observation to Atomese
 
     There are 4 observations (taken from CartPoleEnv help)
@@ -152,7 +181,7 @@ def observation_to_atomese(observation):
             EvaluationLink(PredicateNode("Cart Velocity At Tip"), pvat)]
 
 
-def reward_to_atomese(reward):
+def gym_reward_to_atomese(reward):
     """Translate gym reward to Atomese
 
     Evaluation
@@ -168,19 +197,27 @@ def reward_to_atomese(reward):
     return EvaluationLink(PredicateNode("Reward"), rn)
 
 
-def action_to_gym(action):
+def atomese_action_space():
+    """Return the set of possible atomese actions.
+
+    """
+
+    return {SchemaNode("Go Left"), SchemaNode("Go Right")}
+
+
+def atomese_action_to_gym(action):
     """Map atomese actions to gym actions
 
     In CartPole-v1 the mapping is as follows
 
-    SchemaNode("Go Right") -> 0
-    SchemaNode("Go Left") -> 1
+    SchemaNode("Go Left") -> 0
+    SchemaNode("Go Right") -> 1
 
     """
 
-    if SchemaNode("Go Right") == action:
-        return 0
     if SchemaNode("Go Left") == action:
+        return 0
+    if SchemaNode("Go Right") == action:
         return 1
 
 
@@ -207,6 +244,21 @@ def get_vardecl(cs):
     return cs.out[0]
 
 
+def is_virtual(clause):
+    """Return true iff the clause is virtual.
+
+    For instance
+
+    (GreaterThanLink (NumberNode "1") (NumberNode "2"))
+
+    is virtual because it gets evaluated on the fly as opposed to be
+    query against the atomspace.
+
+    """
+
+    return is_a(clause.type, get_type("VirtualLink"))
+
+
 def get_context(cs):
     """Extract the context of a cognitive schematic.
 
@@ -225,11 +277,23 @@ def get_context(cs):
 
     return <context>.
 
+    Since the context can be multiple clauses, virtual and
+    non-virtual, it outputs a pair of two lists
+
+    (present-clauses, virtual-clauses)
+
     """
 
-    cnjs = cs.out[2].out
-    neg_exec = next(x for x in cnjs if x.type != types.ExecutionLink)
-    return execution.out[0]
+    # Grab all clauses pertaining to context
+    clauses = cs.out[2].out
+    no_exec_clauses = [x for x in clauses if x.type != types.ExecutionLink]
+
+    # Split them into present and virtual clauses
+    present_clauses = [x for x in no_exec_clauses if not is_virtual(x)]
+    virtual_clauses = [x for x in no_exec_clauses if is_virtual(x)]
+
+    # Return pair of present and virtual clauses
+    return (present_clauses, virtual_clauses)
 
 
 def get_action(cs):
@@ -284,10 +348,11 @@ def get_context_actual_truth(cs, i):
 
     # Build and run a query to check if the context is true
     vardecl = get_vardecl(cs)
-    context = get_context(cs)
-    stamped_context = timestamp(context, i)
-    context_query = SatisfactionLink(vardecl, stamped_context)
-    return execute_atom(context_query)
+    present_clauses, virtual_clauses = get_context(cs)
+    stamped_present_clauses = [timestamp(pc, i) for pc in present_clauses]
+    body = AndLink(PresentLink(*stamped_present_clauses), *virtual_clauses)
+    query = SatisfactionLink(vardecl, body)
+    return execute_atom(a, query)
 
 
 def make_goal(ci):
@@ -302,7 +367,7 @@ def make_goal(ci):
 
     """
 
-    return reward_to_atomese(1)
+    return gym_reward_to_atomese(1)
 
 
 def timestamp(atom, i, tv=None):
@@ -356,7 +421,8 @@ def plan(goal, expiry):
     go_right = SchemaNode("Go Right")
     go_left = SchemaNode("Go Left")
     reward = PredicateNode("Reward")
-    zero = NumberNode("0")
+    epsilon = NumberNode("0.01")
+    mepsilon = NumberNode("-0.01")
     unit = NumberNode("1")
     hTV = TruthValue(0.9, 0.1)  # High TV
     lTV = TruthValue(0.1, 0.1)  # Low TV
@@ -385,7 +451,7 @@ def plan(goal, expiry):
             AndLink(
                 # Context
                 EvaluationLink(pole_angle, angle),
-                GreaterThanLink(angle, zero),
+                GreaterThanLink(angle, epsilon),
                 # Action
                 ExecutionLink(go_right)),
             # Goal
@@ -417,13 +483,13 @@ def plan(goal, expiry):
             AndLink(
                 # Context
                 EvaluationLink(pole_angle, angle),
-                GreaterThanLink(zero, angle),
+                GreaterThanLink(mepsilon, angle),
                 # Action
                 ExecutionLink(go_left)),
             # Goal
             EvaluationLink(reward, unit),
             # TV
-            tv=gTV)
+            tv=hTV)
 
     # To cover all possibilities we shouldn't forget the complementary
     # actions, i.e. going left when the pole is falling to the right
@@ -453,7 +519,7 @@ def plan(goal, expiry):
             AndLink(
                 # Context
                 EvaluationLink(pole_angle, angle),
-                GreaterThanLink(angle, zero),
+                GreaterThanLink(angle, epsilon),
                 # Action
                 ExecutionLink(go_left)),
             # Goal
@@ -485,7 +551,7 @@ def plan(goal, expiry):
             AndLink(
                 # Context
                 EvaluationLink(pole_angle, angle),
-                GreaterThanLink(zero, angle),
+                GreaterThanLink(mepsilon, angle),
                 # Action
                 ExecutionLink(go_right)),
             # Goal
@@ -551,7 +617,9 @@ def deduce(css, i):
     #    BMA can flatten the resulting distribution and be used to
     #    user-tune exploration vs exploitation in a justified
     #    manner. This is probably equivalent to (or better than)
-    #    Epsilon-best.
+    #    Epsilon-best. Ultimately the weight of such unknown component
+    #    should be calculated as the unknown rest in the Solomonoff
+    #    mixture.
     #
     # 2. We actually don't need to build the mixture model, rather we
     #    just need to hand the convex combination of models to the
@@ -567,23 +635,24 @@ def deduce(css, i):
     # cognitive schematics, maybe they should be taken into account to
     # lower the confidence of the final result, as they allegedly
     # exert an unknown influence (via their invalid parts).
-    valid_ccs = [cs for cs in css
-                 if 0.9 < get_context_actual_truth(cs, i).tv.mean]
+    valid_css = [cs for cs in css
+                 if 0.9 < get_context_actual_truth(cs, i).mean]
 
     # For now we have a uniform weighting across valid cognitive
-    # schematics
-    a2bma = omdict([(get_action(cs), (1.0, cs.tv)) for cs in valid_css])
+    # schematics.
+    actdist = omdict([(get_action(cs), (1.0, cs.tv)) for cs in valid_css])
 
+    # Add an unknown component for each action. For now its weight is
+    # constant, delta, but ultimately is should be calculated as a
+    # rest in the Solomonoff mixture.
+    delta = 1.0
+    for action in atomese_action_space():
+        actdist.add(action, (delta, DEFAULT_TV))
 
-
-    # For now assign a default TV to all actions.
-    actions = {get_action(cs) for cs in css}
-    tv = TruthValue(1, 0)
-    return [(action, tv) for action in actions]
+    return actdist
 
 
 def decide(actdist):
-
     """Select the next action to enact from an action distribution.
 
     The action is selected from the action distribution, a list of
@@ -609,10 +678,10 @@ def cartpole_step():
     global observation
     global cartpole_step_count
     i = cartpole_step_count
-    time.sleep(0.2)
+    time.sleep(0.05)
 
     # Translate to atomese and timestamp observations
-    atomese_obs = observation_to_atomese(observation)
+    atomese_obs = gym_observation_to_atomese(observation)
     timestamped_obs = [timestamp(o, i, tv=TRUE_TV) for o in atomese_obs]
     print("timestamped_obs =", timestamped_obs)
 
@@ -639,7 +708,7 @@ def cartpole_step():
     print("(action, pblty) =", (action, pblty))
 
     # Convert atomese action to openai gym action
-    gym_action = action_to_gym(action)
+    gym_action = atomese_action_to_gym(action)
     print("gym_action =", gym_action)
 
     # Run the next step of the environment
@@ -649,14 +718,14 @@ def cartpole_step():
     print("info =", info)
 
     # Translate to atomese and timestamp reward
-    timestamped_reward = timestamp(reward_to_atomese(reward), i, tv=TRUE_TV)
+    timestamped_reward = timestamp(gym_reward_to_atomese(reward), i, tv=TRUE_TV)
     print("timestamped_reward =", timestamped_reward)
 
     cartpole_step_count += 1
-    if done:
-        print("Stopping the openpsi loop")
-        env.close()
-        return TruthValue(0, 1)
+    # if done:
+    #     print("Stopping the openpsi loop")
+    #     env.close()
+    #     return TruthValue(0, 1)
 
     return TruthValue(1, 1)
 
