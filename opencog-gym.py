@@ -83,15 +83,39 @@ def tv_rv(tv):
 def thompson_sample(actdist):
     """Perform Thompson sampling over the action distribution.
 
-    Meaning, for each action truth value, sample its second order
-    distribution to obtain a first order probability variate, and
-    return the pair (action, pblty) corresponding to the highest
-    variate pblty.
+    Meaning, for each action
+
+    1. Select a TV according to its likelihood (derived from its
+    cognitive schematic).
+
+    2. From that TV, sample its second order distribution to obtain a
+    first order probability variate, and return the pair (action,
+    pblty) corresponding to the highest variate.
+
+    Then return the action with the highest probability of success.
 
     """
 
-    actps = [(action, tv_rv(tv)) for (action, tv) in actdist]
+    # 1. For each action select its TV according its weight
+    actvs = [(action, weighted_sampling(w8d_tvs))
+              for (action, w8d_tvs) in actdist.listitems()]
+
+    # 2. For each action select its first order probability given its tv
+    actps = [(action, tv_rv(tv)) for (action, tv) in actvs]
+
+    # Return an action with highest probability of success (TODO: take
+    # case of ties)
     return max(actps, key=lambda actp: actp[1])
+
+
+def weighted_sampling(weighted_list):
+    """Given list of pairs (weight, element) weight-randomly select an element.
+
+    """
+
+    w8s = [weight for (weight, _) in weighted_list]
+    elements = [element for (_, element) in weighted_list]
+    return random.choices(elements, weights=w8s)[0]
 
 
 def weighted_average_tv(weighted_tvs):
@@ -577,23 +601,24 @@ def deduce(css, i):
     # cognitive schematics, maybe they should be taken into account to
     # lower the confidence of the final result, as they allegedly
     # exert an unknown influence (via their invalid parts).
-    valid_ccs = [cs for cs in css
-                 if 0.9 < get_context_actual_truth(cs, i).tv.mean]
+    valid_css = [cs for cs in css
+                 if 0.9 < get_context_actual_truth(cs, i).mean]
 
     # For now we have a uniform weighting across valid cognitive
-    # schematics
-    a2bma = omdict([(get_action(cs), (1.0, cs.tv)) for cs in valid_css])
+    # schematics.
+    actdist = omdict([(get_action(cs), (1.0, cs.tv)) for cs in valid_css])
 
+    # Add an unknown component for each action. For now its weight is
+    # constant, delta, but ultimately is should be calculated as a
+    # rest in the Solomonoff mixture.
+    delta = 1.0
+    for action in atomese_action_space():
+        actdist.add(action, (delta, DEFAULT_TV))
 
-
-    # For now assign a default TV to all actions.
-    actions = {get_action(cs) for cs in css}
-    tv = TruthValue(1, 0)
-    return [(action, tv) for action in actions]
+    return actdist
 
 
 def decide(actdist):
-
     """Select the next action to enact from an action distribution.
 
     The action is selected from the action distribution, a list of
