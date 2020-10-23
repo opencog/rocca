@@ -168,19 +168,27 @@ def reward_to_atomese(reward):
     return EvaluationLink(PredicateNode("Reward"), rn)
 
 
-def action_to_gym(action):
+def atomese_action_space():
+    """Return the set of possible atomese actions.
+
+    """
+
+    return {SchemaNode("Go Left"), SchemaNode("Go Right")}
+
+
+def atomese_action_to_gym(action):
     """Map atomese actions to gym actions
 
     In CartPole-v1 the mapping is as follows
 
-    SchemaNode("Go Right") -> 0
-    SchemaNode("Go Left") -> 1
+    SchemaNode("Go Left") -> 0
+    SchemaNode("Go Right") -> 1
 
     """
 
-    if SchemaNode("Go Right") == action:
-        return 0
     if SchemaNode("Go Left") == action:
+        return 0
+    if SchemaNode("Go Right") == action:
         return 1
 
 
