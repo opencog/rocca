@@ -15,7 +15,7 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 from gym.envs.classic_control import rendering
 
-from envs.gym_chase.game_objects import Player, Table, Plate
+from envs.gym_chase.game_objects import Player, Table, Pellet
 
 FPS = 30
 
@@ -63,7 +63,7 @@ class ChaseEnv(gym.Env):
         self.action_space = spaces.Discrete(4)
         self.observation_space = spaces.Tuple((
             spaces.Discrete(2),  # Agent Position
-            spaces.Discrete(3)  # Food plate
+            spaces.Discrete(3)  # Food pellet
         ))
         self.food_position = None
         self.player_position = None
@@ -81,7 +81,7 @@ class ChaseEnv(gym.Env):
         else:
             return RIGHT_TRANS_X, PLAYER_TRANS_Y
 
-    def get_plate_transform(self):
+    def get_pellet_transform(self):
         if self.food_position == Position.LEFT:
             return LEFT_TRANS_X, TABLE_TRANS_Y
         else:
@@ -119,14 +119,14 @@ class ChaseEnv(gym.Env):
 
         reward, done = self._update_state(Action(action))
         self.player.set_pos(*self.get_player_transform())
-        self.plate.set_pos(*self.get_plate_transform())
+        self.pellet.set_pos(*self.get_pellet_transform())
         return self._get_ob(), reward, done, {}
 
     def reset(self):
         self._setup()
         self.table = Table(TABLE_TRANS_X, TABLE_TRANS_Y)
         self.player = Player(*self.get_player_transform())
-        self.plate = Plate(*self.get_plate_transform())
+        self.pellet = Pellet(*self.get_pellet_transform())
         return self._get_ob()
 
     def render(self, mode='human'):
@@ -137,7 +137,7 @@ class ChaseEnv(gym.Env):
 
         self.table.draw(self.viewer)
         self.player.draw(self.viewer)
-        self.plate.draw(self.viewer)
+        self.pellet.draw(self.viewer)
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def close(self):
