@@ -645,7 +645,7 @@ def deduce(css, i):
     # Add an unknown component for each action. For now its weight is
     # constant, delta, but ultimately is should be calculated as a
     # rest in the Solomonoff mixture.
-    delta = 1.0
+    delta = 0.1
     for action in atomese_action_space():
         actdist.add(action, (delta, DEFAULT_TV))
 

@@ -51,18 +51,18 @@ class Player:
         self.y = y
 
 
-PLATE_RES = 30
-PLATE_RAD = 0.3
+PELLET_RES = 30
+PELLET_RAD = 0.3
 
 
-class Plate:
+class Pellet:
     def __init__(self, init_x, init_y):
         self.x = init_x
         self.y = init_y
 
     def draw(self, viewer):
         p_t = rendering.Transform(translation=(self.x, self.y))
-        viewer.draw_circle(PLATE_RAD, PLATE_RES, filled=True, color=(1, 1, 0)).add_attr(p_t)
+        viewer.draw_circle(PELLET_RAD, PELLET_RES, filled=True, color=(1, 1, 0)).add_attr(p_t)
 
     def set_pos(self, x, y):
         self.x = x

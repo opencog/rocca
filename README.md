@@ -21,6 +21,14 @@ Third party tools
 - python-orderedmultidict https://pypi.org/project/orderedmultidict/
 - gym https://gym.openai.com/
 
+## Install
+
+In the root folder enter the following command
+
+```bash
+pip install .
+```
+
 ## Usage
 
 First load opencog-gym in the python interpreter
