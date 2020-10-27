@@ -124,8 +124,56 @@ class ChaseAgent(GymAgent):
 
         """
 
-        # For now we provide hardwired rules NEXT
-        return []
+        # For now we provide a hardwired rule, which is if the pellet
+        # is on the same square as the agent, then eating brings a
+        # reward of 1 at the next iteration.
+        #
+        # This can be formalized by the following rule:
+        #
+        # PredictiveImplicationScope <high TV>
+        #   TypedVariable
+        #     Variable "$position"
+        #     Type "ConceptNode"
+        #   Time "1"
+        #   And
+        #     Evaluation
+        #       Predicate "Agent Position"
+        #       Variable "$position"
+        #     Evaluation
+        #       Predicate "Pellet Position"
+        #       Variable "$position"
+        #     Execution
+        #       Schema "Eat"
+        #   Evaluation
+        #     Predicate "Reward"
+        #     Number "1"
+
+        agent_position = PredicateNode("Agent Position")
+        pellet_position = PredicateNode("Pellet Position")
+        position = VariableNode("$position")
+        concept_t = TypeNode("ConceptNode")
+        time_offset = NumberNode(str(expiry))
+        eat = SchemaNode("Eat")
+        reward = PredicateNode("Reward")
+        unit = NumberNode("1")
+        vhTV = TruthValue(1.0, 0.1)  # Very high TV
+
+        eat_cogscm = \
+            PredictiveImplicationScopeLink(
+                TypedVariableLink(position, concept_t),
+                time_offset,
+                AndLink(
+                    # Context
+                    EvaluationLink(agent_position, position),
+                    EvaluationLink(pellet_position, position),
+                    # Action
+                    ExecutionLink(eat)),
+                # Goal
+                EvaluationLink(reward, unit),
+                # TV
+                tv=vhTV)
+
+        return [eat_cogscm]
 
 
 ########
