@@ -46,6 +46,9 @@ class GymAgent:
         self.observation = self.env.reset()
         self.step_count = 0
 
+    def __del__(self):
+        self.env.close()
+
     def gym_observation_to_atomese(self, observation):
         """Translate gym observation to Atomese, to be overloaded.
 
@@ -122,7 +125,7 @@ class GymAgent:
     def atomese_action_to_gym(self, action):
         """Map atomese actions to gym actions. To be overloaded.
 
-        For In CartPole-v1 the mapping is as follows
+        For instance in CartPole-v1 the mapping is as follows
 
         SchemaNode("Go Left") -> 0
         SchemaNode("Go Right") -> 1
@@ -248,8 +251,8 @@ class GymAgent:
         # be taken into account to lower the confidence of the final
         # result, as they allegedly exert an unknown influence (via
         # their invalid parts).
-        valid_cogscms = [cogscm for cogscm in cogscms
-                         if 0.9 < get_context_actual_truth(cogscm, i).mean]
+        ctx_tv = lambda cogscm : get_context_actual_truth(self.atomspace, cogscm, i)
+        valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
 
         # For now we have a uniform weighting across valid cognitive
         # schematics.
@@ -324,8 +327,8 @@ class GymAgent:
         print("gym_action =", gym_action)
 
         # Run the next step of the environment
-        observation, reward, done, info = self.env.step(gym_action)
-        print("observation =", observation)
+        self.observation, reward, done, info = self.env.step(gym_action)
+        print("observation =", self.observation)
         print("reward =", reward)
         print("info =", info)
 
@@ -336,7 +339,6 @@ class GymAgent:
         self.step_count += 1
 
         if done:
-            self.env.close()
             return False
 
         return True

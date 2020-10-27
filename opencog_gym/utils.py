@@ -238,7 +238,7 @@ def get_context_actual_truth(atomspace, cogscm, i):
     stamped_present_clauses = [timestamp(pc, i) for pc in present_clauses]
     body = AndLink(PresentLink(*stamped_present_clauses), *virtual_clauses)
     query = SatisfactionLink(vardecl, body)
-    return execute_atom(a, query)
+    return execute_atom(atomspace, query)
 
 
 def timestamp(atom, i, tv=None):
