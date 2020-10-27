@@ -17,7 +17,6 @@ from opencog.exec import execute_atom
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
-from opencog.scheme_wrapper import *
 
 # GymAgent
 from .utils import *
