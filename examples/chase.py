@@ -15,6 +15,8 @@ from opencog.atomspace import types
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
+from opencog.scheme_wrapper import scheme_eval, scheme_eval_h
+from opencog.logger import Logger, log
 
 # OpenAI Gym
 import gym
@@ -33,6 +35,17 @@ from opencog_gym.gymagent import GymAgent
 class ChaseAgent(GymAgent):
     def __init__(self):
         GymAgent.__init__(self, env)
+        # Load PLN
+        scheme_eval(self.atomspace, "(use-modules (opencog pln))")
+        scheme_eval(self.atomspace, "(pln-load 'empty)")
+        log.info("PLN atomspace 1")
+        scheme_eval(self.atomspace, "(pln-log-atomspace)")
+        scheme_eval(self.atomspace, "(pln-load-rules \"temporal/predictive-implication-scope-direct-introduction\")")
+        log.info("PLN atomspace 2")
+        scheme_eval(self.atomspace, "(pln-log-atomspace)")
+        scheme_eval(self.atomspace, "(pln-add-rule 'predictive-implication-scope-direct-introduction)")
+        log.info("PLN atomspace 3")
+        scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
     def gym_observation_to_atomese(self, observation):
         """Translate gym observation to Atomese
