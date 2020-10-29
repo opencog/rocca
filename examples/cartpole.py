@@ -23,7 +23,7 @@ env = gym.make('CartPole-v1')
 # help(env.unwrapped)
 
 # OpenCog Gym
-from opencog_gym.gymagent import GymAgent
+from agent.gymagent import GymAgent
 
 ##################
 # CartPole Agent #

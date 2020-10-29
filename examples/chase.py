@@ -26,7 +26,7 @@ env = gym.make('Chase-v0')
 # help(env.unwrapped)
 
 # OpenCog Gym
-from opencog_gym.gymagent import GymAgent
+from agent.gymagent import GymAgent
 
 ##################
 # CartPole Agent #
