@@ -17,6 +17,7 @@ from opencog.spacetime import *
 from opencog.pln import *
 from opencog.scheme_wrapper import scheme_eval, scheme_eval_h
 from opencog.logger import Logger, log
+from opencog.ure import ure_logger
 
 # OpenAI Gym
 import gym
@@ -35,16 +36,12 @@ from agent.gymagent import GymAgent
 class ChaseAgent(GymAgent):
     def __init__(self):
         GymAgent.__init__(self, env)
+        # Init loggers
+        log.set_level("debug")
+        ure_logger().set_level("fine")
         # Load PLN
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
-        scheme_eval(self.atomspace, "(pln-load 'empty)")
-        log.info("PLN atomspace 1")
-        scheme_eval(self.atomspace, "(pln-log-atomspace)")
-        scheme_eval(self.atomspace, "(pln-load-rules \"temporal/predictive-implication-scope-direct-introduction\")")
-        log.info("PLN atomspace 2")
-        scheme_eval(self.atomspace, "(pln-log-atomspace)")
-        scheme_eval(self.atomspace, "(pln-add-rule 'predictive-implication-scope-direct-introduction)")
-        log.info("PLN atomspace 3")
+        scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-introduction)")
         scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
     def gym_observation_to_atomese(self, observation):
@@ -137,56 +134,8 @@ class ChaseAgent(GymAgent):
 
         """
 
-        # For now we provide a hardwired rule, which is if the pellet
-        # is on the same square as the agent, then eating brings a
-        # reward of 1 at the next iteration.
-        #
-        # This can be formalized by the following rule:
-        #
-        # PredictiveImplicationScope <high TV>
-        #   TypedVariable
-        #     Variable "$position"
-        #     Type "ConceptNode"
-        #   Time "1"
-        #   And
-        #     Evaluation
-        #       Predicate "Agent Position"
-        #       Variable "$position"
-        #     Evaluation
-        #       Predicate "Pellet Position"
-        #       Variable "$position"
-        #     Execution
-        #       Schema "Eat"
-        #   Evaluation
-        #     Predicate "Reward"
-        #     Number "1"
-
-        agent_position = PredicateNode("Agent Position")
-        pellet_position = PredicateNode("Pellet Position")
-        position = VariableNode("$position")
-        concept_t = TypeNode("ConceptNode")
-        time_offset = NumberNode(str(expiry))
-        eat = SchemaNode("Eat")
-        reward = PredicateNode("Reward")
-        unit = NumberNode("1")
-        vhTV = TruthValue(1.0, 0.1)  # Very high TV
-
-        eat_cogscm = \
-            PredictiveImplicationScopeLink(
-                TypedVariableLink(position, concept_t),
-                time_offset,
-                AndLink(
-                    # Context
-                    EvaluationLink(agent_position, position),
-                    EvaluationLink(pellet_position, position),
-                    # Action
-                    ExecutionLink(eat)),
-                # Goal
-                EvaluationLink(reward, unit),
-                # TV
-                tv=vhTV)
-
-        return [eat_cogscm]
+        results = scheme_eval_h(self.atomspace, "(pln-bc (PredictiveImplicationScope (Variable \"$X\") (TimeNode \"1\") (And (Variable \"$P1\") (Variable \"$P2\") (Execution (Variable \"$A\"))) (Evaluation (Predicate \"Reward\") (Number 1))) #:vardecl (VariableSet (Variable \"$P1\") (Variable \"$P2\") (Variable \"$A\")))")
+        return results.out
 
 
 ########
@@ -196,7 +145,7 @@ def main():
     ca = ChaseAgent()
     while (ca.step() or True):
         time.sleep(0.1)
-        print("step_count = {}".format(ca.step_count))
+        log.info("step_count = {}".format(ca.step_count))
 
 
 if __name__ == "__main__":

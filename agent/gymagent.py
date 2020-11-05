@@ -17,6 +17,7 @@ from opencog.exec import execute_atom
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
+from opencog.logger import Logger, log
 
 # GymAgent
 from .utils import *
@@ -134,7 +135,7 @@ class GymAgent:
         return 0
 
 
-    def make_goal(self, ci):
+    def make_goal(self):
 
         """Define the goal of the current iteration.
 
@@ -180,7 +181,7 @@ class GymAgent:
         return []
 
 
-    def deduce(self, cogscms, i):
+    def deduce(self, cogscms):
         """Return an action distribution given a list cognitive schematics.
 
         The action distribution is actually a second order
@@ -250,7 +251,8 @@ class GymAgent:
         # be taken into account to lower the confidence of the final
         # result, as they allegedly exert an unknown influence (via
         # their invalid parts).
-        ctx_tv = lambda cogscm : get_context_actual_truth(self.atomspace, cogscm, i)
+        ctx_tv = lambda cogscm : \
+            get_context_actual_truth(self.atomspace, cogscm, self.step_count)
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
 
         # For now we have a uniform weighting across valid cognitive
@@ -261,7 +263,7 @@ class GymAgent:
         # Add an unknown component for each action. For now its weight
         # is constant, delta, but ultimately is should be calculated
         # as a rest in the Solomonoff mixture.
-        delta = 0.1
+        delta = 0.5
         for action in self.atomese_action_space():
             actdist.add(action, (delta, DEFAULT_TV))
 
@@ -292,16 +294,15 @@ class GymAgent:
         """Run one step of observation, decision and env update
         """
         
-        i = self.step_count
-
         # Translate to atomese and timestamp observations
         atomese_obs = self.gym_observation_to_atomese(self.observation)
-        timestamped_obs = [timestamp(o, i, tv=TRUE_TV) for o in atomese_obs]
-        print("timestamped_obs =", timestamped_obs)
+        timestamped_obs = [timestamp(o, self.step_count, tv=TRUE_TV)
+                           for o in atomese_obs]
+        log.debug("timestamped_obs = {}".format(timestamped_obs))
 
         # Make the goal for that iteration
-        goal = self.make_goal(i)
-        print("goal =", goal)
+        goal = self.make_goal()
+        log.debug("goal = {}".format(goal))
 
         # Render the environment if X is running
         if X_ENABLED:
@@ -311,31 +312,36 @@ class GymAgent:
         # goal expiry is 1, i.e. set for the next iteration.
         expiry = 1
         css = self.plan(goal, expiry)
-        print("css =", css)
+        log.debug("css = {}".format(css))
 
         # Deduce the action distribution
-        actdist = self.deduce(css, i)
-        print("actdist =", actdist)
+        actdist = self.deduce(css)
+        log.debug("actdist = {}".format(actdist))
 
         # Select the next action
         action, pblty = self.decide(actdist)
-        print("(action, pblty) =", (action, pblty))
+        log.debug("(action={}, pblty={})".format(action, pblty))
+
+        # Timestamp the action that is about to be executed
+        action_exec = ExecutionLink(action)
+        timestamped_action_exec = timestamp(action_exec, self.step_count, tv=TRUE_TV)
+        log.debug("timestamped_action = {}".format(timestamped_action_exec))
 
         # Convert atomese action to openai gym action
         gym_action = self.atomese_action_to_gym(action)
-        print("gym_action =", gym_action)
+        log.debug("gym_action = {}".format(gym_action))
 
-        # Run the next step of the environment
-        self.observation, reward, done, info = self.env.step(gym_action)
-        print("observation =", self.observation)
-        print("reward =", reward)
-        print("info =", info)
-
-        # Translate to atomese and timestamp reward
-        timestamped_reward = timestamp(self.gym_reward_to_atomese(reward), i, tv=TRUE_TV)
-        print("timestamped_reward =", timestamped_reward)
-
+        # Increase the step count and run the next step of the environment
         self.step_count += 1
+        self.observation, reward, done, info = self.env.step(gym_action)
+        log.debug("observation = {}".format(self.observation))
+        log.debug("reward = {}".format(reward))
+        log.debug("info = {}".format(info))
+
+        # Translate reward to atomese and timestamp it
+        atomese_reward = self.gym_reward_to_atomese(reward)
+        timestamped_reward = timestamp(atomese_reward, self.step_count, tv=TRUE_TV)
+        log.debug("timestamped_reward = {}".format(timestamped_reward))
 
         if done:
             return False
