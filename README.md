@@ -31,14 +31,7 @@ pip install .
 
 ## Usage
 
-First load opencog-gym in the python interpreter
+For now a gym agent defined under the `agent` folder is provided that
+can used to implement agents for given environments.  See the examples
+under the `examples` folder.
 
-```bash
-python -i opencog-gym.py
-```
-
-then from the python interpreter launch opencog-gym
-
-```python
-main()
-```
