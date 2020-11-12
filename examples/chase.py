@@ -36,9 +36,22 @@ from agent.gymagent import GymAgent
 class ChaseAgent(GymAgent):
     def __init__(self):
         GymAgent.__init__(self, env)
+
         # Init loggers
         log.set_level("debug")
         ure_logger().set_level("fine")
+
+        # Load miner
+        scheme_eval(self.atomspace, "(use-modules (opencog miner))")
+        scheme_eval(self.atomspace, "(define minsup 4)")
+        scheme_eval(self.atomspace, "(define maxiter 10000)")
+        scheme_eval(self.atomspace, "(define cnjexp #f)")
+        scheme_eval(self.atomspace, "(define enfspe #t)")
+        scheme_eval(self.atomspace, "(define mspc 2)")
+        scheme_eval(self.atomspace, "(define maxvars 5)")
+        scheme_eval(self.atomspace, "(define surprise 'nisurp)")
+        scheme_eval(self.atomspace, "(miner-logger-set-level! \"fine\")")
+
         # Load PLN
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
         scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-introduction)")
@@ -108,6 +121,29 @@ class ChaseAgent(GymAgent):
         if SchemaNode("Eat") == action:
             return 3
 
+    def plan_pln_xp(self, goal, expiry):
+        # Rather specialized, though relying entirely on a temporal PLN rule, planning
+        results = scheme_eval_h(self.atomspace, "(pln-bc (PredictiveImplicationScope (Variable \"$X\") (TimeNode \"1\") (And (Variable \"$P1\") (Variable \"$P2\") (Execution (Variable \"$A\"))) (Evaluation (Predicate \"Reward\") (Number 1))) #:vardecl (VariableSet (Variable \"$P1\") (Variable \"$P2\") (Variable \"$A\")))")
+        return results.out
+
+    def plan_miner_xp(self, goal, expiry):
+        schema_eval("(define initpat"
+                    "  (Lambda"
+                    "    (VariableSet (Variable \"$T\") (Variable \"$X\") (Variable \"$Y\"))"
+                    "    (Present"
+                    "      (AtTime (Variable \"$X\") (Variable \"$T\"))"
+                    "      (AtTime (Variable \"$Y\") (S (Variable \"$T\"))))))")
+        results = schema_eval_h("(cog-mine db"
+                                "          #:minimum-support minsup"
+                                "          #:initial-pattern initpat"
+                                "          #:maximum-iterations maxiter"
+                                "          #:conjunction-expansion cnjexp"
+                                "          #:maximum-variables maxvars"
+                                "          #:maximum-spcial-conjuncts mspc"
+                                "          #:surprisingness surprise))")
+        print("results = {}".format(results))
+        return []
+
     def plan(self, goal, expiry):
         """Plan the next actions given a goal and its expiry time offset
 
@@ -134,14 +170,15 @@ class ChaseAgent(GymAgent):
 
         """
 
-        results = scheme_eval_h(self.atomspace, "(pln-bc (PredictiveImplicationScope (Variable \"$X\") (TimeNode \"1\") (And (Variable \"$P1\") (Variable \"$P2\") (Execution (Variable \"$A\"))) (Evaluation (Predicate \"Reward\") (Number 1))) #:vardecl (VariableSet (Variable \"$P1\") (Variable \"$P2\") (Variable \"$A\")))")
-        return results.out
+        # return plan_pln_xp(goal, expiry)
+        return plan_miner_xp(goal, expiry)
 
 
 ########
 # Main #
 ########
 def main():
+    print("test")
     ca = ChaseAgent()
     while (ca.step() or True):
         time.sleep(0.1)
