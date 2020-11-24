@@ -19,6 +19,7 @@ from opencog.exec import execute_atom
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
+from opencog.logger import Logger, log
 
 #############
 # Functions #
@@ -141,7 +142,8 @@ def is_virtual(clause):
 
     """
 
-    return is_a(clause.type, get_type("VirtualLink"))
+    # TODO: can be simplified with clause.is_a
+    return is_a(clause.type, types.VirtualLink)
 
 
 def get_context(cogscm):
@@ -170,7 +172,7 @@ def get_context(cogscm):
     """
 
     # Grab all clauses pertaining to context
-    clauses = cogscm.out[2].out
+    clauses = get_cogscm_antecedants(cogscm)
     no_exec_clauses = [x for x in clauses if x.type != types.ExecutionLink]
 
     # Split them into present and virtual clauses
@@ -181,10 +183,38 @@ def get_context(cogscm):
     return (present_clauses, virtual_clauses)
 
 
+def is_scope(x):
+    """Return True iff the atom is a scope link."""
+
+    return is_a(x.type, types.ScopeLink)
+
+
+def get_cogscm_antecedants(cogscm):
+    """Return the list of antecedants of a cognitive schema.
+
+    For instance is the cognitive schematics is represented by
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <expiry>
+      And (or SimultaneousAnd?)
+        <context-or-action-1>
+        ...
+        <context-or-action-n>
+      <goal>
+
+    it returns [<context-or-action-1>, ..., <context-or-action-1>]
+
+    """
+
+    ante = cogscm.out[2]
+    return ante.out if is_a(ante.type, types.AndLink) else [ante]
+
+
 def get_action(cogscm):
     """Extract the action of a cognitive schematic.
 
-    Given a cognitive schematic of that format
+    Given a cognitive schematic of that formats
 
     PredictiveImplicationScope <tv>
       <vardecl>
@@ -202,7 +232,7 @@ def get_action(cogscm):
 
     """
 
-    cnjs = cogscm.out[2].out
+    cnjs = get_cogscm_antecedants(cogscm)
     execution = next(x for x in cnjs if x.type == types.ExecutionLink)
     return execution.out[0]
 
@@ -240,13 +270,28 @@ def get_context_actual_truth(atomspace, cogscm, i):
     return execute_atom(atomspace, query)
 
 
-def timestamp(atom, i, tv=None):
+def timestamp(atom, i, tv=None, nat=True):
     """Timestamp a given atom.  Optionally set its TV
 
-    AtTimeLink tv               # if tv is provided
-      atom
-      TimeNode str(i)
+    AtTimeLink <tv>               # if tv is provided
+      <atom>
+      TimeNode <str(i)>
+
+    if nat is True it uses a Natural instead of TimeNode (see to_nat).
 
     """
 
-    return AtTimeLink(atom, TimeNode(str(i)), tv=tv)
+    time = to_nat(i) if nat else TimeNode(str(i))
+    return AtTimeLink(atom, time, tv=tv)
+
+
+def to_nat(i):
+    """Convert i to a Natural.
+
+    For instance if i = 3, then it returns
+
+    S S S Z
+
+    """
+
+    return ZLink() if i == 0 else SLink(to_nat(i - 1))
