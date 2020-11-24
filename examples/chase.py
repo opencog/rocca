@@ -128,9 +128,41 @@ class ChaseAgent(GymAgent):
     def negative_goal(self):
         return EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
 
+    # TODO: move to gymagent
+    def learn(self):
+        """Discover patterns in the world and in the self.
+
+        """
+
+        log.debug("learn()")
+
+        # For now we only learn cognitive schematics
+
+        # All resulting cognitive schematics
+        cogscms = set()
+
+        # For each action, mine there relationship to the goal,
+        # positively and negatively.
+        for action in self.atomese_action_space():
+            goal = self.positive_goal()
+            pos_srps = self.mine_action_patterns(action, goal, 1)
+            cogscms.union(set(self.surprises_to_predictive_implications(pos_srps)))
+
+            # TODO: For now the negative goal is hardwired
+            neg_goal = self.negative_goal()
+            neg_srps = self.mine_action_patterns(action, neg_goal, 1)
+            cogscms.union(set(self.surprises_to_predictive_implications(neg_srps)))
+
+        log.debug("cogscms = {}".format(cogscms))
+
     def plan_pln_xp(self, goal, expiry):
-        # Rather specialized, though relying entirely on a temporal PLN rule, planning
-        results = scheme_eval_h(self.atomspace, "(pln-bc (PredictiveImplicationScope (Variable \"$X\") (TimeNode \"1\") (And (Variable \"$P1\") (Variable \"$P2\") (Execution (Variable \"$A\"))) (Evaluation (Predicate \"Reward\") (Number 1))) #:vardecl (VariableSet (Variable \"$P1\") (Variable \"$P2\") (Variable \"$A\")))")
+        # For now query existing PredictiveImplicationScope and update
+        # their TVs based on evidence.
+
+        mi = 1
+        query = self.predictive_implication_scope_query(goal, expiry)
+        command = "(pln-bc " + str(query) + " #:maximum-iterations " + str(mi) + ")"
+        results = scheme_eval_h(self.atomspace, command)
         return results.out
 
     def get_pattern(self, surprise_eval):
@@ -249,6 +281,20 @@ class ChaseAgent(GymAgent):
 
         return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
 
+    def predictive_implication_scope_query(self, goal, expiry):
+        """Build a PredictiveImplicationScope query for PLN.
+
+        """
+
+        vardecl = VariableNode("$vardecl")
+        antecedent = VariableNode("$antecedent")
+        succedent = VariableNode("$succedent")
+        query = QuoteLink(PredictiveImplicationScopeLink(UnquoteLink(vardecl),
+                                                         to_nat(expiry),
+                                                         UnquoteLink(antecedent),
+                                                         UnquoteLink(succedent)))
+        return query
+
     def to_predictive_implication(self, pattern):
         """Turn a given pattern into a predictive implication with its TV.
 
@@ -319,7 +365,7 @@ class ChaseAgent(GymAgent):
             Predicate "Reward"
             Number 1
 
-        TODO: for now if the succeedent is
+        TODO: for now if the succedent is
 
           Evaluation
             Predicate "Reward"
@@ -363,8 +409,9 @@ class ChaseAgent(GymAgent):
             pis = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
 
         # Calculate the truth value of the predictive implication
-        pln_query = "(pln-bc " + str(pis) + ")"
-        results = scheme_eval_h(self.atomspace, pln_query)
+        mi = 2
+        command = "(pln-bc " + str(pis) + " #:maximum-iterations " + str(mi) + ")"
+        results = scheme_eval_h(self.atomspace, command)
         return results.out[0]
 
     def is_desirable(self, cogscm):
@@ -434,7 +481,7 @@ class ChaseAgent(GymAgent):
 
         # Set miner parameters
         scheme_eval(self.atomspace, "(define minsup 10)")
-        scheme_eval(self.atomspace, "(define maxiter 100)")
+        scheme_eval(self.atomspace, "(define maxiter 1000)")
         scheme_eval(self.atomspace, "(define cnjexp #f)")
         scheme_eval(self.atomspace, "(define enfspe #t)")
         scheme_eval(self.atomspace, "(define mspc 4)")
@@ -483,35 +530,13 @@ class ChaseAgent(GymAgent):
 
         return surprises.out
 
-
-    def plan_miner_xp(self, goal, expiry):
-        # All resulting plans
-        cogscms = []
-
-        # For each action, mine there relationship to the goal,
-        # positively and negatively.
-        for action in self.atomese_action_space():
-            pos_srps = self.mine_action_patterns(action, goal, 1)
-            cogscms.extend(self.surprises_to_predictive_implications(pos_srps))
-
-            # TODO: For now the negative goal is hardwired
-            neg_goal = self.negative_goal()
-            neg_srps = self.mine_action_patterns(action, neg_goal, 1)
-            cogscms.extend(self.surprises_to_predictive_implications(neg_srps))
-
-        return list(set(cogscms)) # Remove duplicates
-
     def plan(self, goal, expiry):
 
         """Plan the next actions given a goal and its expiry time offset
 
         Return a python list of cognivite schematics.  Whole cognitive
         schematics are output (instead of action plans) in order to
-        make a decision based on their truth values.  Alternatively it
-        could return a pair (action plan, tv), where tv has been
-        evaluated to take into account the truth value of the context
-        as well (which would differ from the truth value of rule in
-        case the context is uncertain).
+        make a decision based on their truth values.
 
         The format for a cognitive schematic is as follows
 
@@ -528,8 +553,7 @@ class ChaseAgent(GymAgent):
 
         """
 
-        # return self.plan_pln_xp(goal, expiry)
-        return self.plan_miner_xp(goal, expiry)
+        return self.plan_pln_xp(goal, expiry)
 
 
 ########
@@ -537,9 +561,21 @@ class ChaseAgent(GymAgent):
 ########
 def main():
     ca = ChaseAgent()
-    while (ca.step() or True):
-        time.sleep(0.1)
-        log.info("step_count = {}".format(ca.step_count))
+    lt_iterations = 2           # Number of learning-training iterations
+    lt_period = 300             # Duration of a learning-training iteration
+    for i in range(lt_iterations):
+        par = ca.accumulated_reward # Keep track of the reward before
+        # Discover patterns to make more informed decisions
+        log.info("Start learning ({}/{})".format(i + 1, lt_iterations))
+        ca.learn()
+        # Run agent to accumulate percepta
+        log.info("Start training ({}/{})".format(i + 1, lt_iterations))
+        for j in range(lt_period):
+            ca.step()
+            time.sleep(0.01)
+            log.info("step_count = {}".format(ca.step_count))
+        nar = ca.accumulated_reward - par
+        log.info("Accumulated reward during {}th iteration = {}".format(i + 1, nar))
 
 
 if __name__ == "__main__":
