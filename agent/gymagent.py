@@ -13,7 +13,6 @@ from orderedmultidict import omdict
 from opencog.atomspace import AtomSpace, TruthValue
 from opencog.atomspace import types
 from opencog.atomspace import get_type, is_a
-from opencog.exec import execute_atom
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
@@ -45,9 +44,26 @@ class GymAgent:
         self.env = gym_env
         self.observation = self.env.reset()
         self.step_count = 0
+        self.accumulated_reward = 0
+        self.percepta_record = ConceptNode("Percepta Record")
 
     def __del__(self):
         self.env.close()
+
+    def record(self, atom, i, tv=None):
+        """Timestamp and record an atom to the Percepta Record.
+
+        That is add the following in the atomspace
+
+        MemberLink (stv 1 1)
+          AtTimeLink <tv>
+            <atom>
+            <i>
+          <self.percepta_record>
+
+        """
+
+        return MemberLink(timestamp(atom, i, tv), self.percepta_record, tv=TRUE_TV)
 
     def gym_observation_to_atomese(self, observation):
         """Translate gym observation to Atomese, to be overloaded.
@@ -175,6 +191,8 @@ class GymAgent:
               <output> [optional]
           <goal>
 
+        For now it is assumed that <action> is fully grounded.
+
         """
 
         # TODO
@@ -219,6 +237,8 @@ class GymAgent:
 
         """
 
+        log.debug("deduce(cogscms={})".format(cogscms))
+
         # For each cognitive schematic estimate the probability of its
         # context to be true and multiply it by the truth value of the
         # cognitive schematic, then calculate its weight based on
@@ -254,11 +274,13 @@ class GymAgent:
         ctx_tv = lambda cogscm : \
             get_context_actual_truth(self.atomspace, cogscm, self.step_count)
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
+        log.debug("valid_cogscms = {}".format(valid_cogscms))
 
         # For now we have a uniform weighting across valid cognitive
         # schematics.
         actdist = omdict([(get_action(cogscm), (1.0, cogscm.tv))
                           for cogscm in valid_cogscms])
+        log.debug("actdist-1 = {}".format(actdist))
 
         # Add an unknown component for each action. For now its weight
         # is constant, delta, but ultimately is should be calculated
@@ -266,6 +288,7 @@ class GymAgent:
         delta = 0.5
         for action in self.atomese_action_space():
             actdist.add(action, (delta, DEFAULT_TV))
+        log.debug("actdist-2 = {}".format(actdist))
 
         return actdist
 
@@ -296,9 +319,10 @@ class GymAgent:
         
         # Translate to atomese and timestamp observations
         atomese_obs = self.gym_observation_to_atomese(self.observation)
-        timestamped_obs = [timestamp(o, self.step_count, tv=TRUE_TV)
-                           for o in atomese_obs]
-        log.debug("timestamped_obs = {}".format(timestamped_obs))
+        log.debug("atomese_obs = {}".format(atomese_obs))
+        obs_record = [self.record(o, self.step_count, tv=TRUE_TV)
+                      for o in atomese_obs]
+        log.debug("obs_record = {}".format(obs_record))
 
         # Make the goal for that iteration
         goal = self.make_goal()
@@ -324,8 +348,8 @@ class GymAgent:
 
         # Timestamp the action that is about to be executed
         action_exec = ExecutionLink(action)
-        timestamped_action_exec = timestamp(action_exec, self.step_count, tv=TRUE_TV)
-        log.debug("timestamped_action = {}".format(timestamped_action_exec))
+        action_exec_record = self.record(action_exec, self.step_count, tv=TRUE_TV)
+        log.debug("action_exec_record = {}".format(action_exec_record))
 
         # Convert atomese action to openai gym action
         gym_action = self.atomese_action_to_gym(action)
@@ -334,14 +358,16 @@ class GymAgent:
         # Increase the step count and run the next step of the environment
         self.step_count += 1
         self.observation, reward, done, info = self.env.step(gym_action)
+        self.accumulated_reward += reward
         log.debug("observation = {}".format(self.observation))
         log.debug("reward = {}".format(reward))
+        log.debug("accumulated reward = {}".format(self.accumulated_reward))
         log.debug("info = {}".format(info))
 
         # Translate reward to atomese and timestamp it
         atomese_reward = self.gym_reward_to_atomese(reward)
-        timestamped_reward = timestamp(atomese_reward, self.step_count, tv=TRUE_TV)
-        log.debug("timestamped_reward = {}".format(timestamped_reward))
+        reward_record = self.record(atomese_reward, self.step_count, tv=TRUE_TV)
+        log.debug("reward_record = {}".format(reward_record))
 
         if done:
             return False
