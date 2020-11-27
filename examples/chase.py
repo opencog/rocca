@@ -562,7 +562,7 @@ class ChaseAgent(GymAgent):
 def main():
     ca = ChaseAgent()
     lt_iterations = 2           # Number of learning-training iterations
-    lt_period = 300             # Duration of a learning-training iteration
+    lt_period = 200             # Duration of a learning-training iteration
     for i in range(lt_iterations):
         par = ca.accumulated_reward # Keep track of the reward before
         # Discover patterns to make more informed decisions
