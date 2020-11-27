@@ -9,7 +9,8 @@ import random
 from orderedmultidict import omdict
 
 # SciPy
-from scipy.stats import beta
+import scipy.stats as st
+import scipy.special as sp
 
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
@@ -20,6 +21,13 @@ from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
 from opencog.logger import Logger, log
+
+#############
+# Constants #
+#############
+
+TRUE_TV = TruthValue(1, 1)
+DEFAULT_TV = TruthValue(1, 0)
 
 #############
 # Functions #
@@ -39,10 +47,31 @@ def tv_to_beta(tv, prior_a=1, prior_b=1):
     pos_count = count * tv.mean # the mean is actually the mode
     a = prior_a + pos_count
     b = prior_b + count - pos_count
-    return beta(a, b)
+    return st.beta(a, b)
 
 
-def tv_rv(tv):
+def tv_to_alpha_param(tv, prior_a=1, prior_b=1):
+    """Return the alpha parameter of a TV's beta-distribution.
+
+    """
+
+    count = tv.count
+    pos_count = count * tv.mean # the mean is actually the mode
+    return prior_a + pos_count
+
+
+def tv_to_beta_param(tv, prior_a=1, prior_b=1):
+    """Return the beta parameter of a TV's beta-distribution.
+
+    """
+
+    count = tv.count
+    pos_count = count * tv.mean # the mean is actually the mode
+    return prior_b + count - pos_count
+
+
+def tv_rv(tv, prior_a=1, prior_b=1):
+
     """Return a first order probability variate of a truth value.
 
     Return a first order probability variate of the beta-distribution
@@ -52,12 +81,12 @@ def tv_rv(tv):
 
     """
 
-    beta = tv_to_beta(tv)
-    return beta.rvs()
+    betadist = tv_to_beta(tv, prior_a, prior_b)
+    return betadist.rvs()
 
 
-def thompson_sample(actdist):
-    """Perform Thompson sampling over the action distribution.
+def thompson_sample(mxmdl, prior_a=1, prior_b=1):
+    """Perform Thompson sampling over the mixture model.
 
     Meaning, for each action
 
@@ -73,15 +102,22 @@ def thompson_sample(actdist):
     """
 
     # 1. For each action select its TV according its weight
-    actvs = [(action, weighted_sampling(w8d_tvs))
-              for (action, w8d_tvs) in actdist.listitems()]
+    actcogscms = [(action, weighted_sampling(w8d_cogscms))
+                  for (action, w8d_cogscms) in mxmdl.listitems()]
 
     # 2. For each action select its first order probability given its tv
-    actps = [(action, tv_rv(tv)) for (action, tv) in actvs]
+    actps = [(action, tv_rv(get_cogscm_tv(cogscm), prior_a, prior_b))
+             for (action, cogscm) in actcogscms]
 
     # Return an action with highest probability of success (TODO: take
     # case of ties)
     return max(actps, key=lambda actp: actp[1])
+
+
+def get_cogscm_tv(cogscm):
+    """Return the Truth Value of a cogscm or the default if it is None"""
+
+    return cogscm.tv if cogscm else DEFAULT_TV
 
 
 def weighted_sampling(weighted_list):
@@ -265,10 +301,27 @@ def get_context_actual_truth(atomspace, cogscm, i):
     vardecl = get_vardecl(cogscm)
     present_clauses, virtual_clauses = get_context(cogscm)
     stamped_present_clauses = [timestamp(pc, i) for pc in present_clauses]
-    body = AndLink(PresentLink(*stamped_present_clauses), *virtual_clauses)
+    body = AndLink(PresentLink(*stamped_present_clauses),
+                   *[IsClosedLink(spc) for spc in stamped_present_clauses],
+                   *[high_strength_virtual_clause(spc)
+                     for spc in stamped_present_clauses],
+                   *[high_confidence_virtual_clause(spc)
+                     for spc in stamped_present_clauses],
+                   *virtual_clauses)
     query = SatisfactionLink(vardecl, body)
-    return execute_atom(atomspace, query)
+    tv = execute_atom(atomspace, query)
+    return tv
 
+
+def high_strength_virtual_clause(a):
+    """Make a virtual clause checking that a has a high strength."""
+    almost_one = NumberNode("0.99")
+    return GreaterThanLink(StrengthOfLink(a), almost_one)
+
+def high_confidence_virtual_clause(a):
+    """Make a virtual clause checking that a has a high confidence."""
+    almost_one = NumberNode("0.99")
+    return GreaterThanLink(ConfidenceOfLink(a), almost_one)
 
 def timestamp(atom, i, tv=None, nat=True):
     """Timestamp a given atom.  Optionally set its TV
