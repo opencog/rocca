@@ -265,10 +265,27 @@ def get_context_actual_truth(atomspace, cogscm, i):
     vardecl = get_vardecl(cogscm)
     present_clauses, virtual_clauses = get_context(cogscm)
     stamped_present_clauses = [timestamp(pc, i) for pc in present_clauses]
-    body = AndLink(PresentLink(*stamped_present_clauses), *virtual_clauses)
+    body = AndLink(PresentLink(*stamped_present_clauses),
+                   *[IsClosedLink(spc) for spc in stamped_present_clauses],
+                   *[high_strength_virtual_clause(spc)
+                     for spc in stamped_present_clauses],
+                   *[high_confidence_virtual_clause(spc)
+                     for spc in stamped_present_clauses],
+                   *virtual_clauses)
     query = SatisfactionLink(vardecl, body)
-    return execute_atom(atomspace, query)
+    tv = execute_atom(atomspace, query)
+    return tv
 
+
+def high_strength_virtual_clause(a):
+    """Make a virtual clause checking that a has a high strength."""
+    almost_one = NumberNode("0.99")
+    return GreaterThanLink(StrengthOfLink(a), almost_one)
+
+def high_confidence_virtual_clause(a):
+    """Make a virtual clause checking that a has a high confidence."""
+    almost_one = NumberNode("0.99")
+    return GreaterThanLink(ConfidenceOfLink(a), almost_one)
 
 def timestamp(atom, i, tv=None, nat=True):
     """Timestamp a given atom.  Optionally set its TV
