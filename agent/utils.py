@@ -9,7 +9,8 @@ import random
 from orderedmultidict import omdict
 
 # SciPy
-from scipy.stats import beta
+import scipy.stats as st
+import scipy.special as sp
 
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
@@ -19,6 +20,14 @@ from opencog.exec import execute_atom
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
+from opencog.logger import Logger, log
+
+#############
+# Constants #
+#############
+
+TRUE_TV = TruthValue(1, 1)
+DEFAULT_TV = TruthValue(1, 0)
 
 #############
 # Functions #
@@ -38,10 +47,31 @@ def tv_to_beta(tv, prior_a=1, prior_b=1):
     pos_count = count * tv.mean # the mean is actually the mode
     a = prior_a + pos_count
     b = prior_b + count - pos_count
-    return beta(a, b)
+    return st.beta(a, b)
 
 
-def tv_rv(tv):
+def tv_to_alpha_param(tv, prior_a=1, prior_b=1):
+    """Return the alpha parameter of a TV's beta-distribution.
+
+    """
+
+    count = tv.count
+    pos_count = count * tv.mean # the mean is actually the mode
+    return prior_a + pos_count
+
+
+def tv_to_beta_param(tv, prior_a=1, prior_b=1):
+    """Return the beta parameter of a TV's beta-distribution.
+
+    """
+
+    count = tv.count
+    pos_count = count * tv.mean # the mean is actually the mode
+    return prior_b + count - pos_count
+
+
+def tv_rv(tv, prior_a=1, prior_b=1):
+
     """Return a first order probability variate of a truth value.
 
     Return a first order probability variate of the beta-distribution
@@ -51,12 +81,12 @@ def tv_rv(tv):
 
     """
 
-    beta = tv_to_beta(tv)
-    return beta.rvs()
+    betadist = tv_to_beta(tv, prior_a, prior_b)
+    return betadist.rvs()
 
 
-def thompson_sample(actdist):
-    """Perform Thompson sampling over the action distribution.
+def thompson_sample(mxmdl, prior_a=1, prior_b=1):
+    """Perform Thompson sampling over the mixture model.
 
     Meaning, for each action
 
@@ -72,15 +102,22 @@ def thompson_sample(actdist):
     """
 
     # 1. For each action select its TV according its weight
-    actvs = [(action, weighted_sampling(w8d_tvs))
-              for (action, w8d_tvs) in actdist.listitems()]
+    actcogscms = [(action, weighted_sampling(w8d_cogscms))
+                  for (action, w8d_cogscms) in mxmdl.listitems()]
 
     # 2. For each action select its first order probability given its tv
-    actps = [(action, tv_rv(tv)) for (action, tv) in actvs]
+    actps = [(action, tv_rv(get_cogscm_tv(cogscm), prior_a, prior_b))
+             for (action, cogscm) in actcogscms]
 
     # Return an action with highest probability of success (TODO: take
     # case of ties)
     return max(actps, key=lambda actp: actp[1])
+
+
+def get_cogscm_tv(cogscm):
+    """Return the Truth Value of a cogscm or the default if it is None"""
+
+    return cogscm.tv if cogscm else DEFAULT_TV
 
 
 def weighted_sampling(weighted_list):
@@ -141,7 +178,8 @@ def is_virtual(clause):
 
     """
 
-    return is_a(clause.type, get_type("VirtualLink"))
+    # TODO: can be simplified with clause.is_a
+    return is_a(clause.type, types.VirtualLink)
 
 
 def get_context(cogscm):
@@ -170,7 +208,7 @@ def get_context(cogscm):
     """
 
     # Grab all clauses pertaining to context
-    clauses = cogscm.out[2].out
+    clauses = get_cogscm_antecedants(cogscm)
     no_exec_clauses = [x for x in clauses if x.type != types.ExecutionLink]
 
     # Split them into present and virtual clauses
@@ -181,10 +219,38 @@ def get_context(cogscm):
     return (present_clauses, virtual_clauses)
 
 
+def is_scope(x):
+    """Return True iff the atom is a scope link."""
+
+    return is_a(x.type, types.ScopeLink)
+
+
+def get_cogscm_antecedants(cogscm):
+    """Return the list of antecedants of a cognitive schema.
+
+    For instance is the cognitive schematics is represented by
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <expiry>
+      And (or SimultaneousAnd?)
+        <context-or-action-1>
+        ...
+        <context-or-action-n>
+      <goal>
+
+    it returns [<context-or-action-1>, ..., <context-or-action-1>]
+
+    """
+
+    ante = cogscm.out[2]
+    return ante.out if is_a(ante.type, types.AndLink) else [ante]
+
+
 def get_action(cogscm):
     """Extract the action of a cognitive schematic.
 
-    Given a cognitive schematic of that format
+    Given a cognitive schematic of that formats
 
     PredictiveImplicationScope <tv>
       <vardecl>
@@ -202,7 +268,7 @@ def get_action(cogscm):
 
     """
 
-    cnjs = cogscm.out[2].out
+    cnjs = get_cogscm_antecedants(cogscm)
     execution = next(x for x in cnjs if x.type == types.ExecutionLink)
     return execution.out[0]
 
@@ -235,18 +301,50 @@ def get_context_actual_truth(atomspace, cogscm, i):
     vardecl = get_vardecl(cogscm)
     present_clauses, virtual_clauses = get_context(cogscm)
     stamped_present_clauses = [timestamp(pc, i) for pc in present_clauses]
-    body = AndLink(PresentLink(*stamped_present_clauses), *virtual_clauses)
+    body = AndLink(PresentLink(*stamped_present_clauses),
+                   *[IsClosedLink(spc) for spc in stamped_present_clauses],
+                   *[high_strength_virtual_clause(spc)
+                     for spc in stamped_present_clauses],
+                   *[high_confidence_virtual_clause(spc)
+                     for spc in stamped_present_clauses],
+                   *virtual_clauses)
     query = SatisfactionLink(vardecl, body)
-    return execute_atom(atomspace, query)
+    tv = execute_atom(atomspace, query)
+    return tv
 
 
-def timestamp(atom, i, tv=None):
+def high_strength_virtual_clause(a):
+    """Make a virtual clause checking that a has a high strength."""
+    almost_one = NumberNode("0.99")
+    return GreaterThanLink(StrengthOfLink(a), almost_one)
+
+def high_confidence_virtual_clause(a):
+    """Make a virtual clause checking that a has a high confidence."""
+    almost_one = NumberNode("0.99")
+    return GreaterThanLink(ConfidenceOfLink(a), almost_one)
+
+def timestamp(atom, i, tv=None, nat=True):
     """Timestamp a given atom.  Optionally set its TV
 
-    AtTimeLink tv               # if tv is provided
-      atom
-      TimeNode str(i)
+    AtTimeLink <tv>               # if tv is provided
+      <atom>
+      TimeNode <str(i)>
+
+    if nat is True it uses a Natural instead of TimeNode (see to_nat).
 
     """
 
-    return AtTimeLink(atom, TimeNode(str(i)), tv=tv)
+    time = to_nat(i) if nat else TimeNode(str(i))
+    return AtTimeLink(atom, time, tv=tv)
+
+
+def to_nat(i):
+    """Convert i to a Natural.
+
+    For instance if i = 3, then it returns
+
+    S S S Z
+
+    """
+
+    return ZLink() if i == 0 else SLink(to_nat(i - 1))
