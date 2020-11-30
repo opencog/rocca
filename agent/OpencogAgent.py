@@ -14,12 +14,6 @@ from opencog.pln import *
 # OpencogAgent
 from .utils import *
 
-#############
-# Constants #
-#############
-
-X_ENABLED = 'DISPLAY' in os.environ
-
 #########
 # Class #
 #########
@@ -477,10 +471,6 @@ class OpencogAgent:
         # Make the goal for that iteration
         goal = self.make_goal()
         log.debug("goal = {}".format(goal))
-
-        # Render the environment if X is running
-        if X_ENABLED:
-            self.env.render()
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
         # goal expiry is 1, i.e. set for the next iteration.
