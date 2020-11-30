@@ -63,7 +63,7 @@ class MalmoWrapper(Wrapper):
             obs_list = []
 
         return mk_evaluation("Reward", rw), \
-               SetLink(*obs_list), \
+               obs_list, \
                not ws.is_mission_running
 
     @staticmethod
