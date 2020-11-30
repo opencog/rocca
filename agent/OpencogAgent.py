@@ -81,8 +81,7 @@ class OpencogAgent:
 
         """
 
-        return self.gym_reward_to_atomese(1)
-
+        return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
     def plan(self, goal, expiry):
         """Plan the next actions given a goal and its expiry time offset
