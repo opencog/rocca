@@ -409,9 +409,8 @@ class OpencogAgent:
         log.debug("(action={}, pblty={})".format(action, pblty))
 
         # Timestamp the action that is about to be executed
-        action_exec = ExecutionLink(action)
-        action_exec_record = self.record(action_exec, self.step_count, tv=TRUE_TV)
-        log.debug("action_exec_record = {}".format(action_exec_record))
+        action_record = self.record(action, self.step_count, tv=TRUE_TV)
+        log.debug("action_record = {}".format(action_record))
         log.debug("action = {}".format(action))
 
         # Increase the step count and run the next step of the environment
