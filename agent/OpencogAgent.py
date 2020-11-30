@@ -25,7 +25,7 @@ X_ENABLED = 'DISPLAY' in os.environ
 #########
 
 class OpencogAgent:
-    def __init__(self, env):
+    def __init__(self, env, action_space, p_goal, n_goal):
         self.atomspace = AtomSpace()
         set_default_atomspace(self.atomspace)
         self.env = env
@@ -33,6 +33,9 @@ class OpencogAgent:
         self.step_count = 0
         self.accumulated_reward = 0
         self.percepta_record = ConceptNode("Percepta Record")
+        self.action_space = action_space
+        self.positive_goal = p_goal
+        self.negative_goal = n_goal
 
         # Parameters controlling learning and decision
 
@@ -131,17 +134,6 @@ class OpencogAgent:
 
         rn = NumberNode(str(reward))
         return EvaluationLink(PredicateNode("Reward"), rn)
-
-
-    def atomese_action_space(self):
-        """Return the set of possible atomese actions. To be overloaded.
-
-        Atomese actions are typically represented as SchemaNode. For
-        now action parameters are ignored.
-
-        """
-
-        return {}
 
 
     def atomese_action_to_gym(self, action):
@@ -445,7 +437,7 @@ class OpencogAgent:
         # is constant, delta, but ultimately is should be calculated
         # as a rest in the Solomonoff mixture.
         delta = 1.0e-3
-        for action in self.atomese_action_space():
+        for action in self.action_space:
             mxmdl.add(action, (delta, None))
 
         return mxmdl
