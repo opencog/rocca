@@ -31,7 +31,12 @@ class GymWrapper(Wrapper):
 
     @staticmethod
     def restart_decorator(restart):
-        pass
+        @wraps(restart)
+        def wrapper(ref):
+            obs = restart(ref)
+            return GymWrapper.parse_world_state(ref.observation_space, obs, 0, False)
+
+        return wrapper
 
     @staticmethod
     def step_decorator(step):
