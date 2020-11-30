@@ -10,8 +10,36 @@ from .utils import *
 from .wrapper import Wrapper
 
 
-def labeled_observations(space, obs):
-    pass
+def labeled_observations(space, obs, sbs=""):
+    if isinstance(space, sp.Tuple):
+        obs_list = []
+        for s in space:
+            idx = len(obs_list)
+            _sbs = sbs + "-" + str(idx) if sbs else str(idx)
+            obs_list.append(*labeled_observations(s, obs[idx], _sbs))
+        return obs_list
+    elif isinstance(space, sp.Box):
+        label = sbs + "-Box" if sbs else "Box"
+        return [mk_evaluation(label, *obs)]
+    elif isinstance(space, sp.Discrete):
+        label = sbs + "-Discrete" if sbs else "Discrete"
+        return [mk_evaluation(label, obs)]
+    elif isinstance(space, sp.Dict):
+        obs_list = []
+        for k in obs.keys():
+            label = sbs + "-" + k if sbs else k
+            if isinstance(space[k], sp.Discrete):
+                obs_list.append(mk_evaluation(label, obs[k]))
+            elif isinstance(space[k], sp.Box):
+                obs_list.append(mk_evaluation(label, *obs[k]))
+            elif isinstance(space[k], sp.Tuple):
+                _sbs = sbs + "-" + k if sbs else k
+                obs_list.append(*labeled_observations(space[k], obs[k], _sbs))
+            else:
+                raise NotImplementedError("ObservationSpace not implemented.")
+        return obs_list
+    else:
+        raise NotImplementedError("Unknown Observation Space.")
 
 
 class GymWrapper(Wrapper):
