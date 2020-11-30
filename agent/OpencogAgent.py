@@ -23,7 +23,7 @@ class OpencogAgent:
         self.atomspace = AtomSpace()
         set_default_atomspace(self.atomspace)
         self.env = env
-        self.observation = self.env.reset()
+        _, self.observation, _ = self.env.restart()
         self.step_count = 0
         self.accumulated_reward = 0
         self.percepta_record = ConceptNode("Percepta Record")
