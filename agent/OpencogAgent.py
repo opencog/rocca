@@ -68,81 +68,6 @@ class OpencogAgent:
 
         return MemberLink(timestamp(atom, i, tv), self.percepta_record, tv=TRUE_TV)
 
-    def gym_observation_to_atomese(self, observation):
-        """Translate gym observation to Atomese, to be overloaded.
-
-        The resulting translation does not need to have a TV or being
-        timestamped, as this should be handled by the caller of that
-        method.
-
-        There is currently not standard for choosing the atomese
-        representation but an example is given below.
-        
-        For instance if the observations are from the CartPole
-        environment
-
-        Observation               Min             Max
-        -----------               ---             ---
-        Cart Position             -4.8            4.8
-        Cart Velocity             -Inf            Inf
-        Pole Angle                -24 deg         24 deg
-        Pole Velocity At Tip      -Inf            Inf
-
-        One way to represent them would be
-
-        Evaluation
-          Predicate "Cart Position"
-          Number CP
-
-        Evaluation
-          Predicate "Cart Velocity"
-          Number CV
-
-        Evaluation
-          Predicate "Pole Angle"
-          Number PA
-
-        Evaluation
-          Predicate "Pole Velocity At Tip"
-          Number PVAT
-
-        A python list (not an atomese list) is returned with these 4
-        Atomese observations.
-
-        """
-
-        return []
-
-
-    def gym_reward_to_atomese(self, reward):
-        """Translate gym reward to Atomese
-
-        Evaluation
-          Predicate "Reward"
-          Number reward
-
-        The reward representation is neither tv-set nor
-        timestamped. It is up to the caller to do it.
-
-        """
-
-        rn = NumberNode(str(reward))
-        return EvaluationLink(PredicateNode("Reward"), rn)
-
-
-    def atomese_action_to_gym(self, action):
-        """Map atomese actions to gym actions. To be overloaded.
-
-        For instance in CartPole-v1 the mapping is as follows
-
-        SchemaNode("Go Left") -> 0
-        SchemaNode("Go Right") -> 1
-
-        """
-
-        return 0
-
-
     def make_goal(self):
 
         """Define the goal of the current iteration.
@@ -460,12 +385,10 @@ class OpencogAgent:
     def step(self):
         """Run one step of observation, decision and env update
         """
-        
-        # Translate to atomese and timestamp observations
-        atomese_obs = self.gym_observation_to_atomese(self.observation)
-        log.debug("atomese_obs = {}".format(atomese_obs))
+
+        log.debug("atomese_obs = {}".format(self.observation))
         obs_record = [self.record(o, self.step_count, tv=TRUE_TV)
-                      for o in atomese_obs]
+                      for o in self.observation]
         log.debug("obs_record = {}".format(obs_record))
 
         # Make the goal for that iteration
@@ -490,23 +413,18 @@ class OpencogAgent:
         action_exec = ExecutionLink(action)
         action_exec_record = self.record(action_exec, self.step_count, tv=TRUE_TV)
         log.debug("action_exec_record = {}".format(action_exec_record))
-
-        # Convert atomese action to openai gym action
-        gym_action = self.atomese_action_to_gym(action)
-        log.debug("gym_action = {}".format(gym_action))
+        log.debug("action = {}".format(action))
 
         # Increase the step count and run the next step of the environment
         self.step_count += 1
-        self.observation, reward, done, info = self.env.step(gym_action)
-        self.accumulated_reward += reward
+        # TODO gather environment info.
+        reward, self.observation, done = self.env.step(action)
+        self.accumulated_reward += int(reward.out[1].name)
         log.debug("observation = {}".format(self.observation))
         log.debug("reward = {}".format(reward))
         log.debug("accumulated reward = {}".format(self.accumulated_reward))
-        log.debug("info = {}".format(info))
 
-        # Translate reward to atomese and timestamp it
-        atomese_reward = self.gym_reward_to_atomese(reward)
-        reward_record = self.record(atomese_reward, self.step_count, tv=TRUE_TV)
+        reward_record = self.record(reward, self.step_count, tv=TRUE_TV)
         log.debug("reward_record = {}".format(reward_record))
 
         if done:
