@@ -126,3 +126,7 @@ class MalmoWrapper(Wrapper):
         except RuntimeError as e:
             print("Error sending command:", e)
         return self.world_state
+
+    def close(self):
+        # Clean up env.
+        pass

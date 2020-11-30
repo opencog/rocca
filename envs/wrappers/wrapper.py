@@ -19,3 +19,7 @@ class Wrapper(abc.ABC):
     @abc.abstractmethod
     def step(self, action):
         pass
+
+    @abc.abstractmethod
+    def close(self):
+        pass
