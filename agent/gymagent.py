@@ -6,19 +6,10 @@
 
 # Python
 import os
-import time
 import math
-from orderedmultidict import omdict
-import scipy.special as sp
 
 # OpenCog
-from opencog.atomspace import AtomSpace, TruthValue
-from opencog.atomspace import types
-from opencog.atomspace import get_type, is_a
-from opencog.type_constructors import *
-from opencog.spacetime import *
 from opencog.pln import *
-from opencog.logger import Logger, log
 
 # GymAgent
 from .utils import *
