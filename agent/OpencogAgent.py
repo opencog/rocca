@@ -1,4 +1,4 @@
-# Class with an agent to interact with OpenAI Gym environment
+# Class with an agent to interact with an environment
 
 ##############
 # Initialize #
@@ -11,7 +11,7 @@ import math
 # OpenCog
 from opencog.pln import *
 
-# GymAgent
+# OpencogAgent
 from .utils import *
 
 #############
@@ -24,15 +24,11 @@ X_ENABLED = 'DISPLAY' in os.environ
 # Class #
 #########
 
-class GymAgent:
-    """Generic opencog gym agent to be derived.
-
-    """
-
-    def __init__(self, gym_env):
+class OpencogAgent:
+    def __init__(self, env):
         self.atomspace = AtomSpace()
         set_default_atomspace(self.atomspace)
-        self.env = gym_env
+        self.env = env
         self.observation = self.env.reset()
         self.step_count = 0
         self.accumulated_reward = 0
