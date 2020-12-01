@@ -368,8 +368,8 @@ class OpencogAgent:
         pd = self.maybe_and(self.get_pattern_succedents(pattern))
 
         # TODO: big hack, pd is turned into positive goal
-        if pd == self.negative_goal():
-            pd = self.positive_goal()
+        if pd == self.negative_goal:
+            pd = self.positive_goal
 
         # Get lag, for now set to 1
         lag = SLink(ZLink())
