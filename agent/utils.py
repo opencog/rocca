@@ -263,14 +263,17 @@ def get_action(cogscm):
           <output> [optional]
       <goal>
 
-    extract <action>. Ideally the input and output should also be
-    extracted, for now only the action.
+    extract
+        Execution
+          <action>
+          <input> [optional]
+          <output> [optional]
 
     """
 
     cnjs = get_cogscm_antecedants(cogscm)
     execution = next(x for x in cnjs if x.type == types.ExecutionLink)
-    return execution.out[0]
+    return execution
 
 
 def get_context_actual_truth(atomspace, cogscm, i):
