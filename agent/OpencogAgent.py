@@ -120,13 +120,16 @@ class OpencogAgent:
         # For each action, mine there relationship to the goal,
         # positively and negatively.
         for action in self.action_space:
-            goal = self.positive_goal
-            pos_srps = self.mine_action_patterns(action, goal, 1)
+            lag = 1
+            prectxs = [EvaluationLink(VariableNode("$P"), VariableNode("$X")),
+                       EvaluationLink(VariableNode("$Q"), VariableNode("$Y")),
+                       ExecutionLink(action)]
+            postctxs = [self.positive_goal]
+            pos_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
             cogscms.union(set(self.surprises_to_predictive_implications(pos_srps)))
 
-            # TODO: For now the negative goal is hardwired
-            neg_goal = self.negative_goal
-            neg_srps = self.mine_action_patterns(action, neg_goal, 1)
+            postctxs = [self.negative_goal]
+            neg_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
             cogscms.union(set(self.surprises_to_predictive_implications(neg_srps)))
 
         log.debug("cogscms = {}".format(cogscms))
@@ -428,79 +431,73 @@ class OpencogAgent:
 
         return cogscms
 
-    def mine_action_patterns(self, action, postctx, lag):
-        """Given an action, a post-context and its lag, mine patterns.
+    def mine_temporal_patterns(self, lag=1, prectxs=[], postctxs=[], vardecl=None):
+        """Given a lag, pre and post contexts, mine temporal patterns.
 
-        That is mine patterns relating pre-context, action and
-        post-context, of the form
+        That is mine patterns specializing the following
 
         Present
           AtTime
-            X1
+            <prectx-1>
             T
           ...
           AtTime
-            Xn
+            <prectx-n>
             T
           AtTime
-            Execution
-              <action>
-            T
-          AtTime
-            <postctx>
+            <postctx-1>
             T + <lag>
+          ...
+          AtTime
+            <postctx-m>
+            T + <lag>
+
+        where
+          prectxs = [prectx-1, ..., prectx-n]
+          postctxs = [postctx-1, ..., postctx-n]
+
+        If no vardecl is provided then it is assumed to be composed of
+        all free variables in prectxs and postctxs.
 
         """
 
-        log.debug("mine_action_patterns(action={}, postctx={}, lag={})".format(action, postctx, lag))
+        log.debug("mine_temporal_patterns(lag={}, prectx={}, postctx={})".format(lag, prectxs, postctxs))
 
         # Set miner parameters
-        scheme_eval(self.atomspace, "(define minsup 10)")
-        scheme_eval(self.atomspace, "(define maxiter 1000)")
-        scheme_eval(self.atomspace, "(define cnjexp #f)")
-        scheme_eval(self.atomspace, "(define enfspe #t)")
-        scheme_eval(self.atomspace, "(define mspc 4)")
-        scheme_eval(self.atomspace, "(define maxvars 10)")
-        scheme_eval(self.atomspace, "(define maxcjnts 4)")
-        scheme_eval(self.atomspace, "(define surprise 'nisurp)")
+        minsup = 10
+        maxiter = 1000
+        cnjexp = "#f"
+        enfspe = "#t"
+        mspc = 4
+        maxvars = 10
+        maxcjnts = 4
+        surprise = "'nisurp"
 
         # Define initial pattern
-        # NEXT: work for more than lag of 1
-        scheme_eval(self.atomspace,
-                    "(define initpat"
-                    "  (Lambda"
-                    "    (VariableSet"
-                    "      (Variable \"$T\")"
-                    "      (Variable \"$P\")"
-                    "      (Variable \"$X\")"
-                    "      (Variable \"$Q\")"
-                    "      (Variable \"$Y\"))"
-                    "    (Present"
-                    "      (AtTime"
-                    "        (Evaluation (Variable \"$P\") (Variable \"$X\"))"
-                    "        (Variable \"$T\"))"
-                    "      (AtTime"
-                    "        (Evaluation (Variable \"$Q\") (Variable \"$Y\"))"
-                    "        (Variable \"$T\"))"
-                    "      (AtTime"
-                             + str(action) +
-                    "        (Variable \"$T\"))"
-                    "      (AtTime"
-                    "        " + str(postctx) +
-                    "        (S (Variable \"$T\"))))))")
+        # TODO: support any lag and vardecl
+        T = VariableNode("$T")
+        timed_prectxs = [AtTimeLink(prectx, T) for prectx in prectxs]
+        timed_postctxs = [AtTimeLink(postctx, SLink(T)) for postctx in postctxs]
+        if not vardecl:
+            vardecl = VariableSet(T, VariableNode("$P"), VariableNode("$X"), VariableNode("$Q"), VariableNode("$Y"))
+        if not vardecl:
+            initpat = LambdaLink(PresentLink(*timed_prectxs, *timed_postctxs))
+        else:
+            initpat = LambdaLink(vardecl, PresentLink(*timed_prectxs, *timed_postctxs))
 
         # Launch pattern miner
         surprises = scheme_eval_h(self.atomspace,
                                   "(List"
                                   "  (cog-mine " + str(self.percepta_record) +
-                                  "            #:minimum-support minsup"
-                                  "            #:initial-pattern initpat"
-                                  "            #:maximum-iterations maxiter"
-                                  "            #:conjunction-expansion cnjexp"
-                                  "            #:maximum-variables maxvars"
-                                  "            #:maximum-conjuncts maxcjnts"
-                                  "            #:maximum-spcial-conjuncts mspc"
-                                  "            #:surprisingness surprise))")
+                                  "            #:minimum-support " + str(minsup) +
+                                  "            #:initial-pattern " + str(initpat) +
+                                  "            #:maximum-iterations " + str(maxiter) +
+                                  "            #:conjunction-expansion " + cnjexp +
+                                  "            #:enforce-specialization " + enfspe +
+                                  "            #:maximum-variables " + str(maxvars) +
+                                  "            #:maximum-conjuncts " + str(maxcjnts) +
+                                  "            #:maximum-spcial-conjuncts " + str(mspc) +
+                                  "            #:surprisingness " + surprise + "))")
         log.debug("surprises = {}".format(surprises))
 
         return surprises.out
