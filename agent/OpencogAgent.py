@@ -123,7 +123,7 @@ class OpencogAgent:
             lag = 1
             prectxs = [EvaluationLink(VariableNode("$P"), VariableNode("$X")),
                        EvaluationLink(VariableNode("$Q"), VariableNode("$Y")),
-                       ExecutionLink(action)]
+                       action]
             postctxs = [self.positive_goal]
             pos_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
             cogscms.union(set(self.surprises_to_predictive_implications(pos_srps)))
