@@ -85,6 +85,38 @@ def tv_rv(tv, prior_a=1, prior_b=1):
     return betadist.rvs()
 
 
+def w8d_cogscm_to_str(w8d_cogscm, indent=""):
+    """Pretty print the given list of weighted cogscm"""
+
+    weight = w8d_cogscm[0]
+    cogscm = w8d_cogscm[1]
+    tv = get_cogscm_tv(cogscm)
+    idstr = cogscm.id_string() if cogscm else "None"
+    s = "(weight={}, tv={}, id={})".format(weight, tv, idstr)
+    return s
+
+
+def w8d_cogscms_to_str(w8d_cogscms, indent=""):
+    """Pretty print the given list of weighted cogscms"""
+
+    w8d_cogscms_sorted = sorted(w8d_cogscms, key=lambda x: x[0], reverse=True)
+
+    s = ""
+    for w8d_cogscm in w8d_cogscms_sorted:
+        s += indent + w8d_cogscm_to_str(w8d_cogscm, indent + "  ") + "\n"
+    return s
+
+
+def mxmdl_to_str(mxmdl, indent=""):
+    """Pretty print the given mixture model of cogscms"""
+
+    s = ""
+    for act_w8d_cogscms in mxmdl.listitems():
+        s += "\n" + indent + str(act_w8d_cogscms[0]) + "\n"
+        s += w8d_cogscms_to_str(act_w8d_cogscms[1], indent + "  ")
+    return s
+
+
 def thompson_sample(mxmdl, prior_a=1, prior_b=1):
     """Perform Thompson sampling over the mixture model.
 
