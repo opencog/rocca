@@ -46,15 +46,17 @@ if __name__ == "__main__":
     lt_iterations = 2           # Number of learning-training iterations
     lt_period = 200             # Duration of a learning-training iteration
     for i in range(lt_iterations):
+        oa.reset_action_counter()
         par = oa.accumulated_reward # Keep track of the reward before
         # Discover patterns to make more informed decisions
-        log.info("Start learning ({}/{})".format(i + 1, lt_iterations))
+        agent_log.info("Start learning ({}/{})".format(i + 1, lt_iterations))
         oa.learn()
         # Run agent to accumulate percepta
-        log.info("Start training ({}/{})".format(i + 1, lt_iterations))
+        agent_log.info("Start training ({}/{})".format(i + 1, lt_iterations))
         for j in range(lt_period):
             oa.step()
             time.sleep(0.01)
             log.info("step_count = {}".format(oa.step_count))
         nar = oa.accumulated_reward - par
-        log.info("Accumulated reward during {}th iteration = {}".format(i + 1, nar))
+        agent_log.info("Accumulated reward during {}th iteration = {}".format(i + 1, nar))
+        agent_log.info("Action counter during {}th iteration = {}".format(i+1, oa.action_counter))

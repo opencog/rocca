@@ -20,7 +20,7 @@ from opencog.exec import execute_atom
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
-from opencog.logger import Logger, log
+from opencog.logger import Logger, log, create_logger
 
 #############
 # Constants #
@@ -28,6 +28,13 @@ from opencog.logger import Logger, log
 
 TRUE_TV = TruthValue(1, 1)
 DEFAULT_TV = TruthValue(1, 0)
+
+#############
+# Variables #
+#############
+
+agent_log = create_logger("opencog.log")
+agent_log.set_component("Agent")
 
 #############
 # Functions #
@@ -133,13 +140,17 @@ def thompson_sample(mxmdl, prior_a=1, prior_b=1):
 
     """
 
+    agent_log.fine("thompson_sample(mxmdl={}, prior_a={}, prior_b={})".format(mxmdl_to_str(mxmdl), prior_a, prior_b))
+
     # 1. For each action select its TV according its weight
     actcogscms = [(action, weighted_sampling(w8d_cogscms))
                   for (action, w8d_cogscms) in mxmdl.listitems()]
+    agent_log.fine("actcogscms = {}".format(actcogscms))
 
     # 2. For each action select its first order probability given its tv
-    actps = [(action, tv_rv(get_cogscm_tv(cogscm), prior_a, prior_b))
-             for (action, cogscm) in actcogscms]
+    actps = [(action, tv_rv(get_cogscm_tv(w8_cogscm[1]), prior_a, prior_b))
+             for (action, w8_cogscm) in actcogscms]
+    agent_log.fine("actps = {}".format(actps))
 
     # Return an action with highest probability of success (TODO: take
     # case of ties)
@@ -155,11 +166,12 @@ def get_cogscm_tv(cogscm):
 def weighted_sampling(weighted_list):
     """Given list of pairs (weight, element) weight-randomly select an element.
 
+    Return pair (w, e) of the weight associated to the selected element.
+
     """
 
     w8s = [weight for (weight, _) in weighted_list]
-    elements = [element for (_, element) in weighted_list]
-    return random.choices(elements, weights=w8s)[0]
+    return random.choices(weighted_list, weights=w8s)[0]
 
 
 def weighted_average_tv(weighted_tvs):

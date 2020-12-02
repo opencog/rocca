@@ -7,11 +7,13 @@
 # Python
 import os
 import math
+from collections import Counter
 
 # OpenCog
 from opencog.pln import *
 from opencog.utilities import is_closed
 from opencog.scheme import scheme_eval_h, scheme_eval
+from opencog.ure import ure_logger
 
 # OpencogAgent
 from .utils import *
@@ -34,6 +36,7 @@ class OpencogAgent:
         self.positive_goal = p_goal
         self.negative_goal = n_goal
         self.load_opencog_modules()
+        self.reset_action_counter()
 
         # Parameters controlling learning and decision
 
@@ -61,7 +64,9 @@ class OpencogAgent:
         # Init loggers
         log.set_level("debug")
         # log.set_sync(True)
-        # ure_logger().set_level("fine")
+        agent_log.set_level("fine")
+        # agent_log.set_sync(True)
+        ure_logger().set_level("info")
         # ure_logger().set_sync(True)
 
         # Load miner
@@ -74,6 +79,9 @@ class OpencogAgent:
         # scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-introduction)")
         scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-evaluation)")
         scheme_eval(self.atomspace, "(pln-log-atomspace)")
+
+    def reset_action_counter(self):
+        self.action_counter = Counter({action: 0 for action in self.action_space})
 
     def record(self, atom, i, tv=None):
         """Timestamp and record an atom to the Percepta Record.
@@ -110,8 +118,6 @@ class OpencogAgent:
 
         """
 
-        log.debug("learn()")
-
         # For now we only learn cognitive schematics
 
         # All resulting cognitive schematics
@@ -132,7 +138,7 @@ class OpencogAgent:
             neg_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
             cogscms.union(set(self.surprises_to_predictive_implications(neg_srps)))
 
-        log.debug("cogscms = {}".format(cogscms))
+        agent_log.debug("cogscms = {}".format(cogscms))
 
     def plan_pln_xp(self, goal, expiry):
         # For now query existing PredictiveImplicationScope and update
@@ -363,7 +369,7 @@ class OpencogAgent:
 
         """
 
-        log.debug("to_predictive_implication(pattern={})".format(pattern))
+        agent_log.debug("to_predictive_implication(pattern={})".format(pattern))
 
         # Get the predictive implication implicant and implicand
         # respecively
@@ -403,11 +409,11 @@ class OpencogAgent:
 
         """
 
-        log.debug("is_desirable(cogscm={})".format(cogscm))
+        agent_log.debug("is_desirable(cogscm={})".format(cogscm))
 
         # ic =  is_closed(get_action(cogscm))
 
-        # log.debug("ic = {})".format(ic))
+        # agent_log.debug("ic = {})".format(ic))
 
         # return ic
 
@@ -418,16 +424,14 @@ class OpencogAgent:
 
         """
 
-        log.debug("surprises_to_predictive_implications(srps={})".format(srps))
+        agent_log.debug("surprises_to_predictive_implications(srps={})".format(srps))
 
         # Turn patterns into predictive implications
         cogscms = [self.to_predictive_implication(self.get_pattern(srp))
                    for srp in srps]
-        log.debug("cogscms-1 = {}".format(cogscms))
 
         # Remove undesirable cognitive schematics
         cogscms = [cogscm for cogscm in cogscms if self.is_desirable(cogscm)]
-        log.debug("cogscms-2 = {}".format(cogscms))
 
         return cogscms
 
@@ -461,7 +465,7 @@ class OpencogAgent:
 
         """
 
-        log.debug("mine_temporal_patterns(lag={}, prectx={}, postctx={})".format(lag, prectxs, postctxs))
+        agent_log.debug("mine_temporal_patterns(lag={}, prectxs={}, postctxs={})".format(lag, prectxs, postctxs))
 
         # Set miner parameters
         minsup = 10
@@ -498,7 +502,7 @@ class OpencogAgent:
                                   "            #:maximum-conjuncts " + str(maxcjnts) +
                                   "            #:maximum-spcial-conjuncts " + str(mspc) +
                                   "            #:surprisingness " + surprise + "))")
-        log.debug("surprises = {}".format(surprises))
+        agent_log.debug("surprises = {}".format(surprises))
 
         return surprises.out
 
@@ -687,7 +691,7 @@ class OpencogAgent:
 
         """
 
-        log.debug("deduce(cogscms={})".format(cogscms))
+        agent_log.debug("deduce(cogscms={})".format(cogscms))
 
         # For each cognitive schematic estimate the probability of its
         # context to be true and multiply it by the truth value of the
@@ -724,7 +728,7 @@ class OpencogAgent:
         ctx_tv = lambda cogscm: \
             get_context_actual_truth(self.atomspace, cogscm, self.step_count)
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
-        log.debug("valid_cogscms = {}".format(valid_cogscms))
+        agent_log.debug("valid_cogscms = {}".format(valid_cogscms))
 
         # Size of the complete data set, including all observations
         # used to build the models. For simplicity we're gonna assume
@@ -772,45 +776,49 @@ class OpencogAgent:
         """Run one step of observation, decision and env update
         """
 
-        log.debug("atomese_obs = {}".format(self.observation))
+        agent_log.debug("atomese_obs = {}".format(self.observation))
         obs_record = [self.record(o, self.step_count, tv=TRUE_TV)
                       for o in self.observation]
-        log.debug("obs_record = {}".format(obs_record))
+        agent_log.debug("obs_record = {}".format(obs_record))
 
         # Make the goal for that iteration
         goal = self.make_goal()
-        log.debug("goal = {}".format(goal))
+        agent_log.debug("goal = {}".format(goal))
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
         # goal expiry is 1, i.e. set for the next iteration.
         expiry = 1
-        css = self.plan(goal, expiry)
-        log.debug("css = {}".format(css))
+        cogscms = self.plan(goal, expiry)
+        agent_log.debug("cogscms = {}".format(cogscms))
 
         # Deduce the action distribution
-        mxmdl = self.deduce(css)
-        log.debug("mxmdl = {}".format(self.mxmdl_to_str(mxmdl)))
+        mxmdl = self.deduce(cogscms)
+        agent_log.debug("mxmdl = {}".format(mxmdl_to_str(mxmdl)))
 
         # Select the next action
         action, pblty = self.decide(mxmdl)
-        log.debug("(action={}, pblty={})".format(action, pblty))
+        agent_log.debug("(action={}, pblty={})".format(action, pblty))
 
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.step_count, tv=TRUE_TV)
-        log.debug("action_record = {}".format(action_record))
-        log.debug("action = {}".format(action))
+        agent_log.debug("action_record = {}".format(action_record))
+        agent_log.debug("action = {}".format(action))
+
+        # Increment the counter for that action and log it
+        self.action_counter[action] += 1
+        agent_log.debug("action_counter = {}".format(self.action_counter))
 
         # Increase the step count and run the next step of the environment
         self.step_count += 1
         # TODO gather environment info.
         reward, self.observation, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
-        log.debug("observation = {}".format(self.observation))
-        log.debug("reward = {}".format(reward))
-        log.debug("accumulated reward = {}".format(self.accumulated_reward))
+        agent_log.debug("observation = {}".format(self.observation))
+        agent_log.debug("reward = {}".format(reward))
+        agent_log.debug("accumulated reward = {}".format(self.accumulated_reward))
 
         reward_record = self.record(reward, self.step_count, tv=TRUE_TV)
-        log.debug("reward_record = {}".format(reward_record))
+        agent_log.debug("reward_record = {}".format(reward_record))
 
         if done:
             return False
