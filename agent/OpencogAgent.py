@@ -78,6 +78,7 @@ class OpencogAgent:
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
         # scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-introduction)")
         scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-evaluation)")
+        scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-direct-evaluation)")
         scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
     def reset_action_counter(self):
@@ -113,6 +114,19 @@ class OpencogAgent:
 
         return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
+    def pln_bc(self, query, maxiter):
+        """Call PLN backward chainer with the given query and parameters.
+
+        Return a python list of solutions.
+
+        """
+
+        command = "(pln-bc "
+        command += str(query)
+        command += " #:maximum-iterations " + str(maxiter)
+        command += ")"
+        return scheme_eval_h(self.atomspace, command).out
+
     def learn(self):
         """Discover patterns in the world and in the self.
 
@@ -138,17 +152,22 @@ class OpencogAgent:
             neg_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
             cogscms.union(set(self.surprises_to_predictive_implications(neg_srps)))
 
-        agent_log.debug("cogscms = {}".format(cogscms))
+        agent_log.fine("cogscms = {}".format(cogscms))
 
     def plan_pln_xp(self, goal, expiry):
-        # For now query existing PredictiveImplicationScope and update
-        # their TVs based on evidence.
-
+        # Query existing PredictiveImplicationScopeLink (do not update
+        # for now)
         mi = 1
         query = self.predictive_implication_scope_query(goal, expiry)
-        command = "(pln-bc " + str(query) + " #:maximum-iterations " + str(mi) + ")"
-        results = scheme_eval_h(self.atomspace, command)
-        return results.out
+        results = self.pln_bc(query, mi)
+
+        # Query existing PredictiveImplicationLink (do not update for
+        # now)
+        mi = 1
+        query = self.predictive_implication_query(goal, expiry)
+        results.extend(self.pln_bc(query, mi))
+
+        return results
 
     def get_pattern(self, surprise_eval):
         """Extract the pattern wrapped in a surprisingness evaluation.
@@ -280,6 +299,16 @@ class OpencogAgent:
                                                          UnquoteLink(succedent)))
         return query
 
+    def predictive_implication_query(self, goal, expiry):
+        """Build a PredictiveImplication query for PLN.
+
+        """
+
+        antecedent = VariableNode("$antecedent")
+        succedent = VariableNode("$succedent")
+        query = PredictiveImplicationLink(to_nat(expiry), antecedent, succedent)
+        return query
+
     def to_predictive_implication(self, pattern):
         """Turn a given pattern into a predictive implication with its TV.
 
@@ -386,18 +415,16 @@ class OpencogAgent:
         # If there is only a time variable return a predictive
         # implication
         if self.is_T(get_vardecl(pattern)):
-            pis = PredictiveImplicationLink(lag, pt, pd)
+            preimp = PredictiveImplicationLink(lag, pt, pd)
         # Otherwise there are multiple variables, return a predictive
         # implication scope
         else:
             ntvardecl = self.get_nt_vardecl(pattern)
-            pis = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
+            preimp = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
 
         # Calculate the truth value of the predictive implication
         mi = 2
-        command = "(pln-bc " + str(pis) + " #:maximum-iterations " + str(mi) + ")"
-        results = scheme_eval_h(self.atomspace, command)
-        return results.out[0]
+        return self.pln_bc(preimp, mi)[0]
 
     def is_desirable(self, cogscm):
         """Return True iff the cognitive schematic is desirable.
@@ -411,13 +438,7 @@ class OpencogAgent:
 
         agent_log.debug("is_desirable(cogscm={})".format(cogscm))
 
-        # ic =  is_closed(get_action(cogscm))
-
-        # agent_log.debug("ic = {})".format(ic))
-
-        # return ic
-
-        return is_scope(cogscm) and is_closed(get_action(cogscm))
+        return has_non_null_confidence(cogscm) and is_closed(get_action(cogscm))
 
     def surprises_to_predictive_implications(self, srps):
         """Like to_predictive_implication but takes surprises.

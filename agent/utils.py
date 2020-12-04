@@ -40,6 +40,12 @@ agent_log.set_component("Agent")
 # Functions #
 #############
 
+def has_non_null_confidence(atom):
+    """Return True iff the given atom has a confidence above 0."""
+
+    return 0 < atom.tv.confidence
+
+
 def tv_to_beta(tv, prior_a=1, prior_b=1):
     """Convert a truth value to a beta distribution.
 
@@ -92,13 +98,19 @@ def tv_rv(tv, prior_a=1, prior_b=1):
     return betadist.rvs()
 
 
+def atom_to_idstr(atom):
+    return atom.id_string() if atom else "None"
+
+
 def w8d_cogscm_to_str(w8d_cogscm, indent=""):
-    """Pretty print the given list of weighted cogscm"""
+    """Pretty print a pair (weight, cogscm)."""
+
+    # agent_log.fine("w8d_cogscm_to_str(w8d_cogscm={}, indent={})".format(w8d_cogscm, indent))
 
     weight = w8d_cogscm[0]
     cogscm = w8d_cogscm[1]
     tv = get_cogscm_tv(cogscm)
-    idstr = cogscm.id_string() if cogscm else "None"
+    idstr = atom_to_idstr(cogscm)
     s = "(weight={}, tv={}, id={})".format(weight, tv, idstr)
     return s
 
@@ -114,13 +126,63 @@ def w8d_cogscms_to_str(w8d_cogscms, indent=""):
     return s
 
 
+def action_to_str(action, indent=""):
+    """Pretty print an action.
+
+    For now it just outputs the schema corresponding to the action
+    without the execution link, for conciseness.
+
+    """
+
+    return indent + str(action.out[0])
+
+
+def act_pblt_to_str(act_pblt, indent=""):
+    action = act_pblt[0]
+    pblt = act_pblt[1]
+    return indent + "({}, {})".format(action_to_str(action), pblt)
+
+
+# TODO: use join
+def act_pblts_to_str(act_pblts, indent=""):
+    """Pretty print a list of pairs (action, probability)."""
+
+    s = ""
+    for act_pblt in act_pblts:
+        s += indent + act_pblt_to_str(act_pblt) + "\n"
+    return s
+
+
+def act_w8d_cogscm_to_str(act_w8d_cogscm, indent=""):
+    """Pretty print a pair (action, (weight, cogscm))."""
+
+    # agent_log.fine("act_w8d_cogscm_to_str(act_w8d_cogscm={}, indent={})".format(act_w8d_cogscm, indent))
+
+    action = act_w8d_cogscm[0]
+    w8d_cogscm = act_w8d_cogscm[1]
+    s = indent + action_to_str(action) + ": " + w8d_cogscm_to_str(w8d_cogscm)
+    return s
+
+
+# TODO: use join
+def act_w8d_cogscms_to_str(act_w8d_cogscms, indent=""):
+    """Pretty print a list of pairs (action, (weight, cogscm))."""
+
+    s = ""
+    for act_w8d_cogscm in act_w8d_cogscms:
+        s += indent + act_w8d_cogscm_to_str(act_w8d_cogscm) + "\n"
+    return s
+
+
 def mxmdl_to_str(mxmdl, indent=""):
     """Pretty print the given mixture model of cogscms"""
 
     s = ""
     for act_w8d_cogscms in mxmdl.listitems():
-        s += "\n" + indent + str(act_w8d_cogscms[0]) + "\n"
-        s += w8d_cogscms_to_str(act_w8d_cogscms[1], indent + "  ")
+        action = act_w8d_cogscms[0]
+        w8d_cogscms = act_w8d_cogscms[1]
+        s += "\n" + indent + str(action_to_str(action)) + "\n"
+        s += w8d_cogscms_to_str(w8d_cogscms, indent + "  ")
     return s
 
 
@@ -140,21 +202,21 @@ def thompson_sample(mxmdl, prior_a=1, prior_b=1):
 
     """
 
-    agent_log.fine("thompson_sample(mxmdl={}, prior_a={}, prior_b={})".format(mxmdl_to_str(mxmdl), prior_a, prior_b))
+    # agent_log.fine("thompson_sample(mxmdl={}, prior_a={}, prior_b={})".format(mxmdl_to_str(mxmdl), prior_a, prior_b))
 
     # 1. For each action select its TV according its weight
-    actcogscms = [(action, weighted_sampling(w8d_cogscms))
+    act_w8d_cogscms = [(action, weighted_sampling(w8d_cogscms))
                   for (action, w8d_cogscms) in mxmdl.listitems()]
-    agent_log.fine("actcogscms = {}".format(actcogscms))
+    agent_log.fine("act_w8d_cogscms:\n{}".format(act_w8d_cogscms_to_str(act_w8d_cogscms)))
 
     # 2. For each action select its first order probability given its tv
-    actps = [(action, tv_rv(get_cogscm_tv(w8_cogscm[1]), prior_a, prior_b))
-             for (action, w8_cogscm) in actcogscms]
-    agent_log.fine("actps = {}".format(actps))
+    act_pblts = [(action, tv_rv(get_cogscm_tv(w8_cogscm[1]), prior_a, prior_b))
+                 for (action, w8_cogscm) in act_w8d_cogscms]
+    agent_log.fine("act_pblts:\n{}".format(act_pblts_to_str(act_pblts)))
 
     # Return an action with highest probability of success (TODO: take
     # case of ties)
-    return max(actps, key=lambda actp: actp[1])
+    return max(act_pblts, key=lambda act_pblt: act_pblt[1])
 
 
 def get_cogscm_tv(cogscm):
@@ -205,9 +267,12 @@ def get_vardecl(cogscm):
 
     return <vardecl>.
 
+    If the cognitive schematic is an PredictiveImplicationLink then
+    return an empty VariableSet.
+
     """
 
-    return cogscm.out[0]
+    return cogscm.out[0] if is_scope(cogscm) else VariableSet()
 
 
 def is_virtual(clause):
@@ -263,10 +328,28 @@ def get_context(cogscm):
     return (present_clauses, virtual_clauses)
 
 
-def is_scope(x):
+def is_scope(atom):
     """Return True iff the atom is a scope link."""
 
-    return is_a(x.type, types.ScopeLink)
+    return is_a(atom.type, types.ScopeLink)
+
+
+def is_predictive_implication(atom):
+    """Return True iff the atom is a predictive implication link."""
+
+    return is_a(atom.type, types.PredictiveImplicationLink)
+
+
+def is_predictive_implication_scope(atom):
+    """Return True iff the atom is a predictive implication scope link."""
+
+    return is_a(atom.type, types.PredictiveImplicationScopeLink)
+
+
+def is_and(atom):
+    """Return True iff the atom is an and link."""
+
+    return is_a(atom.type, types.AndLink)
 
 
 def get_cogscm_antecedants(cogscm):
@@ -287,8 +370,8 @@ def get_cogscm_antecedants(cogscm):
 
     """
 
-    ante = cogscm.out[2]
-    return ante.out if is_a(ante.type, types.AndLink) else [ante]
+    ante = cogscm.out[2] if is_scope(cogscm) else cogscm.out[1]
+    return ante.out if is_and(ante) else [ante]
 
 
 def get_action(cogscm):
