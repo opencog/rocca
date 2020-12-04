@@ -55,7 +55,13 @@ class OpencogAgent:
         # partial model + unexplained data. Ranges from 0 to 1, 0
         # being no compressiveness at all of the unexplained data, 1
         # being full compressiveness.
-        self.compressiveness = 0.9
+        self.compressiveness = 0.8
+
+        # Add an unknown component for each action. For now its weight
+        # is constant, delta, but ultimately is should be calculated
+        # as a rest in the Solomonoff mixture.
+        self.delta = 1.0e-6
+
 
     def __del__(self):
         self.env.close()
@@ -66,7 +72,7 @@ class OpencogAgent:
         # log.set_sync(True)
         agent_log.set_level("fine")
         # agent_log.set_sync(True)
-        ure_logger().set_level("info")
+        ure_logger().set_level("fine")
         # ure_logger().set_sync(True)
 
         # Load miner
@@ -489,7 +495,7 @@ class OpencogAgent:
         agent_log.debug("mine_temporal_patterns(lag={}, prectxs={}, postctxs={})".format(lag, prectxs, postctxs))
 
         # Set miner parameters
-        minsup = 10
+        minsup = 8
         maxiter = 1000
         cnjexp = "#f"
         enfspe = "#t"
@@ -764,13 +770,9 @@ class OpencogAgent:
         # schematics.
         mxmdl = omdict([(get_action(cogscm), (self.weight(cogscm), cogscm))
                         for cogscm in valid_cogscms])
-
-        # Add an unknown component for each action. For now its weight
-        # is constant, delta, but ultimately is should be calculated
-        # as a rest in the Solomonoff mixture.
-        delta = 1.0e-3
+        # Add delta (unknown) components
         for action in self.action_space:
-            mxmdl.add(action, (delta, None))
+            mxmdl.add(action, (self.delta, None))
 
         return mxmdl
 
@@ -818,7 +820,7 @@ class OpencogAgent:
 
         # Select the next action
         action, pblty = self.decide(mxmdl)
-        agent_log.debug("(action={}, pblty={})".format(action, pblty))
+        agent_log.debug("action with probability of success = {}".format(act_pblt_to_str((action, pblty))))
 
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.step_count, tv=TRUE_TV)
