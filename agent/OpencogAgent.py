@@ -84,7 +84,8 @@ class OpencogAgent:
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
         # scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-introduction)")
         scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-evaluation)")
-        scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-direct-evaluation)")
+        # No need of predictive implication for now
+        # scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-direct-evaluation)")
         scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
     def reset_action_counter(self):
@@ -208,12 +209,6 @@ class OpencogAgent:
             mi = 1
             query = self.predictive_implication_scope_query(goal, i)
             cogscms = self.pln_bc(query, mi)
-
-            # Query existing PredictiveImplicationLink (do not update for
-            # now)
-            mi = 1
-            query = self.predictive_implication_query(goal, expiry)
-            cogscms.extend(self.pln_bc(query, mi))
 
         # Only keep desirable cognitive schematics
         cogscms = [cogscm for cogscm in cogscms if self.is_desirable(cogscm)]
@@ -358,11 +353,8 @@ class OpencogAgent:
         query = PredictiveImplicationLink(to_nat(expiry), antecedent, goal)
         return query
 
-    def to_predictive_implication(self, pattern):
-        """Turn a given pattern into a predictive implication with its TV.
-
-        If the pattern has a variable in addition to time, then it is
-        turned into a predictive implication scope.
+    def to_predictive_implication_scope(self, pattern):
+        """Turn a given pattern into a predictive implication scope with its TV.
 
         For instance if the pattern is
 
@@ -380,15 +372,18 @@ class OpencogAgent:
               S
                 Variable "$T"
 
-        then the resulting predictive implication is
+        then the resulting predictive implication scope is
 
-        PredictiveImplication
+        PredictiveImplicationScope
+          VariableList
           S Z
           Execution
             Schema "Eat"
           Evaluation
             Predicate "Reward"
             Number 1
+
+        Note the empty variable declaration.
 
         However if the pattern is
 
@@ -447,7 +442,7 @@ class OpencogAgent:
 
         """
 
-        agent_log.debug("to_predictive_implication(pattern={})".format(pattern))
+        agent_log.debug("to_predictive_implication_scope(pattern={})".format(pattern))
 
         # Get the predictive implication implicant and implicand
         # respecively
@@ -461,20 +456,13 @@ class OpencogAgent:
         # Get lag, for now set to 1
         lag = SLink(ZLink())
 
-        # If there is only a time variable return a predictive
-        # implication
-        if self.is_T(get_vardecl(pattern)):
-            preimp = PredictiveImplicationLink(lag, pt, pd)
-        # Otherwise there are multiple variables, return a predictive
-        # implication scope
-        else:
-            ntvardecl = self.get_nt_vardecl(pattern)
-            preimp = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
-            # Make sure all variables are in the antecedent
-            vardecl_vars = set(get_free_variables(ntvardecl))
-            pt_vars = set(get_free_variables(pt))
-            if vardecl_vars != pt_vars:
-                return None
+        ntvardecl = self.get_nt_vardecl(pattern)
+        preimp = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
+        # Make sure all variables are in the antecedent
+        vardecl_vars = set(get_free_variables(ntvardecl))
+        pt_vars = set(get_free_variables(pt))
+        if vardecl_vars != pt_vars:
+            return None
 
         # Calculate the truth value of the predictive implication
         mi = 2
@@ -506,8 +494,8 @@ class OpencogAgent:
 
         agent_log.debug("surprises_to_predictive_implications(srps={})".format(srps))
 
-        # Turn patterns into predictive implications
-        cogscms = [self.to_predictive_implication(self.get_pattern(srp))
+        # Turn patterns into predictive implication scopes
+        cogscms = [self.to_predictive_implication_scope(self.get_pattern(srp))
                    for srp in srps]
 
         # Remove undesirable cognitive schematics
