@@ -7,11 +7,13 @@
 # Python
 import os
 import math
+from collections import Counter
 
 # OpenCog
 from opencog.pln import *
 from opencog.utilities import is_closed
 from opencog.scheme import scheme_eval_h, scheme_eval
+from opencog.ure import ure_logger
 
 # OpencogAgent
 from .utils import *
@@ -34,6 +36,7 @@ class OpencogAgent:
         self.positive_goal = p_goal
         self.negative_goal = n_goal
         self.load_opencog_modules()
+        self.reset_action_counter()
 
         # Parameters controlling learning and decision
 
@@ -52,7 +55,13 @@ class OpencogAgent:
         # partial model + unexplained data. Ranges from 0 to 1, 0
         # being no compressiveness at all of the unexplained data, 1
         # being full compressiveness.
-        self.compressiveness = 0.9
+        self.compressiveness = 0.8
+
+        # Add an unknown component for each action. For now its weight
+        # is constant, delta, but ultimately is should be calculated
+        # as a rest in the Solomonoff mixture.
+        self.delta = 1.0e-6
+
 
     def __del__(self):
         self.env.close()
@@ -61,7 +70,9 @@ class OpencogAgent:
         # Init loggers
         log.set_level("debug")
         # log.set_sync(True)
-        # ure_logger().set_level("fine")
+        agent_log.set_level("fine")
+        # agent_log.set_sync(True)
+        ure_logger().set_level("fine")
         # ure_logger().set_sync(True)
 
         # Load miner
@@ -73,7 +84,12 @@ class OpencogAgent:
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
         # scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-introduction)")
         scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-evaluation)")
+        # No need of predictive implication for now
+        # scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-direct-evaluation)")
         scheme_eval(self.atomspace, "(pln-log-atomspace)")
+
+    def reset_action_counter(self):
+        self.action_counter = Counter({action: 0 for action in self.action_space})
 
     def record(self, atom, i, tv=None):
         """Timestamp and record an atom to the Percepta Record.
@@ -105,41 +121,99 @@ class OpencogAgent:
 
         return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
+    def pln_bc(self, query, maxiter):
+        """Call PLN backward chainer with the given query and parameters.
+
+        Return a python list of solutions.
+
+        """
+
+        command = "(pln-bc "
+        command += str(query)
+        command += " #:maximum-iterations " + str(maxiter)
+        command += ")"
+        return scheme_eval_h(self.atomspace, command).out
+
     def learn(self):
         """Discover patterns in the world and in the self.
 
         """
-
-        log.debug("learn()")
 
         # For now we only learn cognitive schematics
 
         # All resulting cognitive schematics
         cogscms = set()
 
-        # For each action, mine there relationship to the goal,
-        # positively and negatively.
+        # For each action, mine its relationship to the goal,
+        # positively and negatively, as well as more general
+        # succedents.
         for action in self.action_space:
-            goal = self.positive_goal
-            pos_srps = self.mine_action_patterns(action, goal, 1)
-            cogscms.union(set(self.surprises_to_predictive_implications(pos_srps)))
+            lag = 1
+            prectxs = [EvaluationLink(VariableNode("$P"), VariableNode("$X")),
+                       EvaluationLink(VariableNode("$Q"), VariableNode("$Y")),
+                       action]
 
-            # TODO: For now the negative goal is hardwired
-            neg_goal = self.negative_goal
-            neg_srps = self.mine_action_patterns(action, neg_goal, 1)
-            cogscms.union(set(self.surprises_to_predictive_implications(neg_srps)))
+            # Mine positive succedent goals
+            postctxs = [self.positive_goal]
+            pos_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
+            pos_prdi = self.surprises_to_predictive_implications(pos_srps)
+            agent_log.fine("pos_prdi = {}".format(pos_prdi))
+            cogscms.update(set(pos_prdi))
 
-        log.debug("cogscms = {}".format(cogscms))
+            # Mine negative succedent goals
+            postctxs = [self.negative_goal]
+            neg_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
+            neg_prdi = self.surprises_to_predictive_implications(neg_srps)
+            agent_log.fine("neg_prdi = {}".format(neg_prdi))
+            cogscms.update(set(neg_prdi))
+
+            # Mine general succedents (only one for now)
+            postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
+            gen_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
+            gen_prdi = self.surprises_to_predictive_implications(gen_srps)
+            agent_log.fine("gen_prdi = {}".format(gen_prdi))
+            cogscms.update(set(gen_prdi))
+
+        agent_log.fine("cogscms = {}".format(cogscms))
 
     def plan_pln_xp(self, goal, expiry):
-        # For now query existing PredictiveImplicationScope and update
-        # their TVs based on evidence.
+        # For now we loop from 1 to expiry instead of handling
+        # querying a time interval. Later we'll need to replace that
+        # with reasoning rules to handle
+        #
+        # PredictiveImplication
+        #   Interval
+        #     T1
+        #     T2
+        #   P
+        #   Q
+        # PredictiveImplication
+        #   Interval
+        #     T2
+        #     T3
+        #   P
+        #   Q
+        # |-
+        # PredictiveImplication
+        #   Interval
+        #     T1
+        #     T3
+        #   P
+        #   Q
+        #
+        # or something like that.
 
-        mi = 1
-        query = self.predictive_implication_scope_query(goal, expiry)
-        command = "(pln-bc " + str(query) + " #:maximum-iterations " + str(mi) + ")"
-        results = scheme_eval_h(self.atomspace, command)
-        return results.out
+        for i in range(1, expiry + 1):
+            # Query existing PredictiveImplicationScopeLink (do not update
+            # for now)
+            mi = 1
+            query = self.predictive_implication_scope_query(goal, i)
+            cogscms = self.pln_bc(query, mi)
+
+        # Only keep desirable cognitive schematics
+        cogscms = [cogscm for cogscm in cogscms if self.is_desirable(cogscm)]
+
+        return cogscms
 
     def get_pattern(self, surprise_eval):
         """Extract the pattern wrapped in a surprisingness evaluation.
@@ -264,18 +338,23 @@ class OpencogAgent:
 
         vardecl = VariableNode("$vardecl")
         antecedent = VariableNode("$antecedent")
-        succedent = VariableNode("$succedent")
         query = QuoteLink(PredictiveImplicationScopeLink(UnquoteLink(vardecl),
                                                          to_nat(expiry),
                                                          UnquoteLink(antecedent),
-                                                         UnquoteLink(succedent)))
+                                                         goal))
         return query
 
-    def to_predictive_implication(self, pattern):
-        """Turn a given pattern into a predictive implication with its TV.
+    def predictive_implication_query(self, goal, expiry):
+        """Build a PredictiveImplication query for PLN.
 
-        If the pattern has a variable in addition to time, then it is
-        turned into a predictive implication scope.
+        """
+
+        antecedent = VariableNode("$antecedent")
+        query = PredictiveImplicationLink(to_nat(expiry), antecedent, goal)
+        return query
+
+    def to_predictive_implication_scope(self, pattern):
+        """Turn a given pattern into a predictive implication scope with its TV.
 
         For instance if the pattern is
 
@@ -293,15 +372,18 @@ class OpencogAgent:
               S
                 Variable "$T"
 
-        then the resulting predictive implication is
+        then the resulting predictive implication scope is
 
-        PredictiveImplication
+        PredictiveImplicationScope
+          VariableList
           S Z
           Execution
             Schema "Eat"
           Evaluation
             Predicate "Reward"
             Number 1
+
+        Note the empty variable declaration.
 
         However if the pattern is
 
@@ -350,7 +432,7 @@ class OpencogAgent:
         then the resulting predictive implication (scope) is
 
         PredictiveImplication <1 - s, c>
-          <antecedant>
+          <antecedent>
           Evaluation
             Predicate "Reward"
             Number 1
@@ -360,7 +442,7 @@ class OpencogAgent:
 
         """
 
-        log.debug("to_predictive_implication(pattern={})".format(pattern))
+        agent_log.debug("to_predictive_implication_scope(pattern={})".format(pattern))
 
         # Get the predictive implication implicant and implicand
         # respecively
@@ -374,134 +456,127 @@ class OpencogAgent:
         # Get lag, for now set to 1
         lag = SLink(ZLink())
 
-        # If there is only a time variable return a predictive
-        # implication
-        if self.is_T(get_vardecl(pattern)):
-            pis = PredictiveImplicationLink(lag, pt, pd)
-        # Otherwise there are multiple variables, return a predictive
-        # implication scope
-        else:
-            ntvardecl = self.get_nt_vardecl(pattern)
-            pis = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
+        ntvardecl = self.get_nt_vardecl(pattern)
+        preimp = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
+        # Make sure all variables are in the antecedent
+        vardecl_vars = set(get_free_variables(ntvardecl))
+        pt_vars = set(get_free_variables(pt))
+        if vardecl_vars != pt_vars:
+            return None
 
         # Calculate the truth value of the predictive implication
         mi = 2
-        command = "(pln-bc " + str(pis) + " #:maximum-iterations " + str(mi) + ")"
-        results = scheme_eval_h(self.atomspace, command)
-        return results.out[0]
+        return self.pln_bc(preimp, mi)[0]
 
     def is_desirable(self, cogscm):
         """Return True iff the cognitive schematic is desirable.
 
-        For now to be desirable a cognitive schematic must
+        For now to be desirable a cognitive schematic must have
 
-        1. have its confidence above zero
-        2. have its action fully grounded
+        0. a well define atom
+        1. its confidence above zero
+        2. its action fully grounded
+        3. all its variables in the antecedent
 
         """
 
-        log.debug("is_desirable(cogscm={})".format(cogscm))
+        agent_log.debug("is_desirable(cogscm={})".format(cogscm))
 
-        # ic =  is_closed(get_action(cogscm))
-
-        # log.debug("ic = {})".format(ic))
-
-        # return ic
-
-        return is_scope(cogscm) and is_closed(get_action(cogscm))
+        return cogscm \
+            and has_non_null_confidence(cogscm) \
+            and is_closed(get_action(cogscm)) \
+            and has_all_variables_in_antecedent(cogscm)
 
     def surprises_to_predictive_implications(self, srps):
         """Like to_predictive_implication but takes surprises.
 
         """
 
-        log.debug("surprises_to_predictive_implications(srps={})".format(srps))
+        agent_log.debug("surprises_to_predictive_implications(srps={})".format(srps))
 
-        # Turn patterns into predictive implications
-        cogscms = [self.to_predictive_implication(self.get_pattern(srp))
+        # Turn patterns into predictive implication scopes
+        cogscms = [self.to_predictive_implication_scope(self.get_pattern(srp))
                    for srp in srps]
-        log.debug("cogscms-1 = {}".format(cogscms))
 
         # Remove undesirable cognitive schematics
+        #
+        # TODO: its still in the atomspace, maybe should be move to
+        # its own atomspace or labelled as such.
         cogscms = [cogscm for cogscm in cogscms if self.is_desirable(cogscm)]
-        log.debug("cogscms-2 = {}".format(cogscms))
 
         return cogscms
 
-    def mine_action_patterns(self, action, postctx, lag):
-        """Given an action, a post-context and its lag, mine patterns.
+    def mine_temporal_patterns(self, lag=1, prectxs=[], postctxs=[], vardecl=None):
+        """Given a lag, pre and post contexts, mine temporal patterns.
 
-        That is mine patterns relating pre-context, action and
-        post-context, of the form
+        That is mine patterns specializing the following
 
         Present
           AtTime
-            X1
+            <prectx-1>
             T
           ...
           AtTime
-            Xn
+            <prectx-n>
             T
           AtTime
-            Execution
-              <action>
-            T
-          AtTime
-            <postctx>
+            <postctx-1>
             T + <lag>
+          ...
+          AtTime
+            <postctx-m>
+            T + <lag>
+
+        where
+          prectxs = [prectx-1, ..., prectx-n]
+          postctxs = [postctx-1, ..., postctx-n]
+
+        If no vardecl is provided then it is assumed to be composed of
+        all free variables in prectxs and postctxs.
 
         """
 
-        log.debug("mine_action_patterns(action={}, postctx={}, lag={})".format(action, postctx, lag))
+        agent_log.fine("mine_temporal_patterns(lag={}, prectxs={}, postctxs={})".format(lag, prectxs, postctxs))
 
         # Set miner parameters
-        scheme_eval(self.atomspace, "(define minsup 10)")
-        scheme_eval(self.atomspace, "(define maxiter 1000)")
-        scheme_eval(self.atomspace, "(define cnjexp #f)")
-        scheme_eval(self.atomspace, "(define enfspe #t)")
-        scheme_eval(self.atomspace, "(define mspc 4)")
-        scheme_eval(self.atomspace, "(define maxvars 10)")
-        scheme_eval(self.atomspace, "(define maxcjnts 4)")
-        scheme_eval(self.atomspace, "(define surprise 'nisurp)")
+        minsup = 8
+        maxiter = 1000
+        cnjexp = "#f"
+        enfspe = "#t"
+        mspc = 4
+        maxvars = 10
+        maxcjnts = 4
+        surprise = "'nisurp"
 
         # Define initial pattern
-        # NEXT: work for more than lag of 1
-        scheme_eval(self.atomspace,
-                    "(define initpat"
-                    "  (Lambda"
-                    "    (VariableSet"
-                    "      (Variable \"$T\")"
-                    "      (Variable \"$P\")"
-                    "      (Variable \"$X\")"
-                    "      (Variable \"$Q\")"
-                    "      (Variable \"$Y\"))"
-                    "    (Present"
-                    "      (AtTime"
-                    "        (Evaluation (Variable \"$P\") (Variable \"$X\"))"
-                    "        (Variable \"$T\"))"
-                    "      (AtTime"
-                    "        (Evaluation (Variable \"$Q\") (Variable \"$Y\"))"
-                    "        (Variable \"$T\"))"
-                    "      (AtTime"
-                             + str(action) +
-                    "        (Variable \"$T\"))"
-                    "      (AtTime"
-                    "        " + str(postctx) +
-                    "        (S (Variable \"$T\"))))))")
+        # TODO: support any lag and vardecl
+        T = VariableNode("$T")
+        timed_prectxs = [AtTimeLink(prectx, T) for prectx in prectxs]
+        timed_postctxs = [AtTimeLink(postctx, SLink(T)) for postctx in postctxs]
+        if not vardecl:
+            variables = set([T])
+            variables.update(get_free_variables_of_atoms(prectxs))
+            variables.update(get_free_variables_of_atoms(postctxs))
+            vardecl = VariableSet(*variables)
+        if not vardecl:
+            initpat = LambdaLink(PresentLink(*timed_prectxs, *timed_postctxs))
+        else:
+            initpat = LambdaLink(vardecl, PresentLink(*timed_prectxs, *timed_postctxs))
 
         # Launch pattern miner
-        surprises = scheme_eval_h(self.atomspace,
-                                  "(List"
-                                  "  (cog-mine " + str(self.percepta_record) +
-                                  "            #:minimum-support minsup"
-                                  "            #:initial-pattern initpat"
-                                  "            #:maximum-iterations maxiter"
-                                  "            #:conjunction-expansion cnjexp"
-                                  "            #:maximum-variables maxvars"
-                                  "            #:maximum-conjuncts maxcjnts"
-                                  "            #:maximum-spcial-conjuncts mspc"
-                                  "            #:surprisingness surprise))")
-        log.debug("surprises = {}".format(surprises))
+        mine_query = "(cog-mine " + str(self.percepta_record) + \
+            " #:minimum-support " + str(minsup) + \
+            " #:initial-pattern " + str(initpat) + \
+            " #:maximum-iterations " + str(maxiter) + \
+            " #:conjunction-expansion " + cnjexp + \
+            " #:enforce-specialization " + enfspe + \
+            " #:maximum-variables " + str(maxvars) + \
+            " #:maximum-conjuncts " + str(maxcjnts) + \
+            " #:maximum-spcial-conjuncts " + str(mspc) + \
+            " #:surprisingness " + surprise + ")"
+        agent_log.fine("mine_query = {}".format(mine_query))
+        surprises = scheme_eval_h(self.atomspace, "(List " + mine_query + ")")
+        agent_log.fine("surprises = {}".format(surprises))
 
         return surprises.out
 
@@ -652,35 +727,6 @@ class OpencogAgent:
         else:
             return 0
 
-    def w8d_cogscm_to_str(self, w8d_cogscm, indent=""):
-        """Pretty print the given list of weighted cogscm"""
-
-        weight = w8d_cogscm[0]
-        cogscm = w8d_cogscm[1]
-        tv = get_cogscm_tv(cogscm)
-        idstr = cogscm.id_string() if cogscm else "None"
-        s = "(weight={}, tv={}, id={})".format(weight, tv, idstr)
-        return s
-
-    def w8d_cogscms_to_str(self, w8d_cogscms, indent=""):
-        """Pretty print the given list of weighted cogscms"""
-
-        w8d_cogscms_sorted = sorted(w8d_cogscms, key=lambda x: x[0], reverse=True)
-
-        s = ""
-        for w8d_cogscm in w8d_cogscms_sorted:
-            s += indent + self.w8d_cogscm_to_str(w8d_cogscm, indent + "  ") + "\n"
-        return s
-
-    def mxmdl_to_str(self, mxmdl, indent=""):
-        """Pretty print the given mixture model of cogscms"""
-
-        s = ""
-        for act_w8d_cogscms in mxmdl.listitems():
-            s += "\n" + indent + str(act_w8d_cogscms[0]) + "\n"
-            s += self.w8d_cogscms_to_str(act_w8d_cogscms[1], indent + "  ")
-        return s
-
     def deduce(self, cogscms):
         """Return an action distribution given a list cognitive schematics.
 
@@ -719,7 +765,7 @@ class OpencogAgent:
 
         """
 
-        log.debug("deduce(cogscms={})".format(cogscms))
+        agent_log.debug("deduce(cogscms={})".format(cogscms))
 
         # For each cognitive schematic estimate the probability of its
         # context to be true and multiply it by the truth value of the
@@ -756,7 +802,7 @@ class OpencogAgent:
         ctx_tv = lambda cogscm: \
             get_context_actual_truth(self.atomspace, cogscm, self.step_count)
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
-        log.debug("valid_cogscms = {}".format(valid_cogscms))
+        agent_log.debug("valid_cogscms = {}".format(valid_cogscms))
 
         # Size of the complete data set, including all observations
         # used to build the models. For simplicity we're gonna assume
@@ -771,13 +817,9 @@ class OpencogAgent:
         # schematics.
         mxmdl = omdict([(get_action(cogscm), (self.weight(cogscm), cogscm))
                         for cogscm in valid_cogscms])
-
-        # Add an unknown component for each action. For now its weight
-        # is constant, delta, but ultimately is should be calculated
-        # as a rest in the Solomonoff mixture.
-        delta = 1.0e-3
+        # Add delta (unknown) components
         for action in self.action_space:
-            mxmdl.add(action, (delta, None))
+            mxmdl.add(action, (self.delta, None))
 
         return mxmdl
 
@@ -804,45 +846,49 @@ class OpencogAgent:
         """Run one step of observation, decision and env update
         """
 
-        log.debug("atomese_obs = {}".format(self.observation))
+        agent_log.debug("atomese_obs = {}".format(self.observation))
         obs_record = [self.record(o, self.step_count, tv=TRUE_TV)
                       for o in self.observation]
-        log.debug("obs_record = {}".format(obs_record))
+        agent_log.debug("obs_record = {}".format(obs_record))
 
         # Make the goal for that iteration
         goal = self.make_goal()
-        log.debug("goal = {}".format(goal))
+        agent_log.debug("goal = {}".format(goal))
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
         # goal expiry is 1, i.e. set for the next iteration.
         expiry = 1
-        css = self.plan(goal, expiry)
-        log.debug("css = {}".format(css))
+        cogscms = self.plan(goal, expiry)
+        agent_log.debug("cogscms = {}".format(cogscms))
 
         # Deduce the action distribution
-        mxmdl = self.deduce(css)
-        log.debug("mxmdl = {}".format(self.mxmdl_to_str(mxmdl)))
+        mxmdl = self.deduce(cogscms)
+        agent_log.debug("mxmdl = {}".format(mxmdl_to_str(mxmdl)))
 
         # Select the next action
         action, pblty = self.decide(mxmdl)
-        log.debug("(action={}, pblty={})".format(action, pblty))
+        agent_log.debug("action with probability of success = {}".format(act_pblt_to_str((action, pblty))))
 
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.step_count, tv=TRUE_TV)
-        log.debug("action_record = {}".format(action_record))
-        log.debug("action = {}".format(action))
+        agent_log.debug("action_record = {}".format(action_record))
+        agent_log.debug("action = {}".format(action))
+
+        # Increment the counter for that action and log it
+        self.action_counter[action] += 1
+        agent_log.debug("action_counter = {}".format(self.action_counter))
 
         # Increase the step count and run the next step of the environment
         self.step_count += 1
         # TODO gather environment info.
         reward, self.observation, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
-        log.debug("observation = {}".format(self.observation))
-        log.debug("reward = {}".format(reward))
-        log.debug("accumulated reward = {}".format(self.accumulated_reward))
+        agent_log.debug("observation = {}".format(self.observation))
+        agent_log.debug("reward = {}".format(reward))
+        agent_log.debug("accumulated reward = {}".format(self.accumulated_reward))
 
         reward_record = self.record(reward, self.step_count, tv=TRUE_TV)
-        log.debug("reward_record = {}".format(reward_record))
+        agent_log.debug("reward_record = {}".format(reward_record))
 
         if done:
             return False
