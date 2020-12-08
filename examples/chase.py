@@ -59,4 +59,4 @@ if __name__ == "__main__":
             log.info("step_count = {}".format(oa.step_count))
         nar = oa.accumulated_reward - par
         agent_log.info("Accumulated reward during {}th iteration = {}".format(i + 1, nar))
-        agent_log.info("Action counter during {}th iteration = {}".format(i+1, oa.action_counter))
+        agent_log.info("Action counter during {}th iteration:\n{}".format(i+1, oa.action_counter))

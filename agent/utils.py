@@ -20,6 +20,7 @@ from opencog.exec import execute_atom
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
+from opencog.utilities import is_closed, get_free_variables
 from opencog.logger import Logger, log, create_logger
 
 #############
@@ -317,7 +318,7 @@ def get_context(cogscm):
     """
 
     # Grab all clauses pertaining to context
-    clauses = get_cogscm_antecedants(cogscm)
+    clauses = get_cogscm_antecedents(cogscm)
     no_exec_clauses = [x for x in clauses if x.type != types.ExecutionLink]
 
     # Split them into present and virtual clauses
@@ -352,8 +353,8 @@ def is_and(atom):
     return is_a(atom.type, types.AndLink)
 
 
-def get_cogscm_antecedants(cogscm):
-    """Return the list of antecedants of a cognitive schema.
+def get_cogscm_antecedents(cogscm):
+    """Return the list of antecedents of a cognitive schema.
 
     For instance is the cognitive schematics is represented by
 
@@ -373,6 +374,25 @@ def get_cogscm_antecedants(cogscm):
     ante = cogscm.out[2] if is_scope(cogscm) else cogscm.out[1]
     return ante.out if is_and(ante) else [ante]
 
+
+def has_all_variables_in_antecedent(cogscm):
+    """Return True iff all variables are in the antecedent."""
+
+    if is_scope(cogscm):
+        vardecl_vars = set(get_free_variables(get_vardecl(cogscm)))
+        antecedent_vars = get_free_variables_of_atoms(get_cogscm_antecedents(cogscm))
+        return vardecl_vars == antecedent_vars
+    else:
+        return True
+
+# TODO: optimize using comprehension
+def get_free_variables_of_atoms(atoms):
+    """Get the set of all free variables in all atoms."""
+
+    variables = set()
+    for atom in atoms:
+        variables.update(set(get_free_variables(atom)))
+    return variables
 
 def get_action(cogscm):
     """Extract the action of a cognitive schematic.
@@ -398,7 +418,7 @@ def get_action(cogscm):
 
     """
 
-    cnjs = get_cogscm_antecedants(cogscm)
+    cnjs = get_cogscm_antecedents(cogscm)
     execution = next(x for x in cnjs if x.type == types.ExecutionLink)
     return execution
 
