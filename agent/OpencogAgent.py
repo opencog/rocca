@@ -35,10 +35,15 @@ class OpencogAgent:
         self.action_space = action_space
         self.positive_goal = p_goal
         self.negative_goal = n_goal
+        self.cognitive_schematics = set()
         self.load_opencog_modules()
         self.reset_action_counter()
 
         # Parameters controlling learning and decision
+
+        # Expiry time to fulfill the goal. The system will not plan
+        # beyond expiry.
+        self.expiry = 2
 
         # Prior alpha and beta of beta-distributions corresponding to
         # truth values
@@ -72,7 +77,7 @@ class OpencogAgent:
         # log.set_sync(True)
         agent_log.set_level("fine")
         # agent_log.set_sync(True)
-        ure_logger().set_level("fine")
+        ure_logger().set_level("debug")
         # ure_logger().set_sync(True)
 
         # Load miner
@@ -128,6 +133,8 @@ class OpencogAgent:
 
         """
 
+        agent_log.fine("pln_bc(query={}, maxiter={})".format(query, maxiter))
+
         command = "(pln-bc "
         command += str(query)
         command += " #:maximum-iterations " + str(maxiter)
@@ -175,45 +182,7 @@ class OpencogAgent:
             cogscms.update(set(gen_prdi))
 
         agent_log.fine("cogscms = {}".format(cogscms))
-
-    def plan_pln_xp(self, goal, expiry):
-        # For now we loop from 1 to expiry instead of handling
-        # querying a time interval. Later we'll need to replace that
-        # with reasoning rules to handle
-        #
-        # PredictiveImplication
-        #   Interval
-        #     T1
-        #     T2
-        #   P
-        #   Q
-        # PredictiveImplication
-        #   Interval
-        #     T2
-        #     T3
-        #   P
-        #   Q
-        # |-
-        # PredictiveImplication
-        #   Interval
-        #     T1
-        #     T3
-        #   P
-        #   Q
-        #
-        # or something like that.
-
-        for i in range(1, expiry + 1):
-            # Query existing PredictiveImplicationScopeLink (do not update
-            # for now)
-            mi = 1
-            query = self.predictive_implication_scope_query(goal, i)
-            cogscms = self.pln_bc(query, mi)
-
-        # Only keep desirable cognitive schematics
-        cogscms = [cogscm for cogscm in cogscms if self.is_desirable(cogscm)]
-
-        return cogscms
+        self.cognitive_schematics.update(cogscms)
 
     def get_pattern(self, surprise_eval):
         """Extract the pattern wrapped in a surprisingness evaluation.
@@ -309,7 +278,7 @@ class OpencogAgent:
         """
 
         vt = vardecl.type
-        if is_a(vt, get_type("VariableList")) or is_a(vt, get_type("VariableSet")):
+        if is_a(vt, types.VariableList) or is_a(vt, types.VariableSet):
             return vardecl.out
         else:
             return [vardecl]
@@ -322,7 +291,7 @@ class OpencogAgent:
         vardecl = get_vardecl(pattern)
         tvars = self.get_typed_variables(vardecl)
         nt_tvars = [tvar for tvar in tvars if not self.is_temporally_typed(tvar)]
-        return VariableList(*nt_tvars)
+        return VariableSet(*nt_tvars)
 
     def maybe_and(self, clauses):
         """Wrap an And if multiple clauses, otherwise return the only one.
@@ -442,7 +411,7 @@ class OpencogAgent:
 
         """
 
-        agent_log.debug("to_predictive_implication_scope(pattern={})".format(pattern))
+        agent_log.fine("to_predictive_implication_scope(pattern={})".format(pattern))
 
         # Get the predictive implication implicant and implicand
         # respecively
@@ -480,11 +449,9 @@ class OpencogAgent:
 
         """
 
-        agent_log.debug("is_desirable(cogscm={})".format(cogscm))
-
         return cogscm \
             and has_non_null_confidence(cogscm) \
-            and is_closed(get_action(cogscm)) \
+            and is_closed(get_t0_execution(cogscm)) \
             and has_all_variables_in_antecedent(cogscm)
 
     def surprises_to_predictive_implications(self, srps):
@@ -492,7 +459,7 @@ class OpencogAgent:
 
         """
 
-        agent_log.debug("surprises_to_predictive_implications(srps={})".format(srps))
+        agent_log.fine("surprises_to_predictive_implications(srps={})".format(srps))
 
         # Turn patterns into predictive implication scopes
         cogscms = [self.to_predictive_implication_scope(self.get_pattern(srp))
@@ -583,32 +550,41 @@ class OpencogAgent:
     def plan(self, goal, expiry):
         """Plan the next actions given a goal and its expiry time offset
 
-        Return a python list of cognivite schematics.  Whole cognitive
-        schematics are output (instead of action plans) in order to
-        make a decision based on their truth values.  Alternatively it
-        could return a pair (action plan, tv), where tv has been
-        evaluated to take into account the truth value of the context
-        as well (which would differ from the truth value of rule in
-        case the context is uncertain).
+        Return a python list of cognivite schematics meeting the
+        expiry constrain.  Whole cognitive schematics are output in
+        order to make a decision based on their truth values and
+        priors.
 
         The format for a cognitive schematic is as follows
 
         PredictiveImplicationScope <tv>
           <vardecl>
-          <expiry>
-          And (or SimultaneousAnd?)
-            <context>
-            Execution
-              <action>
-              <input> [optional]
-              <output> [optional]
+          <lag-n>
+          SequentialAnd [optional]
+            <lag-n-1>
+            ...
+              SequentialAnd
+                <lag-1>
+                And
+                  <context>
+                  <execution-1>
+            <execution-n>
           <goal>
 
-        For now it is assumed that <action> is fully grounded.
+        For now it is assumed that <execution-1> is fully grounded.
+
+        The cognitive schematics meets the temporal constrain if the
+        total lag is lower or equal to the expiry.
 
         """
 
-        return self.plan_pln_xp(goal, expiry)
+        agent_log.fine("plan(goal={}, expiry={})".format(goal, expiry))
+
+        # Retrieve all cognitive schematics meeting the temporal
+        # constrain
+        meet = lambda x : get_total_lag(x) <= expiry
+        agent_log.fine("self.cognitive_schematics = {}".format(self.cognitive_schematics))
+        return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
 
     # TODO: move to its own class (MixtureModel or something)
     def get_all_uniq_atoms(self, atom):
@@ -765,7 +741,7 @@ class OpencogAgent:
 
         """
 
-        agent_log.debug("deduce(cogscms={})".format(cogscms))
+        agent_log.fine("deduce(cogscms={})".format(cogscms))
 
         # For each cognitive schematic estimate the probability of its
         # context to be true and multiply it by the truth value of the
@@ -802,7 +778,7 @@ class OpencogAgent:
         ctx_tv = lambda cogscm: \
             get_context_actual_truth(self.atomspace, cogscm, self.step_count)
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
-        agent_log.debug("valid_cogscms = {}".format(valid_cogscms))
+        agent_log.fine("valid_cogscms = {}".format(valid_cogscms))
 
         # Size of the complete data set, including all observations
         # used to build the models. For simplicity we're gonna assume
@@ -815,7 +791,7 @@ class OpencogAgent:
 
         # For each action, map a list of weighted valid cognitive
         # schematics.
-        mxmdl = omdict([(get_action(cogscm), (self.weight(cogscm), cogscm))
+        mxmdl = omdict([(get_t0_execution(cogscm), (self.weight(cogscm), cogscm))
                         for cogscm in valid_cogscms])
         # Add delta (unknown) components
         for action in self.action_space:
@@ -856,9 +832,8 @@ class OpencogAgent:
         agent_log.debug("goal = {}".format(goal))
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
-        # goal expiry is 1, i.e. set for the next iteration.
-        expiry = 1
-        cogscms = self.plan(goal, expiry)
+        # goal expiry is 2, i.e. must be fulfilled set for the next two iterations.
+        cogscms = self.plan(goal, self.expiry)
         agent_log.debug("cogscms = {}".format(cogscms))
 
         # Deduce the action distribution
