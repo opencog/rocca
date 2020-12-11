@@ -63,7 +63,7 @@ class MalmoWrapper(Wrapper):
             obs_list = []
 
         return mk_evaluation("Reward", rw), \
-               SetLink(*obs_list), \
+               obs_list, \
                not ws.is_mission_running
 
     @staticmethod
@@ -126,3 +126,7 @@ class MalmoWrapper(Wrapper):
         except RuntimeError as e:
             print("Error sending command:", e)
         return self.world_state
+
+    def close(self):
+        # Clean up env.
+        pass
