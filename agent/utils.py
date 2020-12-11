@@ -106,8 +106,6 @@ def atom_to_idstr(atom):
 def w8d_cogscm_to_str(w8d_cogscm, indent=""):
     """Pretty print a pair (weight, cogscm)."""
 
-    # agent_log.fine("w8d_cogscm_to_str(w8d_cogscm={}, indent={})".format(w8d_cogscm, indent))
-
     weight = w8d_cogscm[0]
     cogscm = w8d_cogscm[1]
     tv = get_cogscm_tv(cogscm)
@@ -144,7 +142,7 @@ def act_pblt_to_str(act_pblt, indent=""):
     return indent + "({}, {})".format(action_to_str(action), pblt)
 
 
-# TODO: use join
+# TODO: use join to optimize
 def act_pblts_to_str(act_pblts, indent=""):
     """Pretty print a list of pairs (action, probability)."""
 
@@ -157,15 +155,13 @@ def act_pblts_to_str(act_pblts, indent=""):
 def act_w8d_cogscm_to_str(act_w8d_cogscm, indent=""):
     """Pretty print a pair (action, (weight, cogscm))."""
 
-    # agent_log.fine("act_w8d_cogscm_to_str(act_w8d_cogscm={}, indent={})".format(act_w8d_cogscm, indent))
-
     action = act_w8d_cogscm[0]
     w8d_cogscm = act_w8d_cogscm[1]
     s = indent + action_to_str(action) + ": " + w8d_cogscm_to_str(w8d_cogscm)
     return s
 
 
-# TODO: use join
+# TODO: use join to optimize
 def act_w8d_cogscms_to_str(act_w8d_cogscms, indent=""):
     """Pretty print a list of pairs (action, (weight, cogscm))."""
 
@@ -203,7 +199,7 @@ def thompson_sample(mxmdl, prior_a=1, prior_b=1):
 
     """
 
-    # agent_log.fine("thompson_sample(mxmdl={}, prior_a={}, prior_b={})".format(mxmdl_to_str(mxmdl), prior_a, prior_b))
+    agent_log.fine("thompson_sample(mxmdl={}, prior_a={}, prior_b={})".format(mxmdl_to_str(mxmdl), prior_a, prior_b))
 
     # 1. For each action select its TV according its weight
     act_w8d_cogscms = [(action, weighted_sampling(w8d_cogscms))
@@ -295,20 +291,31 @@ def is_virtual(clause):
 def get_context(cogscm):
     """Extract the context of a cognitive schematic.
 
-    Given a cognitive schematic of that format
+    For instance given a cognitive schematic of that format
 
     PredictiveImplicationScope <tv>
       <vardecl>
       <expiry>
-      And (or SimultaneousAnd?)
+      And
         <context>
-        Execution
-          <action>
-          <input> [optional]
-          <output> [optional]
+        <execution>
       <goal>
 
     return <context>.
+
+    Another example, given a cognitive schematic of that format
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <expiry>
+      SequentialAnd
+        And
+          <context>
+          <execution>
+        ...
+      <goal>
+
+    return <context>
 
     Since the context can be multiple clauses, virtual and
     non-virtual, it outputs a pair of two lists
@@ -318,8 +325,8 @@ def get_context(cogscm):
     """
 
     # Grab all clauses pertaining to context
-    clauses = get_cogscm_antecedents(cogscm)
-    no_exec_clauses = [x for x in clauses if x.type != types.ExecutionLink]
+    clauses = get_t0_clauses(get_antecedent(cogscm))
+    no_exec_clauses = [x for x in clauses if not is_execution(x)]
 
     # Split them into present and virtual clauses
     present_clauses = [x for x in no_exec_clauses if not is_virtual(x)]
@@ -338,13 +345,13 @@ def is_scope(atom):
 def is_predictive_implication(atom):
     """Return True iff the atom is a predictive implication link."""
 
-    return is_a(atom.type, types.PredictiveImplicationLink)
+    return is_a(atom.type, get_type("PredictiveImplicationLink"))
 
 
 def is_predictive_implication_scope(atom):
     """Return True iff the atom is a predictive implication scope link."""
 
-    return is_a(atom.type, types.PredictiveImplicationScopeLink)
+    return is_a(atom.type, get_type("PredictiveImplicationScopeLink"))
 
 
 def is_and(atom):
@@ -353,26 +360,150 @@ def is_and(atom):
     return is_a(atom.type, types.AndLink)
 
 
-def get_cogscm_antecedents(cogscm):
-    """Return the list of antecedents of a cognitive schema.
+def is_sequential_and(atom):
+    """Return True iff atom is a sequential and.
+
+    Also for now we use AltSequentialAndLink.
+
+    """
+
+    return is_a(atom.type, get_type("AltSequentialAndLink"))
+
+def is_execution(atom):
+    """Return True iff the atom is an ExecutionLink."""
+
+    return is_a(atom.type, types.ExecutionLink)
+
+
+def is_Z(atom):
+    """Return True iff the atom is Z."""
+
+    return atom.type == get_type("ZLink")
+
+
+def is_S(atom):
+    """Return True iff the atom is S ..."""
+
+    return atom.type == get_type("SLink")
+
+
+def get_antecedent(atom):
+    """Return the antecedent of a temporal atom.
 
     For instance is the cognitive schematics is represented by
 
     PredictiveImplicationScope <tv>
       <vardecl>
       <expiry>
-      And (or SimultaneousAnd?)
-        <context-or-action-1>
-        ...
-        <context-or-action-n>
-      <goal>
+      <antecedent>
+      <succedent>
 
-    it returns [<context-or-action-1>, ..., <context-or-action-1>]
+    it returns <antecedent>
 
     """
 
-    ante = cogscm.out[2] if is_scope(cogscm) else cogscm.out[1]
-    return ante.out if is_and(ante) else [ante]
+    if is_predictive_implication_scope(atom):
+        return atom.out[2]
+    if is_predictive_implication(atom):
+        return atom.out[1]
+    if is_sequential_and(atom):
+        return atom.out[1]
+    return None
+
+
+def get_succedent(atom):
+    """Return the succedent of a temporal atom.
+
+    For instance is the cognitive schematics is represented by
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <expiry>
+      <antecedent>
+      <succedent>
+
+    it returns <succedent>
+
+    """
+
+    if is_predictive_implication_scope(atom):
+        return atom.out[3]
+    if is_predictive_implication(atom):
+        return atom.out[2]
+    if is_sequential_and(atom):
+        return atom.out[2]
+    return None
+
+
+def get_lag(atom):
+    """Given an temporal atom, return its lag component.
+
+    For instance if it is a PredictiveImplicationScope
+
+    PredictiveImplicationScope
+      <vardecl>
+      <lag>
+      <antecedent>
+      <succedent>
+
+    return <lag>
+
+    If it is a SequentialAnd
+
+    SequentialAnd
+      <lag>
+      <A>
+      <B>
+
+    return <lag>
+
+    """
+
+    if is_predictive_implication_scope(atom):
+        return to_int(atom.out[1])
+    if is_predictive_implication(atom):
+        return to_int(atom.out[0])
+    if is_sequential_and(atom):
+        return to_int(atom.out[0])
+    return 0
+
+
+def get_t0_clauses(antecedent):
+    """Return the list of clauses occuring at initial time.
+
+    For instance if the cognitive schematics has the following format
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <lag>
+      SequentialAnd
+        And
+          <context-1>
+          ...
+          <context-n>
+          Execution
+            <action>
+            <input> [optional]
+            <output> [optional]
+        ...
+      <goal>
+
+    it returns
+
+    [<context-1>, ..., <context-n>, Execution ...]
+
+    because they are all the clauses happening the initial time of the
+    predictive implication.
+
+    """
+
+    antecedent
+    if is_and(antecedent):
+        return antecedent.out
+    if is_sequential_and(antecedent):
+        return get_t0_clauses(antecedent.out[1])
+    else:
+        return [antecedent]
 
 
 def has_all_variables_in_antecedent(cogscm):
@@ -380,7 +511,7 @@ def has_all_variables_in_antecedent(cogscm):
 
     if is_scope(cogscm):
         vardecl_vars = set(get_free_variables(get_vardecl(cogscm)))
-        antecedent_vars = get_free_variables_of_atoms(get_cogscm_antecedents(cogscm))
+        antecedent_vars = set(get_free_variables(get_antecedent(cogscm)))
         return vardecl_vars == antecedent_vars
     else:
         return True
@@ -394,7 +525,37 @@ def get_free_variables_of_atoms(atoms):
         variables.update(set(get_free_variables(atom)))
     return variables
 
-def get_action(cogscm):
+
+def get_total_lag(atom):
+    """Return the total lag between first and last atom.
+
+    For instance if the atom is
+
+    PredictiveImplicationScope <tv>
+      <vardecl>
+      <lag-1>
+      SequentialAnd
+        <lag-2>
+        SequentialAnd
+          <lag-3>
+          And
+            <context>
+            <execution>
+          <other-execution>
+      <goal>
+
+    return lag-1 + lag-2 + lag3
+
+    """
+
+    lag = get_lag(atom)
+    ant = get_antecedent(atom)
+    tlg = lag + (get_total_lag(ant) if ant else 0)
+    agent_log.fine("get_total_lag(atom={}) = {}".format(atom, tlg))
+    return tlg
+
+
+def get_t0_execution(cogscm):
     """Extract the action of a cognitive schematic.
 
     Given a cognitive schematic of that formats
@@ -418,8 +579,8 @@ def get_action(cogscm):
 
     """
 
-    cnjs = get_cogscm_antecedents(cogscm)
-    execution = next(x for x in cnjs if x.type == types.ExecutionLink)
+    cnjs = get_t0_clauses(get_antecedent(cogscm))
+    execution = next(x for x in cnjs if is_execution(x))
     return execution
 
 
@@ -485,3 +646,29 @@ def to_nat(i):
     """
 
     return ZLink() if i == 0 else SLink(to_nat(i - 1))
+
+
+def lag_to_nat(i, T):
+    """Given an int i and T, return as many SLinks wrapping around T.
+
+    For instance if i=3 and T=VariableNode("$T") return
+
+    S(S(S(T)))
+
+    """
+
+    return T if i == 0 else SLink(lag_to_nat(i - 1, T))
+
+
+def to_int(n):
+
+    """Convert n to an Int.
+
+    For instance if n = S S S Z, then it returns 3.
+
+    """
+
+    if is_Z(n):
+        return 0
+    if is_S(n):
+        return 1 + to_int(n.out[0])
