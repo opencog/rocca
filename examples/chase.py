@@ -29,89 +29,89 @@ class ChaseAgent(OpencogAgent):
     def __init__(self, env, action_space, p_goal, n_goal):
         OpencogAgent.__init__(self, env, action_space, p_goal, n_goal)
 
-    def learn(self):
-        agent_log.fine("ChaseAgent.learn()")
+    # def learn(self):
+    #     agent_log.fine("ChaseAgent.learn()")
 
-        # For now hardwire various plans of different timescales
-        agent_position = PredicateNode("0-Discrete")
-        pellet_position = PredicateNode("1-Discrete")
-        position = VariableNode("$position")
-        left_pos = NumberNode("0")
-        right_pos = NumberNode("1")
-        concept_t = TypeNode("ConceptNode")
-        number_t = TypeNode("NumberNode")
-        eat = SchemaNode("Eat")
-        go_right = SchemaNode("Go Right")
-        go_left = SchemaNode("Go Left")
-        reward = PredicateNode("Reward")
-        unit = NumberNode("1")
-        vhTV = TruthValue(1.0, 0.1)  # Very high TV
+    #     # For now hardwire various plans of different timescales
+    #     agent_position = PredicateNode("0-Discrete")
+    #     pellet_position = PredicateNode("1-Discrete")
+    #     position = VariableNode("$position")
+    #     left_pos = NumberNode("0")
+    #     right_pos = NumberNode("1")
+    #     concept_t = TypeNode("ConceptNode")
+    #     number_t = TypeNode("NumberNode")
+    #     eat = SchemaNode("Eat")
+    #     go_right = SchemaNode("Go Right")
+    #     go_left = SchemaNode("Go Left")
+    #     reward = PredicateNode("Reward")
+    #     unit = NumberNode("1")
+    #     vhTV = TruthValue(1.0, 0.1)  # Very high TV
 
-        # If agent position equals pellet position then eating brings
-        # a reward
-        eat_cogscm = \
-            PredictiveImplicationScopeLink(
-                TypedVariableLink(position, number_t),
-                to_nat(1),
-                AndLink(
-                    # Context
-                    EvaluationLink(agent_position, position),
-                    EvaluationLink(pellet_position, position),
-                    # Action
-                    ExecutionLink(eat)),
-                # Goal
-                EvaluationLink(reward, unit),
-                # TV
-                tv=vhTV)
-        agent_log.fine("eat_cogscm = {}".format(eat_cogscm))
+    #     # If agent position equals pellet position then eating brings
+    #     # a reward
+    #     eat_cogscm = \
+    #         PredictiveImplicationScopeLink(
+    #             TypedVariableLink(position, number_t),
+    #             to_nat(1),
+    #             AndLink(
+    #                 # Context
+    #                 EvaluationLink(agent_position, position),
+    #                 EvaluationLink(pellet_position, position),
+    #                 # Action
+    #                 ExecutionLink(eat)),
+    #             # Goal
+    #             EvaluationLink(reward, unit),
+    #             # TV
+    #             tv=vhTV)
+    #     agent_log.fine("eat_cogscm = {}".format(eat_cogscm))
 
-        # If agent position is Left and pellet position is Right then
-        # going right and eating brings a reward
-        go_right_eat_cogscm = \
-            PredictiveImplicationScopeLink(
-                VariableSet(),
-                to_nat(1),
-                AltSequentialAndLink(
-                    to_nat(1),
-                    AndLink(
-                        # Context
-                        EvaluationLink(agent_position, left_pos),
-                        EvaluationLink(pellet_position, right_pos),
-                        # Action 1
-                        ExecutionLink(go_right)),
-                    # Action 2
-                    ExecutionLink(eat)),
-                # Goal
-                EvaluationLink(reward, unit),
-                # TV
-                tv=vhTV)
-        agent_log.fine("go_right_eat_cogscm = {}".format(go_right_eat_cogscm))
+    #     # If agent position is Left and pellet position is Right then
+    #     # going right and eating brings a reward
+    #     go_right_eat_cogscm = \
+    #         PredictiveImplicationScopeLink(
+    #             VariableSet(),
+    #             to_nat(1),
+    #             AltSequentialAndLink(
+    #                 to_nat(1),
+    #                 AndLink(
+    #                     # Context
+    #                     EvaluationLink(agent_position, left_pos),
+    #                     EvaluationLink(pellet_position, right_pos),
+    #                     # Action 1
+    #                     ExecutionLink(go_right)),
+    #                 # Action 2
+    #                 ExecutionLink(eat)),
+    #             # Goal
+    #             EvaluationLink(reward, unit),
+    #             # TV
+    #             tv=vhTV)
+    #     agent_log.fine("go_right_eat_cogscm = {}".format(go_right_eat_cogscm))
 
-        # If agent position is Right and pellet position is Left then
-        # going left and eating brings a reward
-        go_left_eat_cogscm = \
-            PredictiveImplicationScopeLink(
-                VariableSet(),
-                to_nat(1),
-                AltSequentialAndLink(
-                    to_nat(1),
-                    AndLink(
-                        # Context
-                        EvaluationLink(agent_position, right_pos),
-                        EvaluationLink(pellet_position, left_pos),
-                        # Action 1
-                        ExecutionLink(go_left)),
-                    # Action 2
-                    ExecutionLink(eat)),
-                # Goal
-                EvaluationLink(reward, unit),
-                # TV
-                tv=vhTV)
-        agent_log.fine("go_left_eat_cogscm = {}".format(go_left_eat_cogscm))
+    #     # If agent position is Right and pellet position is Left then
+    #     # going left and eating brings a reward
+    #     go_left_eat_cogscm = \
+    #         PredictiveImplicationScopeLink(
+    #             VariableSet(),
+    #             to_nat(1),
+    #             AltSequentialAndLink(
+    #                 to_nat(1),
+    #                 AndLink(
+    #                     # Context
+    #                     EvaluationLink(agent_position, right_pos),
+    #                     EvaluationLink(pellet_position, left_pos),
+    #                     # Action 1
+    #                     ExecutionLink(go_left)),
+    #                 # Action 2
+    #                 ExecutionLink(eat)),
+    #             # Goal
+    #             EvaluationLink(reward, unit),
+    #             # TV
+    #             tv=vhTV)
+    #     agent_log.fine("go_left_eat_cogscm = {}".format(go_left_eat_cogscm))
 
-        self.cognitive_schematics = set([eat_cogscm,
-                                         go_right_eat_cogscm,
-                                         go_left_eat_cogscm])
+    #     self.cognitive_schematics = set([eat_cogscm,
+    #                                      go_right_eat_cogscm,
+    #                                      go_left_eat_cogscm])
 
 if __name__ == "__main__":
     atomspace = AtomSpace()

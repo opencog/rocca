@@ -60,7 +60,7 @@ class OpencogAgent:
         # partial model + unexplained data. Ranges from 0 to 1, 0
         # being no compressiveness at all of the unexplained data, 1
         # being full compressiveness.
-        self.compressiveness = 0.8
+        self.compressiveness = 0.75
 
         # Add an unknown component for each action. For now its weight
         # is constant, delta, but ultimately is should be calculated
@@ -75,9 +75,9 @@ class OpencogAgent:
         # Init loggers
         log.set_level("debug")
         # log.set_sync(True)
-        agent_log.set_level("fine")
+        agent_log.set_level("debug")
         # agent_log.set_sync(True)
-        ure_logger().set_level("debug")
+        ure_logger().set_level("info")
         # ure_logger().set_sync(True)
 
         # Load miner
@@ -162,21 +162,21 @@ class OpencogAgent:
 
             # Mine positive succedent goals
             postctxs = [self.positive_goal]
-            pos_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
+            pos_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
             pos_prdi = self.surprises_to_predictive_implications(pos_srps)
             agent_log.fine("pos_prdi = {}".format(pos_prdi))
             cogscms.update(set(pos_prdi))
 
             # Mine negative succedent goals
             postctxs = [self.negative_goal]
-            neg_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
+            neg_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
             neg_prdi = self.surprises_to_predictive_implications(neg_srps)
             agent_log.fine("neg_prdi = {}".format(neg_prdi))
             cogscms.update(set(neg_prdi))
 
             # Mine general succedents (only one for now)
             postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
-            gen_srps = self.mine_temporal_patterns(lag, prectxs, postctxs)
+            gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
             gen_prdi = self.surprises_to_predictive_implications(gen_srps)
             agent_log.fine("gen_prdi = {}".format(gen_prdi))
             cogscms.update(set(gen_prdi))
@@ -473,37 +473,84 @@ class OpencogAgent:
 
         return cogscms
 
-    def mine_temporal_patterns(self, lag=1, prectxs=[], postctxs=[], vardecl=None):
-        """Given a lag, pre and post contexts, mine temporal patterns.
+    def to_timed_clauses(self, lagged_antecedents_succedents, T):
+        """Turn nested lagged, antecedents, succedents to AtTime clauses.
 
-        That is mine patterns specializing the following
+        For instance the input is
 
-        Present
-          AtTime
-            <prectx-1>
-            T
-          ...
-          AtTime
-            <prectx-n>
-            T
-          AtTime
-            <postctx-1>
-            T + <lag>
-          ...
-          AtTime
-            <postctx-m>
-            T + <lag>
+        (lag-2, (lag-1, X, Y), Z)
 
-        where
-          prectxs = [prectx-1, ..., prectx-n]
-          postctxs = [postctx-1, ..., postctx-n]
+        then it is transformed into the following clauses
 
-        If no vardecl is provided then it is assumed to be composed of
-        all free variables in prectxs and postctxs.
+        [AtTime
+           X
+           T,
+         AtTime
+           Y
+           T + lag-1,
+         AtTime
+           Z
+           T + lag-1 + lag-2]
+
+        Note that it will also output the max lag of such clauses,
+        which in this example would be lag-1 + lag-2.  This is
+        required by the caller in case such function is called
+        recursively.
+
+        Also, for now, and maybe ever, having nested succedents is not
+        supported as in that case lags are not additive.
 
         """
 
-        agent_log.fine("mine_temporal_patterns(lag={}, prectxs={}, postctxs={})".format(lag, prectxs, postctxs))
+        lag = lagged_antecedents_succedents[0]
+        antecedents = lagged_antecedents_succedents[1]
+        succedents = lagged_antecedents_succedents[2]
+
+        if type(antecedents) is tuple:
+            timed_clauses, reclag = to_timestamped_clauses(antecedents)
+            lag += reclag
+        else:
+            timed_clauses = [AtTimeLink(ante, T) for ante in antecedents]
+
+        lagnat = lag_to_nat(lag, T)
+        timed_clauses += [AtTimeLink(succ, lagnat) for succ in succedents]
+        return timed_clauses, lag
+
+    def mine_temporal_patterns(self, lagged_antecedents_succedents, vardecl=None):
+        """Given nested lagged, antecedents, succedents, mine temporal patterns.
+
+        More precisely it takes a list of triples
+
+        (lag, antecedents, succedents)
+
+        where antecedents and succedents can themselves be triples of
+        lagged antecedents and succedents.
+
+        For instance the input is
+
+        (lag-2, (lag-1, X, Y), Z)
+
+        then it is transformed into the following initial pattern
+
+        Present
+          AtTime
+            X
+            T
+          AtTime
+            Y
+            T + lag-1
+          AtTime
+            Z
+            T + lag-1 + lag-2
+
+        which the miner can start from.
+
+        If no vardecl is provided then it is assumed to be composed of
+        all free variables in all antecedents and succedents.
+
+        """
+
+        agent_log.fine("mine_temporal_patterns(lagged_antecedents_succedents={}, vardecl={})".format(lagged_antecedents_succedents, vardecl))
 
         # Set miner parameters
         minsup = 8
@@ -518,17 +565,13 @@ class OpencogAgent:
         # Define initial pattern
         # TODO: support any lag and vardecl
         T = VariableNode("$T")
-        timed_prectxs = [AtTimeLink(prectx, T) for prectx in prectxs]
-        timed_postctxs = [AtTimeLink(postctx, SLink(T)) for postctx in postctxs]
+        timed_clauses, _ = self.to_timed_clauses(lagged_antecedents_succedents, T)
+        agent_log.fine("timed_clauses = {}".format(timed_clauses))
         if not vardecl:
             variables = set([T])
-            variables.update(get_free_variables_of_atoms(prectxs))
-            variables.update(get_free_variables_of_atoms(postctxs))
+            variables.update(get_free_variables_of_atoms(timed_clauses))
             vardecl = VariableSet(*variables)
-        if not vardecl:
-            initpat = LambdaLink(PresentLink(*timed_prectxs, *timed_postctxs))
-        else:
-            initpat = LambdaLink(vardecl, PresentLink(*timed_prectxs, *timed_postctxs))
+        initpat = LambdaLink(vardecl, PresentLink(*timed_clauses))
 
         # Launch pattern miner
         mine_query = "(cog-mine " + str(self.percepta_record) + \
@@ -579,11 +622,16 @@ class OpencogAgent:
         """
 
         agent_log.fine("plan(goal={}, expiry={})".format(goal, expiry))
-
-        # Retrieve all cognitive schematics meeting the temporal
-        # constrain
-        meet = lambda x : get_total_lag(x) <= expiry
         agent_log.fine("self.cognitive_schematics = {}".format(self.cognitive_schematics))
+
+        # Retrieve all cognitive schematics meeting the constrains which are
+        #
+        # 1. The total lag of the cognitive schematics is below or
+        #    equal to the expiry.
+        #
+        # 2. The succedent matches the goal
+        meet = lambda cogscm : get_total_lag(cogscm) <= expiry \
+            and get_succedent(cogscm) == goal
         return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
 
     # TODO: move to its own class (MixtureModel or something)

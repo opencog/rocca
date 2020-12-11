@@ -648,7 +648,20 @@ def to_nat(i):
     return ZLink() if i == 0 else SLink(to_nat(i - 1))
 
 
+def lag_to_nat(i, T):
+    """Given an int i and T, return as many SLinks wrapping around T.
+
+    For instance if i=3 and T=VariableNode("$T") return
+
+    S(S(S(T)))
+
+    """
+
+    return T if i == 0 else SLink(lag_to_nat(i - 1, T))
+
+
 def to_int(n):
+
     """Convert n to an Int.
 
     For instance if n = S S S Z, then it returns 3.
