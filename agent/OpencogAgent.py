@@ -174,12 +174,12 @@ class OpencogAgent:
             agent_log.fine("neg_prdi = {}".format(neg_prdi))
             cogscms.update(set(neg_prdi))
 
-            # Mine general succedents (only one for now)
-            postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
-            gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
-            gen_prdi = self.surprises_to_predictive_implications(gen_srps)
-            agent_log.fine("gen_prdi = {}".format(gen_prdi))
-            cogscms.update(set(gen_prdi))
+            # # Mine general succedents (only one for now)
+            # postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
+            # gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
+            # gen_prdi = self.surprises_to_predictive_implications(gen_srps)
+            # agent_log.fine("gen_prdi = {}".format(gen_prdi))
+            # cogscms.update(set(gen_prdi))
 
             # Mine positive succedent goals with multi-actions
             postctxs = [self.positive_goal]
@@ -560,13 +560,13 @@ class OpencogAgent:
         agent_log.fine("mine_temporal_patterns(lagged_antecedents_succedents={}, vardecl={})".format(lagged_antecedents_succedents, vardecl))
 
         # Set miner parameters
-        minsup = 8
+        minsup = 4
         maxiter = 1000
         cnjexp = "#f"
         enfspe = "#t"
-        mspc = 4
-        maxvars = 10
-        maxcjnts = 4
+        mspc = 6
+        maxvars = 8
+        maxcjnts = 6
         surprise = "'nisurp"
         T = VariableNode("$T")
         ignore = SetLink(T)
