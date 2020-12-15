@@ -75,14 +75,14 @@ class OpencogAgent:
         # Init loggers
         log.set_level("debug")
         # log.set_sync(True)
-        agent_log.set_level("debug")
+        agent_log.set_level("fine")
         # agent_log.set_sync(True)
-        ure_logger().set_level("info")
+        ure_logger().set_level("debug")
         # ure_logger().set_sync(True)
 
         # Load miner
         scheme_eval(self.atomspace, "(use-modules (opencog miner))")
-        # scheme_eval(self.atomspace, "(miner-logger-set-level! \"fine\")")
+        scheme_eval(self.atomspace, "(miner-logger-set-level! \"fine\")")
         # scheme_eval(self.atomspace, "(miner-logger-set-sync! #t)")
 
         # Load PLN
@@ -180,6 +180,13 @@ class OpencogAgent:
             gen_prdi = self.surprises_to_predictive_implications(gen_srps)
             agent_log.fine("gen_prdi = {}".format(gen_prdi))
             cogscms.update(set(gen_prdi))
+
+            # Mine positive succedent goals with multi-actions
+            postctxs = [self.positive_goal]
+            for snd_action in self.action_space:
+                agent_log.fine("MULTIACTION MINING snd_action = {}".format(snd_action))
+                pos_multi_srps = self.mine_temporal_patterns((lag, (lag, prectxs, [snd_action]), postctxs))
+                agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
 
         agent_log.fine("cogscms = {}".format(cogscms))
         self.cognitive_schematics.update(cogscms)
@@ -507,7 +514,7 @@ class OpencogAgent:
         succedents = lagged_antecedents_succedents[2]
 
         if type(antecedents) is tuple:
-            timed_clauses, reclag = to_timestamped_clauses(antecedents)
+            timed_clauses, reclag = self.to_timed_clauses(antecedents, T)
             lag += reclag
         else:
             timed_clauses = [AtTimeLink(ante, T) for ante in antecedents]
@@ -561,10 +568,11 @@ class OpencogAgent:
         maxvars = 10
         maxcjnts = 4
         surprise = "'nisurp"
+        T = VariableNode("$T")
+        ignore = SetLink(T)
 
         # Define initial pattern
         # TODO: support any lag and vardecl
-        T = VariableNode("$T")
         timed_clauses, _ = self.to_timed_clauses(lagged_antecedents_succedents, T)
         agent_log.fine("timed_clauses = {}".format(timed_clauses))
         if not vardecl:
@@ -574,6 +582,7 @@ class OpencogAgent:
         initpat = LambdaLink(vardecl, PresentLink(*timed_clauses))
 
         # Launch pattern miner
+            # " #:ignore " + str(ignore) + \
         mine_query = "(cog-mine " + str(self.percepta_record) + \
             " #:minimum-support " + str(minsup) + \
             " #:initial-pattern " + str(initpat) + \
