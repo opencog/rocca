@@ -14,8 +14,8 @@ endeavor, which will likely involve Hyperon.
 
 ## What do we have so far?
 
-We have an OpenCog agent [1], easily wrappable to any synchronous
-gym-like environment (via Kasim's wrapper), that can:
+We have an OpenCog agent [1](#references), easily wrappable to any
+synchronous gym-like environment (via Kasim's wrapper), that can:
 
 1. Learn (via the pattern miner) cognitive schematics (i.e. predictive
    implications) with arbitrary pre/post contexts, and one or more
@@ -28,11 +28,11 @@ gym-like environment (via Kasim's wrapper), that can:
 
 1. Consecutive lags in predictive implications and sequential ands are
    limited to one unit of time, i.e. can capture cognitive schematics
-   such as
+   such as:
 
-   """ if context C is true at T, and action A1 is executed at T, and
-   if action A2 is executed at T+1, then goal G is likely to be
-   acheived at T+2. """
+     If context C is true at T, and action A1 is executed at T, and if
+     action A2 is executed at T+1, then goal G is likely to be
+     acheived at T+2.
 
    Arbitrary lags, for mining or else, are not currently supported.
 
@@ -40,12 +40,12 @@ gym-like environment (via Kasim's wrapper), that can:
    able to match lags between events.  For instance 3 units of time is
    represented as
 
-   (SLink (SLink (SLink (ZLink))))
+   `(SLink (SLink (SLink (ZLink))))`
 
-   Or a lag of 2 units of time relative to (Variable "$T") is
+   Or a lag of 2 units of time relative to `(Variable "$T")` is
    represented as
 
-   (SLink (Slink (VariableNode "$T")))
+   `(SLink (Slink (VariableNode "$T")))`
 
 3. Another source of inefficiency is decision making.  Although it is
    considerably more efficient than learning/planning (for now done
@@ -69,18 +69,18 @@ gym-like environment (via Kasim's wrapper), that can:
 
 1. Move from the simplistic Chase environment to Malmo.  According to
    Kasim the plumbing is ready.  Maybe for starter we could port the
-   Chase env to Malmo.  Then, as Alexey suggested in [2] we need to
-   create high level actions, such as goto(X), etc, as well as high
-   level perceta, to increase the scale and complexity of the
-   environment.
+   Chase env to Malmo.  Then, as Alexey suggested in [2](#references)
+   we need to create high level actions, such as `goto(X)`, etc, as
+   well as high level perceta, to increase the scale and complexity of
+   the environment.
 
 2. Introduce temporal deduction.  The agent should be able to chain
    actions sequences that it has never observed, but rather based on
    whether the post-context of some cognitive schematics matches with
    (implies or inherits from) the pre-context of another.  For that we
-   need to implement a similar deduction rule as [3] for predictive
-   implications.  This is also required for decomposing goals into
-   subgoals.
+   need to implement a similar deduction rule as [3](#references) for
+   predictive implications.  This is also required for decomposing
+   goals into subgoals.
 
 3. Support arbitrary (possibly continous) time lags.  The agent should
    be able to notice surprising combinations of events even if they
@@ -91,36 +91,36 @@ gym-like environment (via Kasim's wrapper), that can:
    two things:
 
    1. The pattern miner should handle time intervals, then the same a
-      priori property [4] can be used to prune the search tree with
-      time intervals, the larger the time interval the more abstract
-      the pattern.
+      priori property [4](#references) can be used to prune the search
+      tree with time intervals, the larger the time interval the more
+      abstract the pattern.
 
    2. We likely need to represent the lag distribution, based on
       direct evidence or indirectly inferred.  One possibility would
-      be to introduce a temporal truth value (as suggested in [5]),
-      using a distributional lag.  As of today the lag is represented
-      in the temporal relationship instead, see [6], which makes sense
-      given the current limits as it allows to represent the same
-      predictive implication with different lags, resulting in
-      different truth values, but once a distributional lag is used
-      there is no longer the need for it.  Even the TV of an
-      "eventual" predictive implication can be obtained by looking at
-      the extremum the cumulative distribution function.  So that way
-      only one predictive implication, solely determined by its pre
-      and post contexts, is required.  Of course such distributional
-      temporal truth value could inherit from a more general
-      distributional truth value.
+      be to introduce a temporal truth value (as suggested in
+      [5](#references)), using a distributional lag.  As of today the
+      lag is represented in the temporal relationship instead, see
+      [6](#references), which makes sense given the current limits as
+      it allows to represent the same predictive implication with
+      different lags, resulting in different truth values, but once a
+      distributional lag is used there is no longer the need for it.
+      Even the TV of an "eventual" predictive implication can be
+      obtained by looking at the extremum the cumulative distribution
+      function.  So that way only one predictive implication, solely
+      determined by its pre and post contexts, is required.  Of course
+      such distributional temporal truth value could inherit from a
+      more general distributional truth value.
 
 4. Improve temporal mining efficiency.  We could (with Legacy OpenCog
    in mind):
 
    1. Upgrade the pattern matcher to have queries like
 
-      (Get (AtTime A (Plus (TimeNode "1" (TimeNode "10")))))
+      `(Get (AtTime A (Plus (TimeNode "1" (TimeNode "10")))))`
 
       be able to match
 
-      (AtTime A (TimeNode "11"))
+      `(AtTime A (TimeNode "11"))`
 
    In that case timestamps would still be in the atomspace, which is
    inheritantly inefficient, alternatively we could:
@@ -181,7 +181,7 @@ gym-like environment (via Kasim's wrapper), that can:
    acheived within 10s, then a crude flash meta-reasoning could take
    place to evaluate that reasoning for say 2s, then executing the
    resulting plan for the remaining 8s is likely to succeed.  By
-   considering "planning" and "executing" as high level actions, it
+   considering `planning` and `executing` as high level actions, it
    should be possible to do without much radical change I believe.
 
 9. Last but not least we need unit and integration tests.
