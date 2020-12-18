@@ -174,19 +174,20 @@ class OpencogAgent:
             agent_log.fine("neg_prdi = {}".format(neg_prdi))
             cogscms.update(set(neg_prdi))
 
-            # # Mine general succedents (only one for now)
-            # postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
-            # gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
-            # gen_prdi = self.surprises_to_predictive_implications(gen_srps)
-            # agent_log.fine("gen_prdi = {}".format(gen_prdi))
-            # cogscms.update(set(gen_prdi))
+            # Mine general succedents (only one for now)
+            postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
+            gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
+            gen_prdi = self.surprises_to_predictive_implications(gen_srps)
+            agent_log.fine("gen_prdi = {}".format(gen_prdi))
+            cogscms.update(set(gen_prdi))
 
-            # Mine positive succedent goals with multi-actions
-            postctxs = [self.positive_goal]
-            for snd_action in self.action_space:
-                agent_log.fine("MULTIACTION MINING snd_action = {}".format(snd_action))
-                pos_multi_srps = self.mine_temporal_patterns((lag, (lag, prectxs, [snd_action]), postctxs))
-                agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
+            # NEXT
+            # # Mine positive succedent goals with multi-actions
+            # postctxs = [self.positive_goal]
+            # for snd_action in self.action_space:
+            #     agent_log.fine("multiaction mining snd_action = {}".format(snd_action))
+            #     pos_multi_srps = self.mine_temporal_patterns((lag, (lag, prectxs, [snd_action]), postctxs))
+            #     agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
 
         agent_log.fine("cogscms = {}".format(cogscms))
         self.cognitive_schematics.update(cogscms)
@@ -242,42 +243,32 @@ class OpencogAgent:
 
         return self.is_T(clause.out[1])
 
-    def get_event(self, clause):
-        """Return the event in a clause that is a timestamped event
-
-        For instance if clause is
-
-        AtTime
-          <event>
-          <time>
-
-        return <event>
+    def get_pattern_timed_clauses(self, pattern):
+        """Return all timestamped clauses of a pattern.
 
         """
 
-        return clause.out[0]
+        return pattern.out[1].out
 
-    def get_pattern_antecedents(self, pattern):
+    def get_pattern_antecedent_events(self, pattern):
         """Return the antecedent events of a temporal pattern.
 
-        That is all propositions taking place at time T.
+        That is all propositions not taking place at the latest time.
 
         """
 
-        clauses = pattern.out[1].out
-        return [self.get_event(clause) for clause in clauses
-                if self.is_attime_T(clause)]
+        tclauses = get_early_clauses(self.get_pattern_timed_clauses(pattern))
+        return [get_event(tc) for tc in tclauses]
 
-    def get_pattern_succedents(self, pattern):
+    def get_pattern_succedent_events(self, pattern):
         """Return the succedent events of a temporal pattern.
 
-        That is the propositions taking place at time T+1.
+        That is the propositions taking place at the lastest time.
 
         """
 
-        clauses = pattern.out[1].out
-        return [self.get_event(clause) for clause in clauses
-                if not self.is_attime_T(clause)]
+        tclauses = get_latest_clauses(self.get_pattern_timed_clauses(pattern))
+        return [get_event(tc) for tc in tclauses]
 
     def get_typed_variables(self, vardecl):
         """Get the list of possibly typed variables in vardecl.
@@ -328,6 +319,34 @@ class OpencogAgent:
         antecedent = VariableNode("$antecedent")
         query = PredictiveImplicationLink(to_nat(expiry), antecedent, goal)
         return query
+
+    # def to_sequential_and(timed_clauses):
+    #     # NEXT:
+
+    def to_predictive_implicant(self, pattern):
+        """Turn a temporal pattern into predictive implicant.
+
+        """
+
+        agent_log.fine("to_predictive_implicant(pattern={})".format(pattern))
+
+        timed_clauses = self.get_pattern_timed_clauses(pattern)
+        early_clauses = get_early_clauses(timed_clauses)
+        times = get_times(early_clauses)
+        agent_log.fine("timed_clauses = {})".format(timed_clauses))
+        agent_log.fine("early_clauses = {})".format(early_clauses))
+        agent_log.fine("times = {})".format(times))
+        if len(times) == 1:     # No need of SequentialAnd
+            return self.maybe_and(get_events(early_clauses))
+        else:
+            print("NEXT")
+
+    def to_predictive_implicand(self, pattern):
+        """Turn a temporal pattern into predictive implicand.
+
+        """
+
+        return self.maybe_and(self.get_pattern_succedent_events(pattern))
 
     def to_predictive_implication_scope(self, pattern):
         """Turn a given pattern into a predictive implication scope with its TV.
@@ -421,9 +440,12 @@ class OpencogAgent:
         agent_log.fine("to_predictive_implication_scope(pattern={})".format(pattern))
 
         # Get the predictive implication implicant and implicand
-        # respecively
-        pt = self.maybe_and(self.get_pattern_antecedents(pattern))
-        pd = self.maybe_and(self.get_pattern_succedents(pattern))
+        # respectively
+        pt = self.to_predictive_implicant(pattern)
+        pd = self.to_predictive_implicand(pattern)
+
+        agent_log.fine("pt = {}".format(pt))
+        agent_log.fine("pd = {}".format(pd))
 
         # TODO: big hack, pd is turned into positive goal
         if pd == self.negative_goal:
@@ -437,9 +459,12 @@ class OpencogAgent:
         # Make sure all variables are in the antecedent
         vardecl_vars = set(get_free_variables(ntvardecl))
         pt_vars = set(get_free_variables(pt))
+        agent_log.fine("vardecl_vars = {}".format(vardecl_vars))
+        agent_log.fine("pt_vars = {}".format(pt_vars))
         if vardecl_vars != pt_vars:
             return None
 
+        agent_log.fine("preimp = {}".format(preimp))
         # Calculate the truth value of the predictive implication
         mi = 2
         return self.pln_bc(preimp, mi)[0]

@@ -119,7 +119,7 @@ def w8d_cogscms_to_str(w8d_cogscms, indent=""):
 
     w8d_cogscms_sorted = sorted(w8d_cogscms, key=lambda x: x[0], reverse=True)
 
-    s = ""
+    s = indent + "size = " + str(len(w8d_cogscms_sorted)) + "\n"
     for w8d_cogscm in w8d_cogscms_sorted:
         s += indent + w8d_cogscm_to_str(w8d_cogscm, indent + "  ") + "\n"
     return s
@@ -336,6 +336,12 @@ def get_context(cogscm):
     return (present_clauses, virtual_clauses)
 
 
+def is_variable(atom):
+    """Return True iff the atom is a variable node."""
+
+    return is_a(atom.type, types.VariableNode)
+
+
 def is_scope(atom):
     """Return True iff the atom is a scope link."""
 
@@ -518,7 +524,9 @@ def has_all_variables_in_antecedent(cogscm):
 
 # TODO: optimize using comprehension
 def get_free_variables_of_atoms(atoms):
-    """Get the set of all free variables in all atoms."""
+    """Get the set of all free variables in all atoms.
+
+    """
 
     variables = set()
     for atom in atoms:
@@ -526,8 +534,62 @@ def get_free_variables_of_atoms(atoms):
     return variables
 
 
+def get_times(timed_atoms):
+    """Given a list of timestamped clauses, return a set of all times.
+
+    """
+
+    if timed_atoms == []:
+        return set()
+    return set.union(set([get_time(timed_atoms[0])]), get_times(timed_atoms[1:]))
+
+
+def get_events(timed_atoms):
+    """Given a list of timestamped clauses, return a list of all events.
+
+    """
+
+    return [get_event(ta) for ta in timed_atoms]
+
+
+def get_latest_time(timed_clauses):
+    """Given a list of timestamped clauses, return the latest timestamp.
+
+    """
+
+    if timed_clauses == []:
+        return ZLink()
+    return nat_max(get_time(timed_clauses[0]), get_latest_time(timed_clauses[1:]))
+
+
+def get_latest_clauses(timed_clauses):
+    """Given a list of timestamped clauses, return the latest clauses.
+
+    For instance if the timestamped clauses are
+
+    [AtTime(A, T), AtTime(B, S(T)), AtTime(C, S(S(T))), AtTime(D, S(S(T)))]
+
+    return
+
+    [AtTime(C, S(S(T))), AtTime(D, S(S(T)))]
+
+    """
+
+    lt = get_latest_time(timed_clauses)
+    return [tc for tc in timed_clauses if get_time(tc) == lt]
+
+
+def get_early_clauses(timed_clauses):
+    """Return all clauses that are not the latest.
+
+    """
+
+    lcs = set(get_latest_clauses(timed_clauses))
+    return list(set(timed_clauses).difference(lcs))
+
+
 def get_total_lag(atom):
-    """Return the total lag between first and last atom.
+    """Return the total lag between earliest and lastest subatoms of atom.
 
     For instance if the atom is
 
@@ -621,6 +683,30 @@ def get_context_actual_truth(atomspace, cogscm, i):
     return tv
 
 
+def get_event(timed_atom):
+    """Return the event in a clause that is a timestamped event
+
+    For instance if clause is
+
+    AtTime
+      <event>
+      <time>
+
+    return <event>
+
+    """
+
+    return timed_atom.out[0]
+
+
+def get_time(timed_atom):
+    """Given (AtTime A T) return T.
+
+    """
+
+    return timed_atom.out[1]
+
+
 def timestamp(atom, i, tv=None, nat=True):
     """Timestamp a given atom.  Optionally set its TV
 
@@ -634,6 +720,17 @@ def timestamp(atom, i, tv=None, nat=True):
 
     time = to_nat(i) if nat else TimeNode(str(i))
     return AtTimeLink(atom, time, tv=tv)
+
+
+def nat_max(n, m):
+
+    """Return the max between two naturals (including if they wrap variables)."""
+
+    if is_Z(n) or is_variable(n):
+        return m
+    if is_Z(m) or is_variable(m):
+        return n
+    return SLink(nat_max(n.out[0], m.out[0]))
 
 
 def to_nat(i):
