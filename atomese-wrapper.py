@@ -101,7 +101,7 @@ def observation_to_atomese(observation):
     beg = player[0]
     end = player.pop()
     midplayer = ((beg[0] + end[0]) / 2, (beg[1] + end[1]) / 2)
-    schemaplayer=to_atlocation(midplayer, "Player")
+    schemaplayer = to_atlocation(midplayer, "Player")
     schemaball = SchemaNode("Null")
     schemaopp = SchemaNode("Null")
 
