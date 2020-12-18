@@ -61,8 +61,8 @@ synchronous gym-like environment (via Kasim's wrapper), that can:
    3. Ultimately, capacity to create/use abstractions for modeling and
       acting. Schematization/specialization, meta-learning, etc.
 
-5. As of right PLN is very underused, for instance goals are not
-   decomposed into subgoals, to happen this requires futher
+5. As of right now PLN is very underused.  For instance goals are
+   not decomposed into subgoals.  To happen this requires futher
    development on temporal logic, currently in progress.
 
 ## What remains to be done?
