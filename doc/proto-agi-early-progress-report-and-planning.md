@@ -153,7 +153,7 @@ synchronous gym-like environment (via Kasim's wrapper), that can:
 
 5. Improve decision efficiency.  The decision procedure (consisting of
    estimating the posterior of each cognitive schematic, followed by
-   Thomposon Sampling) is entirely implemented in Python, which partly
+   Thompson Sampling) is entirely implemented in Python, which partly
    explains its slowness (again, 3 seconds for 200 cognitive
    schematics).  Re-implementing in C++ or Rust could speed it up,
    however before that we want to optimize the algorithm itself, maybe
