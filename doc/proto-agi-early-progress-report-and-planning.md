@@ -14,7 +14,7 @@ endeavor, which will likely involve Hyperon.
 
 ## What do we have so far?
 
-We have an OpenCog agent [1](#references), easily wrappable to any
+We have an OpenCog agent [[1]](#references), easily wrappable to any
 synchronous gym-like environment (via Kasim's wrapper), that can:
 
 1. Learn (via the pattern miner) cognitive schematics (i.e. predictive
@@ -69,7 +69,7 @@ synchronous gym-like environment (via Kasim's wrapper), that can:
 
 1. Move from the simplistic Chase environment to Malmo.  According to
    Kasim the plumbing is ready.  Maybe for starter we could port the
-   Chase env to Malmo.  Then, as Alexey suggested in [2](#references)
+   Chase env to Malmo.  Then, as Alexey suggested in [[2]](#references)
    we need to create high level actions, such as `goto(X)`, etc, as
    well as high level perceta, to increase the scale and complexity of
    the environment.
@@ -78,8 +78,8 @@ synchronous gym-like environment (via Kasim's wrapper), that can:
    actions sequences that it has never observed, but rather based on
    whether the post-context of some cognitive schematics matches with
    (implies or inherits from) the pre-context of another.  For that we
-   need to implement a similar deduction rule as [3](#references) for
-   predictive implications.  This is also required for decomposing
+   need to implement a similar deduction rule as [[3]](#references)
+   for predictive implications.  This is also required for decomposing
    goals into subgoals.
 
 3. Support arbitrary (possibly continous) time lags.  The agent should
@@ -91,17 +91,17 @@ synchronous gym-like environment (via Kasim's wrapper), that can:
    two things:
 
    1. The pattern miner should handle time intervals, then the same a
-      priori property [4](#references) can be used to prune the search
-      tree with time intervals, the larger the time interval the more
-      abstract the pattern.
+      priori property [[4]](#references) can be used to prune the
+      search tree with time intervals, the larger the time interval
+      the more abstract the pattern.
 
    2. We likely need to represent the lag distribution, based on
       direct evidence or indirectly inferred.  One possibility would
       be to introduce a temporal truth value (as suggested in
-      [5](#references)), using a distributional lag.  As of today the
-      lag is represented in the temporal relationship instead, see
-      [6](#references), which makes sense given the current limits as
-      it allows to represent the same predictive implication with
+      [[5]](#references)), using a distributional lag.  As of today
+      the lag is represented in the temporal relationship instead, see
+      [[6]](#references), which makes sense given the current limits
+      as it allows to represent the same predictive implication with
       different lags, resulting in different truth values, but once a
       distributional lag is used there is no longer the need for it.
       Even the TV of an "eventual" predictive implication can be
