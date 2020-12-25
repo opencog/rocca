@@ -69,3 +69,49 @@ mission_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
         </AgentHandlers>
     </AgentSection>
 </Mission>'''
+
+
+if __name__ == '__main__':
+    """
+    The following is some random heuristics to demo how you
+    would use the MalmoWrapper and the environment defined
+    with the xml above.
+    """
+
+    a = AtomSpace()
+    set_default_atomspace(a)
+
+    malmoWrapper = MalmoWrapper(missionXML=mission_xml, validate=True)
+
+    def stp_callback(action, ws):
+        pass  # you can do something here.
+
+    rw, ob, done = malmoWrapper.restart()
+
+    malmoWrapper.step(mk_action("hotbar.9", 1))  # Press the hotbar key
+    malmoWrapper.step(mk_action("hotbar.9", 0))  # Release hotbar key - agent should now be holding diamond_pickaxe
+
+    # Wait a second until we are looking in roughly the right direction
+    time.sleep(1)
+
+    # tilt camera
+    # malmoWrapper.step(mk_action("pitch", 0.3))
+    # time.sleep(0.5)
+    # malmoWrapper.step(mk_action("pitch", 0))
+
+    malmoWrapper.step(mk_action("move", 0.5))
+
+    # malmoWrapper.step(mk_action("tpz", -1.5))
+    malmoWrapper.step(mk_action("tpz", 2.5))
+    while not done:
+        print(".", end="")
+        time.sleep(0.2)
+        rw, ob, done = malmoWrapper.step(mk_action("attack", 1),
+                                         update_callback=stp_callback)
+
+        print("Reward : \n", rw)
+        print("Observation : \n", ob)
+        print()
+
+    print()
+    print("Mission ended")
