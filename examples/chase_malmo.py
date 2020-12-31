@@ -18,10 +18,6 @@ from agent.utils import agent_log
 from envs.malmo_demo.chase_env import mission_xml
 from envs.wrappers import MalmoWrapper
 
-
-# Uncomment the following to get a description of env
-# help(env.unwrapped)
-
 ###############
 # Chase Agent #
 ###############
