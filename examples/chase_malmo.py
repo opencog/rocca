@@ -56,7 +56,9 @@ if __name__ == "__main__":
     # TODO take care of action parameters.
     action_space = {ExecutionLink(SchemaNode("tpz"), NumberNode("2.5")),
                     ExecutionLink(SchemaNode("tpz"), NumberNode("-1.5")),
+                    ExecutionLink(SchemaNode("attack"), NumberNode("0")),
                     ExecutionLink(SchemaNode("attack"), NumberNode("1")),
+                    ExecutionLink(SchemaNode("move"), NumberNode("0")),
                     ExecutionLink(SchemaNode("move"), NumberNode("0.5"))}
 
     # ChaseAgent
