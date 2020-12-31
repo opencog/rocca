@@ -49,6 +49,11 @@ mission_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Placement x="0" y="230" z="0" yaw="90"/>
             <Inventory>
                 <InventoryItem slot="8" type="diamond_pickaxe"/>
+                <InventoryItem slot="7" type="golden_apple" quantity="10"/>
+                <InventoryItem slot="6" type="golden_apple" quantity="10"/>
+                <InventoryItem slot="5" type="golden_apple" quantity="10"/>
+                <InventoryItem slot="4" type="golden_apple" quantity="10"/>
+                <InventoryItem slot="3" type="golden_apple" quantity="10"/>
             </Inventory>
         </AgentStart>
         <AgentHandlers>

@@ -30,6 +30,17 @@ class ChaseAgent(OpencogAgent):
         env.step(mk_action("hotbar.9", 1))  # Press the hotbar key
         env.step(mk_action("hotbar.9", 0))  # Release hotbar key - agent should now be holding diamond_pickaxe
 
+    def eat(self, i):
+        self.env.step(mk_action("move", 0))
+        self.env.step(mk_action("hotbar.{}".format(i), 1))
+        self.env.step(mk_action("hotbar.{}".format(i), 0))
+        self.env.step(mk_action("use", 1))
+
+    def wake(self):
+        self.env.step(mk_action("use", 0))
+        self.env.step(mk_action("hotbar.9", 1))
+        self.env.step(mk_action("hotbar.9", 0))
+
 
 if __name__ == "__main__":
     atomspace = AtomSpace()
@@ -51,6 +62,10 @@ if __name__ == "__main__":
     # ChaseAgent
     ca = ChaseAgent(wrapped_env, action_space, pgoal, ngoal)
 
+    # Eat some food.
+    ca.eat(4)
+    time.sleep(5)
+
     # Training/learning loop
     lt_iterations = 2  # Number of learning-training iterations
     lt_period = 200  # Duration of a learning-training iteration
@@ -60,6 +75,7 @@ if __name__ == "__main__":
         # Discover patterns to make more informed decisions
         agent_log.info("Start learning ({}/{})".format(i + 1, lt_iterations))
         ca.learn()
+        ca.wake()
         # Run agent to accumulate percepta
         agent_log.info("Start training ({}/{})".format(i + 1, lt_iterations))
         for j in range(lt_period):
@@ -69,3 +85,4 @@ if __name__ == "__main__":
         nar = ca.accumulated_reward - par
         agent_log.info("Accumulated reward during {}th iteration = {}".format(i + 1, nar))
         agent_log.info("Action counter during {}th iteration:\n{}".format(i + 1, ca.action_counter))
+        ca.eat(8 - i)
