@@ -35,11 +35,11 @@ mission_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <Weather>clear</Weather>
         </ServerInitialConditions>
         <ServerHandlers>
-            <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;3;,biome_1"/>
+            <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;3;,biome_1" 
+                                forceReset="true"/>
             <DrawingDecorator>
-                ''' + drawRewards(228, 1000, "diamond_block") + '''
+                ''' + drawRewards(228, 2000, "diamond_block") + '''
             </DrawingDecorator>
-            <ServerQuitFromTimeUp description="" timeLimitMs="120000"/>
             <ServerQuitWhenAnyAgentFinishes description=""/>
         </ServerHandlers>
     </ServerSection>
@@ -57,12 +57,14 @@ mission_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             </Inventory>
         </AgentStart>
         <AgentHandlers>
+            <ObservationFromFullStats/>
             <ObservationFromGrid>
               <Grid name="BlocksInFront">
-                <min x="-5" y="1" z="0"/>
+                <min x="-7" y="1" z="0"/>
                 <max x="0" y="1" z="0"/>
               </Grid>
             </ObservationFromGrid>
+            <ObservationFromRecentCommands/>
             <ContinuousMovementCommands turnSpeedDegs="180"/>
             <AbsoluteMovementCommands />
             <InventoryCommands/>
