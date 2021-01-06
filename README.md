@@ -11,6 +11,7 @@ OpenCog tools
 - ure
 - spacetime
 - pln
+- miner
 - cogserver
 - attention
 - opencog
@@ -19,7 +20,11 @@ Third party tools
 
 - Python 3
 - python-orderedmultidict https://pypi.org/project/orderedmultidict/
-- gym https://gym.openai.com/
+- OpenAI Gym https://gym.openai.com/
+- Malmo https://github.com/Microsoft/malmo (after compiling Malmo,
+  copy `<MALMO>/build/install/Python_Examples/MalmoPython.so` and
+  `<MALMO>/build/install/Python_Examples/malmoutils.py` under
+  `<ROCCA>/examples/malmo`)
 
 ## Install
 
