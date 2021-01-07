@@ -291,13 +291,6 @@ class OpencogAgent:
         nt_tvars = [tvar for tvar in tvars if not self.is_temporally_typed(tvar)]
         return VariableSet(*nt_tvars)
 
-    def maybe_and(self, clauses):
-        """Wrap an And if multiple clauses, otherwise return the only one.
-
-        """
-
-        return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
-
     def predictive_implication_scope_query(self, goal, expiry):
         """Build a PredictiveImplicationScope query for PLN.
 
@@ -320,8 +313,20 @@ class OpencogAgent:
         query = PredictiveImplicationLink(to_nat(expiry), antecedent, goal)
         return query
 
-    # def to_sequential_and(timed_clauses):
-    #     # NEXT:
+    def to_sequential_and(self, timed_clauses):
+        times = get_times(timed_clauses)
+        if len(times) == 2:
+            # Partition events in first and second time. For now lags
+            # are assumed to be 1.
+            early_clauses = get_early_clauses(timed_clauses)
+            early_events = get_events(early_clauses)
+            latest_clauses = get_latest_clauses(timed_clauses)
+            latest_events = get_events(latest_clauses)
+            return AltSequentialAndLink(to_nat(1),
+                                        maybe_and(early_events),
+                                        maybe_and(latest_events))
+        else:
+            agent_log.error("Not supported yet!")
 
     def to_predictive_implicant(self, pattern):
         """Turn a temporal pattern into predictive implicant.
@@ -332,21 +337,21 @@ class OpencogAgent:
 
         timed_clauses = self.get_pattern_timed_clauses(pattern)
         early_clauses = get_early_clauses(timed_clauses)
-        times = get_times(early_clauses)
+        early_times = get_times(early_clauses)
         agent_log.fine("timed_clauses = {})".format(timed_clauses))
         agent_log.fine("early_clauses = {})".format(early_clauses))
-        agent_log.fine("times = {})".format(times))
-        if len(times) == 1:     # No need of SequentialAnd
-            return self.maybe_and(get_events(early_clauses))
+        agent_log.fine("early_times = {})".format(early_times))
+        if len(early_times) == 1:     # No need of SequentialAnd
+            return maybe_and(get_events(early_clauses))
         else:
-            print("NEXT")
+            return self.to_sequential_and(early_clauses)
 
     def to_predictive_implicand(self, pattern):
         """Turn a temporal pattern into predictive implicand.
 
         """
 
-        return self.maybe_and(self.get_pattern_succedent_events(pattern))
+        return maybe_and(self.get_pattern_succedent_events(pattern))
 
     def to_predictive_implication_scope(self, pattern):
         """Turn a given pattern into a predictive implication scope with its TV.
