@@ -1,3 +1,4 @@
+import uuid
 from functools import wraps
 from builtins import range
 import os
@@ -19,9 +20,11 @@ else:
 
 
 class MalmoWrapper(Wrapper):
-    def __init__(self, missionXML, validate, setup_mission=None):
+    def __init__(self, missionXML, validate, setup_mission=None, ip="127.0.0.1", port=10000):
         super()
         self.agent_host = MalmoPython.AgentHost()
+        self.clientPool = MalmoPython.ClientPool()
+        self.clientPool.add(MalmoPython.ClientInfo(ip, port))
         try:
             self.agent_host.parse(sys.argv)
         except RuntimeError as e:
@@ -89,7 +92,10 @@ class MalmoWrapper(Wrapper):
     def restart(self, max_retries=3):
         for retry in range(max_retries):
             try:
-                self.agent_host.startMission(self.mission, self.mission_record)
+                self.agent_host.startMission(self.mission,
+                                             self.clientPool,
+                                             self.mission_record,
+                                             0, str(uuid.uuid4()))
                 break
             except RuntimeError as e:
                 if retry == max_retries - 1:
