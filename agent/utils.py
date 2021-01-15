@@ -393,6 +393,14 @@ def is_S(atom):
     return atom.type == get_type("SLink")
 
 
+def maybe_and(clauses):
+    """Wrap an And if multiple clauses, otherwise return the only one.
+
+    """
+
+    return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
+
+
 def get_antecedent(atom):
     """Return the antecedent of a temporal atom.
 
