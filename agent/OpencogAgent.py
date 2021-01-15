@@ -65,7 +65,7 @@ class OpencogAgent:
         # Add an unknown component for each action. For now its weight
         # is constant, delta, but ultimately is should be calculated
         # as a rest in the Solomonoff mixture.
-        self.delta = 1.0e-6
+        self.delta = 1.0e-5
 
 
     def __del__(self):
@@ -75,9 +75,9 @@ class OpencogAgent:
         # Init loggers
         log.set_level("debug")
         # log.set_sync(True)
-        agent_log.set_level("fine")
+        agent_log.set_level("debug")
         # agent_log.set_sync(True)
-        ure_logger().set_level("debug")
+        ure_logger().set_level("info")
         # ure_logger().set_sync(True)
 
         # Load miner
