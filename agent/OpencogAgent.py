@@ -181,13 +181,15 @@ class OpencogAgent:
             agent_log.fine("gen_prdi = {}".format(gen_prdi))
             cogscms.update(set(gen_prdi))
 
-            # NEXT
-            # # Mine positive succedent goals with multi-actions
-            # postctxs = [self.positive_goal]
-            # for snd_action in self.action_space:
-            #     agent_log.fine("multiaction mining snd_action = {}".format(snd_action))
-            #     pos_multi_srps = self.mine_temporal_patterns((lag, (lag, prectxs, [snd_action]), postctxs))
-            #     agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
+            # Mine positive succedent goals with multi-actions
+            postctxs = [self.positive_goal]
+            for snd_action in self.action_space:
+                agent_log.fine("multiaction mining snd_action = {}".format(snd_action))
+                ma_prectxs = (lag, prectxs, [snd_action])
+                pos_multi_srps = self.mine_temporal_patterns((lag, ma_prectxs, postctxs))
+                agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
+                pos_multi_prdi = self.surprises_to_predictive_implications(pos_multi_srps)
+                cogscms.update(set(pos_multi_prdi))
 
         agent_log.fine("cogscms = {}".format(cogscms))
         self.cognitive_schematics.update(cogscms)
