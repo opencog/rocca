@@ -448,7 +448,7 @@ class OpencogAgent:
         agent_log.fine("pt = {}".format(pt))
         agent_log.fine("pd = {}".format(pd))
 
-        # TODO: big hack, pd is turned into positive goal
+        # HACK: big hack, pd is turned into positive goal
         if pd == self.negative_goal:
             pd = self.positive_goal
 
