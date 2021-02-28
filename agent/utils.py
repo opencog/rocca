@@ -21,7 +21,7 @@ from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
 from opencog.utilities import is_closed, get_free_variables
-from opencog.logger import Logger, log, create_logger
+from opencog.logger import create_logger
 
 #############
 # Constants #
@@ -34,7 +34,7 @@ DEFAULT_TV = TruthValue(1, 0)
 # Variables #
 #############
 
-agent_log = create_logger("opencog.log")
+agent_log = create_logger("opencog_agent.log")
 agent_log.set_component("Agent")
 
 #############
