@@ -61,11 +61,14 @@ nb_path: "index.ipynb"
 <ul>
 <li>Python 3</li>
 <li>python-orderedmultidict <a href="https://pypi.org/project/orderedmultidict/">https://pypi.org/project/orderedmultidict/</a></li>
+<li>fastcore <a href="https://fastcore.fast.ai">https://fastcore.fast.ai</a></li>
 <li>OpenAI Gym <a href="https://gym.openai.com/">https://gym.openai.com/</a></li>
-<li>Malmo <a href="https://github.com/Microsoft/malmo">https://github.com/Microsoft/malmo</a> (after compiling Malmo,
-copy <code>&lt;MALMO&gt;/build/install/Python_Examples/MalmoPython.so</code> and
-<code>&lt;MALMO&gt;/build/install/Python_Examples/malmoutils.py</code> under
-<code>&lt;ROCCA&gt;/examples/malmo</code>)</li>
+<li>MineRL <a href="https://minerl.io">https://minerl.io</a><ul>
+<li>In the current release there is a trivial bug that prevents Minecraft from building, go to <code>.../site-packages/minerl/env/Malmo/Minecraft/build.gradle</code> and
+edit line 73 such that the URL uses HTTPS protocol (<a href="https://github.com/minerllabs/minerl/issues/450#issuecomment-777009360">https://github.com/minerllabs/minerl/issues/450#issuecomment-777009360</a>).</li>
+</ul>
+</li>
+<li>nbdev <a href="https://nbdev.fast.ai">https://nbdev.fast.ai</a></li>
 </ul>
 
 </div>
@@ -97,6 +100,26 @@ copy <code>&lt;MALMO&gt;/build/install/Python_Examples/MalmoPython.so</code> and
 <p>For now a gym agent defined under the <code>rocca/agents</code> folder is provided that
 can used to implement agents for given environments.  See the examples
 under the <code>examples</code> folder.</p>
+<p>There are Jupyter notebooks provided for experimentation as well.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Develop">Develop<a class="anchor-link" href="#Develop"> </a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>You do not have to use <code>nbdev</code> to work with the code under the <code>rocca</code> directory.
+You should use it though if you want to work with Jupyter notebooks, the repository is setup to use certain
+utilities to clean them from unnecessary metadata when committing.</p>
+<p>One important mention is that <code>README.md</code> is now generated from <code>index.ipynb</code> by <code>nbdev_build_docs</code> command.
+Thus, you should not edit <code>README.md</code> directly.</p>
+<p>Exports from notebooks are generated with <code>nbdev_build_lib</code>. Changes to the exported code can be synchronized
+back to notebooks with <code>nbdev_update_lib</code>.</p>
 
 </div>
 </div>
