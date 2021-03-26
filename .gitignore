@@ -64,7 +64,6 @@ tools/fastai
 
 # link checker
 checklink/cookies.txt
-.envrc
 
 # Sphinx documentation
 docs/_build/
