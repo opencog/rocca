@@ -3,6 +3,7 @@
 *.py~
 .cache
 .pytest_cache/
+.last_checked
 
 # Setuptools distribution and build folders.
 /dist/
