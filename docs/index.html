@@ -113,13 +113,24 @@ under the <code>examples</code> folder.</p>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>You do not have to use <code>nbdev</code> to work with the code under the <code>rocca</code> directory.
+<h3 id="nbdev-workflow">nbdev workflow<a class="anchor-link" href="#nbdev-workflow"> </a></h3><p>You do not have to use <code>nbdev</code> to work with the code under the <code>rocca</code> directory.
 You should use it though if you want to work with Jupyter notebooks, the repository is setup to use certain
 utilities to clean them from unnecessary metadata when committing.</p>
 <p>One important mention is that <code>README.md</code> is now generated from <code>index.ipynb</code> by <code>nbdev_build_docs</code> command.
 Thus, you should not edit <code>README.md</code> directly.</p>
 <p>Exports from notebooks are generated with <code>nbdev_build_lib</code>. Changes to the exported code can be synchronized
 back to notebooks with <code>nbdev_update_lib</code>.</p>
+<h3 id="VS-Code-devcontainer">VS Code devcontainer<a class="anchor-link" href="#VS-Code-devcontainer"> </a></h3><p>This repository contains configuration that can be automatically used by VS Code to build a Docker container
+that will have the contents of this repository mounted and all dependencies installed. VS Code should ask you
+to reopen the directory in a container if you have its <em>Remote-Containers</em> extension installed.</p>
+<p>Running the provided configuration will start a JupyterLab instance that will be available on port 8888.</p>
+<p><strong>You have to inspect <code>.devcontainer/docker-compose.yml</code> and take care to set environment variables mentioned there.</strong></p>
+<p>There is also the <code>.devcontainer/docker-compose-custom.yml</code> that you can use to add your own configuration, matching your
+personal needs.</p>
+<p>Should you want to include your personal configuration without committing it to the repository, use the following Git command
+to ignore the changes:</p>
+<div class="highlight"><pre><span></span>git update-index --skip-worktree &lt;path/to/file&gt;
+</pre></div>
 
 </div>
 </div>

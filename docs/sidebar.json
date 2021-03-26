@@ -1,0 +1,7 @@
+{
+  "rocca": {
+    "Overview": "/",
+    "Hello World MineRL": "minerl_hello_world.html",
+    "Basic MineRL Agent": "minerl_basic_agent.html"
+  }
+}
