@@ -137,10 +137,7 @@ if __name__ == "__main__":
 
     # Create Action Space. The set of allowed actions an agent can take.
     # TODO take care of action parameters.
-    action_space = {ExecutionLink(SchemaNode("Go Left")),
-                    ExecutionLink(SchemaNode("Go Right")),
-                    ExecutionLink(SchemaNode("Stay")),
-                    ExecutionLink(SchemaNode("Eat"))}
+    action_space = {ExecutionLink(SchemaNode(a)) for a in allowed_actions}
 
     # ChaseAgent
     ca = ChaseAgent(wrapped_env, action_space, pgoal, ngoal)
