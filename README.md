@@ -25,7 +25,9 @@ Third party tools
   https://github.com/microsoft/malmo/blob/master/doc/build_linux.md,
   copy `<MALMO>/build/install/Python_Examples/MalmoPython.so` and
   `<MALMO>/build/install/Python_Examples/malmoutils.py` under
-  `<ROCCA>/examples/malmo`)
+  `<ROCCA>/examples/malmo`, then launch
+  `<MALMO>/Minecraft/launchClient.sh` before running the malmo
+  example).
 
 ## Install
 
