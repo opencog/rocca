@@ -12,9 +12,9 @@ OpenCog tools
 - spacetime
 - pln
 - miner
-- cogserver
-- attention
-- opencog
+- [optional] cogserver
+- [optional] attention
+- [optional] opencog
 
 Third party tools
 
