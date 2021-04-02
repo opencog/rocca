@@ -11,6 +11,7 @@ import time
 import gym
 # OpenCog
 from opencog.pln import *
+from opencog.ure import ure_logger
 
 # OpenCog Gym
 from agent.OpencogAgent import OpencogAgent
@@ -114,6 +115,14 @@ class ChaseAgent(OpencogAgent):
     #                                      go_left_eat_cogscm])
 
 if __name__ == "__main__":
+    # Init loggers
+    log.set_level("debug")
+    log.set_sync(False)
+    agent_log.set_level("fine")
+    agent_log.set_sync(False)
+    ure_logger().set_level("debug")
+    ure_logger().set_sync(False)
+
     atomspace = AtomSpace()
     set_default_atomspace(atomspace)
     # Wrap environment

@@ -72,14 +72,6 @@ class OpencogAgent:
         self.env.close()
 
     def load_opencog_modules(self):
-        # Init loggers
-        log.set_level("debug")
-        # log.set_sync(True)
-        agent_log.set_level("debug")
-        # agent_log.set_sync(True)
-        ure_logger().set_level("info")
-        # ure_logger().set_sync(True)
-
         # Load miner
         scheme_eval(self.atomspace, "(use-modules (opencog miner))")
         scheme_eval(self.atomspace, "(miner-logger-set-level! \"fine\")")
