@@ -15,6 +15,7 @@ from opencog.atomspace import types
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
+from opencog.ure import ure_logger
 
 # OpenAI Gym
 import gym
@@ -23,15 +24,17 @@ env = gym.make('CartPole-v1')
 # help(env.unwrapped)
 
 # OpenCog Gym
-from agent.gymagent import GymAgent
+from agent.OpencogAgent import OpencogAgent
+from agent.utils import *
+from envs.wrappers import GymWrapper
 
 ##################
 # CartPole Agent #
 ##################
 
-class CartPoleAgent(GymAgent):
-    def __init__(self):
-        GymAgent.__init__(self, env)
+class CartPoleAgent(OpencogAgent):
+    def __init__(self, env, action_space, p_goal, n_goal):
+        OpencogAgent.__init__(self, env, action_space, p_goal, n_goal)
 
     def gym_observation_to_atomese(self, observation):
         """Translate gym observation to Atomese
@@ -287,7 +290,36 @@ class CartPoleAgent(GymAgent):
 # Main #
 ########
 def main():
-    cpa = CartPoleAgent()
+    # Init loggers
+    log.set_level("debug")
+    log.set_sync(False)
+    agent_log.set_level("fine")
+    agent_log.set_sync(False)
+    ure_logger().set_level("debug")
+    ure_logger().set_sync(False)
+
+    # Set main atomspace
+    atomspace = AtomSpace()
+    set_default_atomspace(atomspace)
+
+    # Wrap environment
+    # Allowed_actions is not required if the gym environment's action
+    # space is labeled a.k.a space.Dict.
+    allowed_actions = ["Go Left", "Go Right"]
+    wrapped_env = GymWrapper(env, allowed_actions)
+
+    # Create Goal
+    pgoal = EvaluationLink(PredicateNode("Reward"), NumberNode("1"))
+    ngoal = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
+
+    # Create Action Space. The set of allowed actions an agent can take.
+    # TODO take care of action parameters.
+    action_space = {ExecutionLink(SchemaNode(a)) for a in allowed_actions}
+
+    # Instantiate CartPoleAgent
+    cpa = CartPoleAgent(wrapped_env, action_space, pgoal, ngoal)
+
+    # Run control loop
     while (cpa.step() or True):
         time.sleep(0.1)
         print("step_count = {}".format(cpa.step_count))
