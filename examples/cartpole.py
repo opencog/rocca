@@ -15,6 +15,7 @@ from opencog.atomspace import types
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
+from opencog.ure import ure_logger
 
 # OpenAI Gym
 import gym
@@ -23,17 +24,20 @@ env = gym.make('CartPole-v1')
 # help(env.unwrapped)
 
 # OpenCog Gym
-from agent.gymagent import GymAgent
+from agent.OpencogAgent import OpencogAgent
+from agent.utils import *
+from envs.wrappers import GymWrapper
 
-##################
-# CartPole Agent #
-##################
+####################
+# CartPole Wrapper #
+####################
 
-class CartPoleAgent(GymAgent):
-    def __init__(self):
-        GymAgent.__init__(self, env)
+class CartPoleWrapper(GymWrapper):
+    def __init__(self, env):
+        action_list = ["Go Left", "Go Right"]
+        GymWrapper.__init__(self, env, action_list)
 
-    def gym_observation_to_atomese(self, observation):
+    def labeled_observations(self, space, obs, sbs=""):
         """Translate gym observation to Atomese
 
         There are 4 observations (taken from CartPoleEnv help)
@@ -71,33 +75,33 @@ class CartPoleAgent(GymAgent):
 
         """
 
-        cp = NumberNode(str(observation[0]))
-        cv = NumberNode(str(observation[1]))
-        pa = NumberNode(str(observation[2]))
-        pvat = NumberNode(str(observation[3]))
+        cp = NumberNode(str(obs[0]))
+        cv = NumberNode(str(obs[1]))
+        pa = NumberNode(str(obs[2]))
+        pvat = NumberNode(str(obs[3]))
 
         return [EvaluationLink(PredicateNode("Cart Position"), cp),
                 EvaluationLink(PredicateNode("Cart Velocity"), cv),
                 EvaluationLink(PredicateNode("Pole Angle"), pa),
                 EvaluationLink(PredicateNode("Cart Velocity At Tip"), pvat)]
 
-    def atomese_action_space(self):
-        return {SchemaNode("Go Left"), SchemaNode("Go Right")}
 
-    def atomese_action_to_gym(self, action):
-        """Map atomese actions to gym actions
+##################
+# CartPole Agent #
+##################
 
-        In CartPole-v1 the mapping is as follows
+class CartPoleAgent(OpencogAgent):
+    def __init__(self, env):
+        # Create Action Space. The set of allowed actions an agent can take.
+        # TODO take care of action parameters.
+        action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_list}
 
-        SchemaNode("Go Left") -> 0
-        SchemaNode("Go Right") -> 1
+        # Create Goal
+        pgoal = EvaluationLink(PredicateNode("Reward"), NumberNode("1"))
+        ngoal = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
 
-        """
-
-        if SchemaNode("Go Left") == action:
-            return 0
-        if SchemaNode("Go Right") == action:
-            return 1
+        # Call super ctor
+        OpencogAgent.__init__(self, env, action_space, pgoal, ngoal)
 
     def plan(self, goal, expiry):
         """Plan the next actions given a goal and its expiry time offset
@@ -133,7 +137,7 @@ class CartPoleAgent(GymAgent):
         # with some arbitrary truth value (stv 0.9, 0.1)
         angle = VariableNode("$angle")
         numt = TypeNode("NumberNode")
-        time_offset = NumberNode(str(expiry))
+        time_offset = to_nat(1)
         pole_angle = PredicateNode("Pole Angle")
         go_right = SchemaNode("Go Right")
         go_left = SchemaNode("Go Left")
@@ -149,7 +153,7 @@ class CartPoleAgent(GymAgent):
         #     Variable "$angle"
         #     Type "NumberNode"
         #   Time "1"
-        #   And (or SimultaneousAnd?)
+        #   And
         #     Evaluation
         #       Predicate "Pole Angle"
         #       Variable "$angle"
@@ -181,7 +185,7 @@ class CartPoleAgent(GymAgent):
         #     Variable "$angle"
         #     Type "NumberNode"
         #   Time "1"
-        #   And (or SimultaneousAnd?)
+        #   And
         #     Evaluation
         #       Predicate "Pole Angle"
         #       Variable "$angle"
@@ -287,10 +291,29 @@ class CartPoleAgent(GymAgent):
 # Main #
 ########
 def main():
-    cpa = CartPoleAgent()
+    # Init loggers
+    log.set_level("debug")
+    log.set_sync(False)
+    agent_log.set_level("fine")
+    agent_log.set_sync(False)
+    ure_logger().set_level("debug")
+    ure_logger().set_sync(False)
+
+    # Set main atomspace
+    atomspace = AtomSpace()
+    set_default_atomspace(atomspace)
+
+    # Wrap environment
+    wrapped_env = CartPoleWrapper(env)
+
+    # Instantiate CartPoleAgent, and tune parameters
+    cpa = CartPoleAgent(wrapped_env)
+    cpa.delta = 1.0e-16
+
+    # Run control loop
     while (cpa.step() or True):
         time.sleep(0.1)
-        print("step_count = {}".format(cpa.step_count))
+        log.info("step_count = {}".format(cpa.step_count))
 
 
 if __name__ == "__main__":

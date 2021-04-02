@@ -11,6 +11,7 @@ import time
 import gym
 # OpenCog
 from opencog.pln import *
+from opencog.ure import ure_logger
 
 # OpenCog Gym
 from agent.OpencogAgent import OpencogAgent
@@ -21,120 +22,91 @@ env = gym.make('Chase-v0')
 # Uncomment the following to get a description of env
 # help(env.unwrapped)
 
+#################
+# Chase Wrapper #
+#################
+
+class CartPoleWrapper(GymWrapper):
+    def __init__(self, env):
+        action_list = ["Go Left", "Go Right", "Stay", "Eat"]
+        GymWrapper.__init__(self, env, action_list)
+
+    def labeled_observations(self, space, obs, sbs=""):
+        """Translate gym observation to Atomese
+
+        There are 2 gym observations:
+
+        Agent Position is 0 (left) or 1 (right)
+        Pellet Positon is 0 (left), 1 (right) or 2 (none)
+
+        Translated in Atomese as follows:
+
+        Evaluation
+          Predicate "Agent Position"
+          AP
+
+        where AP can be
+
+        1. Concept "Left Square"
+        2. Concept "Right Square"
+
+        Evaluation
+          Predicate "Pellet Position"
+          PP
+
+        where PP can be
+
+        1. Concept "Left Square"
+        2. Concept "Right Square"
+        3. Concept "None"
+
+        """
+
+        to_atomese_position = {0 : ConceptNode("Left Square"),
+                               1 : ConceptNode("Right Square"),
+                               2 : ConceptNode("None")}
+        ap = to_atomese_position[obs[0]]
+        pp = to_atomese_position[obs[1]]
+        return [EvaluationLink(PredicateNode("Agent Position"), ap),
+                EvaluationLink(PredicateNode("Pellet Position"), pp)]
+
+
 ###############
 # Chase Agent #
 ###############
 
 class ChaseAgent(OpencogAgent):
-    def __init__(self, env, action_space, p_goal, n_goal):
-        OpencogAgent.__init__(self, env, action_space, p_goal, n_goal)
+    def __init__(self, env):
+        # Create Action Space. The set of allowed actions an agent can take.
+        # TODO take care of action parameters.
+        action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_list}
 
-    # def learn(self):
-    #     agent_log.fine("ChaseAgent.learn()")
+        # Create Goal
+        pgoal = EvaluationLink(PredicateNode("Reward"), NumberNode("1"))
+        ngoal = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
 
-    #     # For now hardwire various plans of different timescales
-    #     agent_position = PredicateNode("0-Discrete")
-    #     pellet_position = PredicateNode("1-Discrete")
-    #     position = VariableNode("$position")
-    #     left_pos = NumberNode("0")
-    #     right_pos = NumberNode("1")
-    #     concept_t = TypeNode("ConceptNode")
-    #     number_t = TypeNode("NumberNode")
-    #     eat = SchemaNode("Eat")
-    #     go_right = SchemaNode("Go Right")
-    #     go_left = SchemaNode("Go Left")
-    #     reward = PredicateNode("Reward")
-    #     unit = NumberNode("1")
-    #     vhTV = TruthValue(1.0, 0.1)  # Very high TV
+        # Call super ctor
+        OpencogAgent.__init__(self, env, action_space, pgoal, ngoal)
 
-    #     # If agent position equals pellet position then eating brings
-    #     # a reward
-    #     eat_cogscm = \
-    #         PredictiveImplicationScopeLink(
-    #             TypedVariableLink(position, number_t),
-    #             to_nat(1),
-    #             AndLink(
-    #                 # Context
-    #                 EvaluationLink(agent_position, position),
-    #                 EvaluationLink(pellet_position, position),
-    #                 # Action
-    #                 ExecutionLink(eat)),
-    #             # Goal
-    #             EvaluationLink(reward, unit),
-    #             # TV
-    #             tv=vhTV)
-    #     agent_log.fine("eat_cogscm = {}".format(eat_cogscm))
-
-    #     # If agent position is Left and pellet position is Right then
-    #     # going right and eating brings a reward
-    #     go_right_eat_cogscm = \
-    #         PredictiveImplicationScopeLink(
-    #             VariableSet(),
-    #             to_nat(1),
-    #             AltSequentialAndLink(
-    #                 to_nat(1),
-    #                 AndLink(
-    #                     # Context
-    #                     EvaluationLink(agent_position, left_pos),
-    #                     EvaluationLink(pellet_position, right_pos),
-    #                     # Action 1
-    #                     ExecutionLink(go_right)),
-    #                 # Action 2
-    #                 ExecutionLink(eat)),
-    #             # Goal
-    #             EvaluationLink(reward, unit),
-    #             # TV
-    #             tv=vhTV)
-    #     agent_log.fine("go_right_eat_cogscm = {}".format(go_right_eat_cogscm))
-
-    #     # If agent position is Right and pellet position is Left then
-    #     # going left and eating brings a reward
-    #     go_left_eat_cogscm = \
-    #         PredictiveImplicationScopeLink(
-    #             VariableSet(),
-    #             to_nat(1),
-    #             AltSequentialAndLink(
-    #                 to_nat(1),
-    #                 AndLink(
-    #                     # Context
-    #                     EvaluationLink(agent_position, right_pos),
-    #                     EvaluationLink(pellet_position, left_pos),
-    #                     # Action 1
-    #                     ExecutionLink(go_left)),
-    #                 # Action 2
-    #                 ExecutionLink(eat)),
-    #             # Goal
-    #             EvaluationLink(reward, unit),
-    #             # TV
-    #             tv=vhTV)
-    #     agent_log.fine("go_left_eat_cogscm = {}".format(go_left_eat_cogscm))
-
-    #     self.cognitive_schematics = set([eat_cogscm,
-    #                                      go_right_eat_cogscm,
-    #                                      go_left_eat_cogscm])
 
 if __name__ == "__main__":
+    # Init loggers
+    log.set_level("debug")
+    log.set_sync(False)
+    agent_log.set_level("fine")
+    agent_log.set_sync(False)
+    ure_logger().set_level("debug")
+    ure_logger().set_sync(False)
+
+    # Set main atomspace
     atomspace = AtomSpace()
     set_default_atomspace(atomspace)
+
     # Wrap environment
-    # Allowed_actions is not required if the gym environment's action
-    # space is labeled a.k.a space.Dict.
-    allowed_actions = ["Go Left", "Go Right", "Stay", "Eat"]
-    wrapped_env = GymWrapper(env, allowed_actions)
-
-    # Create Goal
-    pgoal = EvaluationLink(PredicateNode("Reward"), NumberNode("1"))
-    ngoal = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
-
-    # Create Action Space. The set of allowed actions an agent can take.
-    # TODO take care of action parameters.
-    action_space = {ExecutionLink(SchemaNode("Go Left")),
-                    ExecutionLink(SchemaNode("Go Right")),
-                    ExecutionLink(SchemaNode("Stay")),
-                    ExecutionLink(SchemaNode("Eat"))}
+    wrapped_env = CartPoleWrapper(env)
 
     # ChaseAgent
-    ca = ChaseAgent(wrapped_env, action_space, pgoal, ngoal)
+    ca = ChaseAgent(wrapped_env)
 
     # Training/learning loop
     lt_iterations = 2           # Number of learning-training iterations
@@ -149,7 +121,7 @@ if __name__ == "__main__":
         agent_log.info("Start training ({}/{})".format(i + 1, lt_iterations))
         for j in range(lt_period):
             ca.step()
-            time.sleep(0.01)
+            time.sleep(0.1)
             log.info("step_count = {}".format(ca.step_count))
         nar = ca.accumulated_reward - par
         agent_log.info("Accumulated reward during {}th iteration = {}".format(i + 1, nar))
