@@ -85,6 +85,7 @@ class CartPoleWrapper(GymWrapper):
                 EvaluationLink(PredicateNode("Pole Angle"), pa),
                 EvaluationLink(PredicateNode("Cart Velocity At Tip"), pvat)]
 
+
 ##################
 # CartPole Agent #
 ##################
