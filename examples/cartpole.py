@@ -136,7 +136,7 @@ class CartPoleAgent(OpencogAgent):
         # with some arbitrary truth value (stv 0.9, 0.1)
         angle = VariableNode("$angle")
         numt = TypeNode("NumberNode")
-        time_offset = to_nat(expiry)
+        time_offset = to_nat(1)
         pole_angle = PredicateNode("Pole Angle")
         go_right = SchemaNode("Go Right")
         go_left = SchemaNode("Go Left")
@@ -305,13 +305,14 @@ def main():
     # Wrap environment
     wrapped_env = CartPoleWrapper(env)
 
-    # Instantiate CartPoleAgent
+    # Instantiate CartPoleAgent, and tune parameters
     cpa = CartPoleAgent(wrapped_env)
+    cpa.delta = 1.0e-16
 
     # Run control loop
     while (cpa.step() or True):
         time.sleep(0.1)
-        print("step_count = {}".format(cpa.step_count))
+        log.info("step_count = {}".format(cpa.step_count))
 
 
 if __name__ == "__main__":
