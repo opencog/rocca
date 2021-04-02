@@ -300,10 +300,12 @@ class OpencogAgent:
 
         vardecl = VariableNode("$vardecl")
         antecedent = VariableNode("$antecedent")
-        query = QuoteLink(PredictiveImplicationScopeLink(UnquoteLink(vardecl),
-                                                         to_nat(expiry),
-                                                         UnquoteLink(antecedent),
-                                                         goal))
+        # TODO: fix python PredictiveImplicationScopeLink binding!
+        # query = QuoteLink(PredictiveImplicationScopeLink(UnquoteLink(vardecl),
+        #                                                  to_nat(expiry),
+        #                                                  UnquoteLink(antecedent),
+        #                                                  goal))
+        query = QuoteLink(scheme_eval_h(self.atomspace, "(PredictiveImplicationScopeLink " + str(UnquoteLink(vardecl)) + str(to_nat(expiry)) + str(UnquoteLink(antecedent)) + str(goal) + ")"))
         return query
 
     def predictive_implication_query(self, goal, expiry):
@@ -462,7 +464,9 @@ class OpencogAgent:
         lag = SLink(ZLink())
 
         ntvardecl = self.get_nt_vardecl(pattern)
-        preimp = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
+        # TODO: fix python PredictiveImplicationScopeLink binding!
+        # preimp = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
+        preimp = scheme_eval_h(self.atomspace, "(PredictiveImplicationScopeLink " + str(ntvardecl) + str(lag) + str(pt) + str(pd) + ")")
         # Make sure all variables are in the antecedent
         vardecl_vars = set(get_free_variables(ntvardecl))
         pt_vars = set(get_free_variables(pt))
