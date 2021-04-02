@@ -12,19 +12,22 @@ OpenCog tools
 - spacetime
 - pln
 - miner
-- cogserver
-- attention
-- opencog
+- [optional] cogserver
+- [optional] attention
+- [optional] opencog
 
 Third party tools
 
 - Python 3
 - python-orderedmultidict https://pypi.org/project/orderedmultidict/
 - OpenAI Gym https://gym.openai.com/
-- Malmo https://github.com/Microsoft/malmo (after compiling Malmo,
+- Malmo https://github.com/Microsoft/malmo (after compiling Malmo, see
+  https://github.com/microsoft/malmo/blob/master/doc/build_linux.md,
   copy `<MALMO>/build/install/Python_Examples/MalmoPython.so` and
   `<MALMO>/build/install/Python_Examples/malmoutils.py` under
-  `<ROCCA>/examples/malmo`)
+  `<ROCCA>/examples/malmo`, then launch
+  `<MALMO>/Minecraft/launchClient.sh` before running the malmo
+  example).
 
 ## Install
 
