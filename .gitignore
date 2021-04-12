@@ -64,3 +64,4 @@ tools/fastai
 
 # link checker
 checklink/cookies.txt
+.envrc
