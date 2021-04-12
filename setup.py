@@ -1,8 +1,8 @@
 from setuptools import setup
 
 setup(
-    name="opencog-gym",
+    name="rocca",
     version="0.0.1",
-    packages=["agent", "envs", "envs.malmo_demo", "envs.wrappers", "envs.gym_chase"],
+    packages=["rocca"],
     install_requires=["gym", "orderedmultidict", "fastcore", "minerl"],
 )

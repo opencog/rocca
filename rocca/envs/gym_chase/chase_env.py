@@ -15,7 +15,7 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 from gym.envs.classic_control import rendering
 
-from envs.gym_chase.game_objects import Player, Table, Pellet
+from rocca.envs.gym_chase.game_objects import Player, Table, Pellet
 
 FPS = 30
 
