@@ -94,6 +94,7 @@ class ChaseAgent(OpencogAgent):
 
 if __name__ == "__main__":
     # Init loggers
+    log = create_logger("opencog.log")
     log.set_level("debug")
     log.set_sync(False)
     agent_log.set_level("fine")

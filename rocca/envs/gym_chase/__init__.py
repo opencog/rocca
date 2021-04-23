@@ -1,1 +1,1 @@
-from envs.gym_chase.chase_env import ChaseEnv
+from rocca.envs.gym_chase.chase_env import ChaseEnv
