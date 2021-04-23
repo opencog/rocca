@@ -14,6 +14,7 @@ import gym
 from opencog.atomspace import *
 from opencog.pln import *
 from opencog.ure import ure_logger
+from opencog.logger import log
 
 # OpenCog Gym
 from rocca.agents import OpencogAgent
@@ -93,7 +94,6 @@ class ChaseAgent(OpencogAgent):
 
 if __name__ == "__main__":
     # Init loggers
-    log = create_logger("opencog.log")
     log.set_level("debug")
     log.set_sync(False)
     agent_log.set_level("fine")

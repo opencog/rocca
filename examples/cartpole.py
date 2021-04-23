@@ -16,6 +16,7 @@ from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
 from opencog.ure import ure_logger
+from opencog.logger import log
 
 # OpenAI Gym
 import gym
@@ -292,7 +293,6 @@ class CartPoleAgent(OpencogAgent):
 ########
 def main():
     # Init loggers
-    log = create_logger("opencog.log")
     log.set_level("debug")
     log.set_sync(False)
     agent_log.set_level("fine")
