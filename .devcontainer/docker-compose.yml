@@ -13,22 +13,12 @@ services:
             - "6901:6901"
         volumes:
             - ..:/workspace:cached
-            - $OPENCOG_SOURCE_DIR:/opencog
-            - $HOME/.gitconfig:/home/opencog/.gitconfig # for git commits,stash ...
             - ~/.ccache:/home/opencog/.ccache # for persisting ccache artifacts
-            - $ATOMSPACE_SOURCE_DIR:/atomspace
-            - $COGUTIL_SOURCE_DIR:/cogutil
-            - $OPENCOG_NOTEBOOKS_DIR:/opencog/notebooks
-            # Uncomment the following lines if you want to work on moses
-            # - $MOSES_SOURCE_DIR:/moses
         environment:
-            - OPENCOG_SOURCE_DIR=/opencog
             - CCACHE_DIR=/home/opencog/.ccache
             - PGHOST=db # This should be the same as the link's alias
             - PGUSER=opencog_user # user created by configure-database.sh
             - TZ=$TZ # set this to your timezone
-            - ATOMSPACE_SOURCE_DIR=/atomspace
-            - COGUTIL_SOURCE_DIR=/cogutil
         links:
             - postgres:db
             - relex:relex

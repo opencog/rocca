@@ -27,6 +27,7 @@
 		"sjhuangx.vscode-scheme",
 		"clptn.code-paredit",
 		"2gua.rainbow-brackets",
+		"ms-python.vscode-pylance",
 	],
 	// Uncomment the next line if you want start specific services in your Docker Compose config.
 	// "runServices": [],
