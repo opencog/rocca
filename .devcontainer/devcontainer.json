@@ -7,7 +7,6 @@
 	// The .devcontainer/docker-compose.yml file contains any overrides you need/want to make.
 	"dockerComposeFile": [
 		"docker-compose.yml",
-		"docker-compose-custom.yml"
 	],
 	// The 'service' property is the name of the service for the container that VS Code should
 	// use. Update this value and .devcontainer/docker-compose.yml to the real service name.
@@ -34,7 +33,7 @@
 	// Uncomment the next line if you want to keep your containers running after VS Code shuts down.
 	// "shutdownAction": "none",
 	// Uncomment the next line to run commands after the container is created - for example installing git.
-	"postCreateCommand": "sudo pip3 install -e .",
+	"postCreateCommand": "sudo pip3 install -r requirements-dev.txt && sudo pip3 install -e .",
 	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
 	// "remoteUser": "vscode"
 }
