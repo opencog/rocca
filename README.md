@@ -26,8 +26,7 @@ Third party tools
 - fastcore https://fastcore.fast.ai
 - OpenAI Gym https://gym.openai.com/
 - MineRL https://minerl.io
-  - In the current release there is a trivial bug that prevents Minecraft from building, go to `.../site-packages/minerl/env/Malmo/Minecraft/build.gradle` and
-    edit line 73 such that the URL uses HTTPS protocol (https://github.com/minerllabs/minerl/issues/450#issuecomment-777009360).
+- nbdev https://nbdev.fast.ai
 
 ## Install
 
