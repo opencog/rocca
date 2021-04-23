@@ -6,8 +6,8 @@ index = {"NavigateAgent": "02_minerl_basic_agent.ipynb"}
 
 modules = ["agents/navigate.py"]
 
-doc_url = "https://ntoxeg.github.io/rocca/"
+doc_url = "https://opencog.github.io/rocca/"
 
-git_url = "https://github.com/ntoxeg/rocca/tree/master/"
+git_url = "https://github.com/opencog/rocca/tree/master/"
 
 def custom_doc_links(name): return None

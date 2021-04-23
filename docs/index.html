@@ -53,9 +53,9 @@ nb_path: "index.ipynb"
 <li>spacetime</li>
 <li>pln</li>
 <li>miner</li>
-<li>cogserver</li>
-<li>attention</li>
-<li>opencog</li>
+<li>[optional] cogserver</li>
+<li>[optional] attention</li>
+<li>[optional] opencog</li>
 </ul>
 <p>Third party tools</p>
 <ul>
@@ -63,11 +63,7 @@ nb_path: "index.ipynb"
 <li>python-orderedmultidict <a href="https://pypi.org/project/orderedmultidict/">https://pypi.org/project/orderedmultidict/</a></li>
 <li>fastcore <a href="https://fastcore.fast.ai">https://fastcore.fast.ai</a></li>
 <li>OpenAI Gym <a href="https://gym.openai.com/">https://gym.openai.com/</a></li>
-<li>MineRL <a href="https://minerl.io">https://minerl.io</a><ul>
-<li>In the current release there is a trivial bug that prevents Minecraft from building, go to <code>.../site-packages/minerl/env/Malmo/Minecraft/build.gradle</code> and
-edit line 73 such that the URL uses HTTPS protocol (<a href="https://github.com/minerllabs/minerl/issues/450#issuecomment-777009360">https://github.com/minerllabs/minerl/issues/450#issuecomment-777009360</a>).</li>
-</ul>
-</li>
+<li>MineRL <a href="https://minerl.io">https://minerl.io</a></li>
 <li>nbdev <a href="https://nbdev.fast.ai">https://nbdev.fast.ai</a></li>
 </ul>
 
@@ -127,10 +123,6 @@ to reopen the directory in a container if you have its <em>Remote-Containers</em
 <p><strong>You have to inspect <code>.devcontainer/docker-compose.yml</code> and take care to set environment variables mentioned there.</strong></p>
 <p>There is also the <code>.devcontainer/docker-compose-custom.yml</code> that you can use to add your own configuration, matching your
 personal needs.</p>
-<p>Should you want to include your personal configuration without committing it to the repository, use the following Git command
-to ignore the changes:</p>
-<div class="highlight"><pre><span></span>git update-index --skip-worktree &lt;path/to/file&gt;
-</pre></div>
 
 </div>
 </div>
