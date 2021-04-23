@@ -24,9 +24,9 @@ env = gym.make('CartPole-v1')
 # help(env.unwrapped)
 
 # OpenCog Gym
-from agent.OpencogAgent import OpencogAgent
-from agent.utils import *
-from envs.wrappers import GymWrapper
+from rocca.agents import OpencogAgent
+from rocca.agents.utils import *
+from rocca.envs.wrappers import GymWrapper
 
 ####################
 # CartPole Wrapper #
@@ -292,6 +292,7 @@ class CartPoleAgent(OpencogAgent):
 ########
 def main():
     # Init loggers
+    log = create_logger("opencog.log")
     log.set_level("debug")
     log.set_sync(False)
     agent_log.set_level("fine")
