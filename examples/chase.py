@@ -9,7 +9,9 @@ import time
 
 # OpenAI Gym
 import gym
+
 # OpenCog
+from opencog.atomspace import *
 from opencog.pln import *
 from opencog.ure import ure_logger
 
