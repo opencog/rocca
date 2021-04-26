@@ -29,10 +29,10 @@ env = gym.make('Chase-v0')
 # Chase Wrapper #
 #################
 
-class CartPoleWrapper(GymWrapper):
+class ChaseWrapper(GymWrapper):
     def __init__(self, env):
         action_list = ["Go Left", "Go Right", "Stay", "Eat"]
-        GymWrapper.__init__(self, env, action_list)
+        super().__init__(env, action_list)
 
     def labeled_observations(self, space, obs, sbs=""):
         """Translate gym observation to Atomese
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     set_default_atomspace(atomspace)
 
     # Wrap environment
-    wrapped_env = CartPoleWrapper(env)
+    wrapped_env = ChaseWrapper(env)
 
     # ChaseAgent
     ca = ChaseAgent(wrapped_env)

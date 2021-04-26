@@ -5,13 +5,11 @@
 ##############
 
 # Python
-import os
 import time
-from orderedmultidict import omdict
+from typing import List
 
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
-from opencog.atomspace import types
 from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
@@ -20,7 +18,8 @@ from opencog.logger import log
 
 # OpenAI Gym
 import gym
-env = gym.make('CartPole-v1')
+
+env = gym.make("CartPole-v1")
 # Uncomment the following to get a description of env
 # help(env.unwrapped)
 
@@ -33,10 +32,11 @@ from rocca.envs.wrappers import GymWrapper
 # CartPole Wrapper #
 ####################
 
+
 class CartPoleWrapper(GymWrapper):
     def __init__(self, env):
         action_list = ["Go Left", "Go Right"]
-        GymWrapper.__init__(self, env, action_list)
+        super().__init__(env, action_list)
 
     def labeled_observations(self, space, obs, sbs=""):
         """Translate gym observation to Atomese
@@ -81,18 +81,21 @@ class CartPoleWrapper(GymWrapper):
         pa = NumberNode(str(obs[2]))
         pvat = NumberNode(str(obs[3]))
 
-        return [EvaluationLink(PredicateNode("Cart Position"), cp),
-                EvaluationLink(PredicateNode("Cart Velocity"), cv),
-                EvaluationLink(PredicateNode("Pole Angle"), pa),
-                EvaluationLink(PredicateNode("Cart Velocity At Tip"), pvat)]
+        return [
+            EvaluationLink(PredicateNode("Cart Position"), cp),
+            EvaluationLink(PredicateNode("Cart Velocity"), cv),
+            EvaluationLink(PredicateNode("Pole Angle"), pa),
+            EvaluationLink(PredicateNode("Cart Velocity At Tip"), pvat),
+        ]
 
 
 ##################
 # CartPole Agent #
 ##################
 
+
 class CartPoleAgent(OpencogAgent):
-    def __init__(self, env):
+    def __init__(self, env: GymWrapper):
         # Create Action Space. The set of allowed actions an agent can take.
         # TODO take care of action parameters.
         action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_list}
@@ -102,9 +105,9 @@ class CartPoleAgent(OpencogAgent):
         ngoal = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
 
         # Call super ctor
-        OpencogAgent.__init__(self, env, action_space, pgoal, ngoal)
+        super().__init__(env, action_space, pgoal, ngoal)
 
-    def plan(self, goal, expiry):
+    def plan(self, goal, expiry) -> List:
         """Plan the next actions given a goal and its expiry time offset
 
         Return a python list of cognivite schematics.  Whole cognitive
@@ -166,20 +169,21 @@ class CartPoleAgent(OpencogAgent):
         #   Evaluation
         #     Predicate "Reward"
         #     Number "1"
-        cs_rr = \
-            PredictiveImplicationScopeLink(
-                TypedVariableLink(angle, numt),
-                time_offset,
-                AndLink(
-                    # Context
-                    EvaluationLink(pole_angle, angle),
-                    GreaterThanLink(angle, epsilon),
-                    # Action
-                    ExecutionLink(go_right)),
-                # Goal
-                EvaluationLink(reward, unit),
-                # TV
-                tv=hTV)
+        cs_rr = PredictiveImplicationScopeLink(
+            TypedVariableLink(angle, numt),
+            time_offset,
+            AndLink(
+                # Context
+                EvaluationLink(pole_angle, angle),
+                GreaterThanLink(angle, epsilon),
+                # Action
+                ExecutionLink(go_right),
+            ),
+            # Goal
+            EvaluationLink(reward, unit),
+            # TV
+            tv=hTV,
+        )
 
         # PredictiveImplicationScope <high TV>
         #   TypedVariable
@@ -198,20 +202,21 @@ class CartPoleAgent(OpencogAgent):
         #   Evaluation
         #     Predicate "Reward"
         #     Number "1"
-        cs_ll = \
-            PredictiveImplicationScopeLink(
-                TypedVariableLink(angle, numt),
-                time_offset,
-                AndLink(
-                    # Context
-                    EvaluationLink(pole_angle, angle),
-                    GreaterThanLink(mepsilon, angle),
-                    # Action
-                    ExecutionLink(go_left)),
-                # Goal
-                EvaluationLink(reward, unit),
-                # TV
-                tv=hTV)
+        cs_ll = PredictiveImplicationScopeLink(
+            TypedVariableLink(angle, numt),
+            time_offset,
+            AndLink(
+                # Context
+                EvaluationLink(pole_angle, angle),
+                GreaterThanLink(mepsilon, angle),
+                # Action
+                ExecutionLink(go_left),
+            ),
+            # Goal
+            EvaluationLink(reward, unit),
+            # TV
+            tv=hTV,
+        )
 
         # To cover all possibilities we shouldn't forget the complementary
         # actions, i.e. going left when the pole is falling to the right
@@ -234,20 +239,21 @@ class CartPoleAgent(OpencogAgent):
         #   Evaluation
         #     Predicate "Reward"
         #     Number "1"
-        cs_rl = \
-            PredictiveImplicationScopeLink(
-                TypedVariableLink(angle, numt),
-                time_offset,
-                AndLink(
-                    # Context
-                    EvaluationLink(pole_angle, angle),
-                    GreaterThanLink(angle, epsilon),
-                    # Action
-                    ExecutionLink(go_left)),
-                # Goal
-                EvaluationLink(reward, unit),
-                # TV
-                tv=lTV)
+        cs_rl = PredictiveImplicationScopeLink(
+            TypedVariableLink(angle, numt),
+            time_offset,
+            AndLink(
+                # Context
+                EvaluationLink(pole_angle, angle),
+                GreaterThanLink(angle, epsilon),
+                # Action
+                ExecutionLink(go_left),
+            ),
+            # Goal
+            EvaluationLink(reward, unit),
+            # TV
+            tv=lTV,
+        )
 
         # PredictiveImplicationScope <low TV>
         #   TypedVariable
@@ -266,20 +272,21 @@ class CartPoleAgent(OpencogAgent):
         #   Evaluation
         #     Predicate "Reward"
         #     Number "1"
-        cs_lr = \
-            PredictiveImplicationScopeLink(
-                TypedVariableLink(angle, numt),
-                time_offset,
-                AndLink(
-                    # Context
-                    EvaluationLink(pole_angle, angle),
-                    GreaterThanLink(mepsilon, angle),
-                    # Action
-                    ExecutionLink(go_right)),
-                # Goal
-                EvaluationLink(reward, unit),
-                # TV
-                tv=lTV)
+        cs_lr = PredictiveImplicationScopeLink(
+            TypedVariableLink(angle, numt),
+            time_offset,
+            AndLink(
+                # Context
+                EvaluationLink(pole_angle, angle),
+                GreaterThanLink(mepsilon, angle),
+                # Action
+                ExecutionLink(go_right),
+            ),
+            # Goal
+            EvaluationLink(reward, unit),
+            # TV
+            tv=lTV,
+        )
 
         # Ideally we want to return only relevant cognitive schematics
         # (i.e. with contexts probabilistically currently true) for
@@ -293,11 +300,11 @@ class CartPoleAgent(OpencogAgent):
 ########
 def main():
     # Init loggers
-    log.set_level("debug")
+    log.set_level("fine")
     log.set_sync(False)
     agent_log.set_level("fine")
     agent_log.set_sync(False)
-    ure_logger().set_level("debug")
+    ure_logger().set_level("fine")
     ure_logger().set_sync(False)
 
     # Set main atomspace
@@ -312,9 +319,11 @@ def main():
     cpa.delta = 1.0e-16
 
     # Run control loop
-    while (cpa.step() or True):
+    while cpa.step():
         time.sleep(0.1)
         log.info("step_count = {}".format(cpa.step_count))
+
+    print(f"The final reward is {cpa.accumulated_reward}.")
 
 
 if __name__ == "__main__":
