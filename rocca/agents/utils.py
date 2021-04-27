@@ -34,7 +34,7 @@ DEFAULT_TV = TruthValue(1, 0)
 # Variables #
 #############
 
-agent_log = create_logger("opencog_agent.log")
+agent_log = create_logger("opencog.log")
 agent_log.set_component("Agent")
 
 #############
