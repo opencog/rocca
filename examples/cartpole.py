@@ -8,6 +8,8 @@
 import time
 from typing import List
 
+from tensorboardX import SummaryWriter
+
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
 from opencog.type_constructors import *
@@ -27,6 +29,8 @@ env = gym.make("CartPole-v1")
 from rocca.agents import OpencogAgent
 from rocca.agents.utils import *
 from rocca.envs.wrappers import GymWrapper
+
+from rocca.utils import *
 
 ####################
 # CartPole Wrapper #
@@ -110,7 +114,7 @@ class CartPoleAgent(OpencogAgent):
     def plan(self, goal, expiry) -> List:
         """Plan the next actions given a goal and its expiry time offset
 
-        Return a python list of cognivite schematics.  Whole cognitive
+        Return a python list of cognitive schematics.  Whole cognitive
         schematics are output (instead of action plans) in order to
         make a decision based on their truth values.  Alternatively it
         could return a pair (action plan, tv), where tv has been
@@ -307,6 +311,8 @@ def main():
     ure_logger().set_level("fine")
     ure_logger().set_sync(False)
 
+    tb_writer = SummaryWriter(comment="cartpole")
+
     # Set main atomspace
     atomspace = AtomSpace()
     set_default_atomspace(atomspace)
@@ -322,8 +328,9 @@ def main():
     while cpa.step():
         time.sleep(0.1)
         log.info("step_count = {}".format(cpa.step_count))
+        tb_writer.add_scalar("accumulated_reward", cpa.accumulated_reward, cpa.step_count)
 
-    print(f"The final reward is {cpa.accumulated_reward}.")
+    log_msg(agent_log, f"The final reward is {cpa.accumulated_reward}.")
 
 
 if __name__ == "__main__":
