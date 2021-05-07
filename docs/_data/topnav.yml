@@ -2,7 +2,7 @@ topnav:
 - title: Topnav
   items:
     - title: github
-      external_url: https://github.com/ntoxeg/rocca/tree/master/
+      external_url: https://github.com/opencog/rocca/tree/master/
 
 #Topnav dropdowns
 topnav_dropdowns:

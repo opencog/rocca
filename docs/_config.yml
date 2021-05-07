@@ -1,4 +1,4 @@
-repository: ntoxeg/rocca
+repository: opencog/rocca
 output: web
 topnav_title: rocca
 site_title: rocca

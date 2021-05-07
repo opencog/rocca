@@ -1,7 +1,8 @@
 {
   "rocca": {
     "Overview": "/",
+    "Cartpole Agent": "cartpole.html",
     "Hello World MineRL": "minerl_hello_world.html",
-    "Basic MineRL Agent": "minerl_basic_agent.html"
+    "Basic MineRL Agent": "minerl_navigate_agent.html"
   }
 }
