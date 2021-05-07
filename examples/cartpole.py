@@ -8,8 +8,6 @@
 import time
 from typing import List
 
-from tensorboardX import SummaryWriter
-
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue
 from opencog.type_constructors import *
@@ -36,7 +34,7 @@ from rocca.utils import *
 # CartPole Wrapper #
 ####################
 
-
+# TODO: move to a library module.
 class CartPoleWrapper(GymWrapper):
     def __init__(self, env):
         action_list = ["Go Left", "Go Right"]
@@ -311,8 +309,6 @@ def main():
     ure_logger().set_level("fine")
     ure_logger().set_sync(False)
 
-    tb_writer = SummaryWriter(comment="cartpole")
-
     # Set main atomspace
     atomspace = AtomSpace()
     set_default_atomspace(atomspace)
@@ -325,10 +321,9 @@ def main():
     cpa.delta = 1.0e-16
 
     # Run control loop
-    while cpa.step():
+    while not cpa.step():
         time.sleep(0.1)
         log.info("step_count = {}".format(cpa.step_count))
-        tb_writer.add_scalar("accumulated_reward", cpa.accumulated_reward, cpa.step_count)
 
     log_msg(agent_log, f"The final reward is {cpa.accumulated_reward}.")
 
