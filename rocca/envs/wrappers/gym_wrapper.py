@@ -1,15 +1,18 @@
 from functools import wraps
+from typing import *
 
 import numpy as np
 from fastcore.basics import listify
+from gym import Env
 from gym import spaces as sp
+from opencog.atomspace import Atom
 
 from .utils import *
 from .wrapper import Wrapper
 
 
 class GymWrapper(Wrapper):
-    def __init__(self, env, action_list=[]):
+    def __init__(self, env: Env, action_list=[]):
         super()
         self.env = env
         self.action_space = env.action_space
@@ -55,14 +58,18 @@ class GymWrapper(Wrapper):
         else:
             raise NotImplementedError("Unknown Observation Space.")
 
-    def parse_world_state(self, ospace, obs, reward, done):
+    def parse_world_state(self, ospace, obs, reward, done) -> Tuple[list, Atom, bool]:
+        """Return a triple of `observation, reward, done` - in Atomese representation
+
+        The `done` variable signifies whether the Gym environment is done.
+        """
         obs_list = self.labeled_observations(ospace, obs)
-        return mk_evaluation("Reward", reward), obs_list, done
+        return obs_list, mk_evaluation("Reward", reward), done
 
     @staticmethod
     def restart_decorator(restart):
         @wraps(restart)
-        def wrapper(ref):
+        def wrapper(ref: "GymWrapper"):
             obs = restart(ref)
             return ref.parse_world_state(ref.observation_space, obs, 0, False)
 
@@ -71,7 +78,7 @@ class GymWrapper(Wrapper):
     @staticmethod
     def step_decorator(step):
         @wraps(step)
-        def wrapper(ref, action):
+        def wrapper(ref: "GymWrapper", action):
             if isinstance(ref.action_space, sp.Discrete):
                 if not len(ref.action_list) == ref.action_space.n:
                     raise ValueError("Invalid action list.")
@@ -96,7 +103,6 @@ class GymWrapper(Wrapper):
 
     @restart_decorator.__func__
     def restart(self):
-        # self.env.render()  FIXME: is this necessary here?
         return self.env.reset()
 
     @step_decorator.__func__
