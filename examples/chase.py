@@ -28,7 +28,7 @@ env = gym.make('Chase-v0')
 #################
 # Chase Wrapper #
 #################
-
+# TODO: move to a library module.
 class ChaseWrapper(GymWrapper):
     def __init__(self, env):
         action_list = ["Go Left", "Go Right", "Stay", "Eat"]

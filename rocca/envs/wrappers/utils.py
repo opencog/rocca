@@ -8,7 +8,7 @@ from opencog.atomspace import types as AT
 from opencog.type_constructors import *
 
 
-def mk_action(name, value):
+def mk_action(name, value) -> Atom:
     if isinstance(value, np.ndarray):
         value = listify(value.tolist())
         return ExecutionLink(SchemaNode(name), mk_list(*value))
@@ -16,7 +16,7 @@ def mk_action(name, value):
     return ExecutionLink(SchemaNode(name), mk_node(value))
 
 
-def mk_node(name):
+def mk_node(name) -> Atom:
     if isinstance(name, Number):
         return NumberNode(str(name))
     if isinstance(name, str):
@@ -24,7 +24,7 @@ def mk_node(name):
     raise RuntimeError("Error: Unknown type.")
 
 
-def mk_evaluation(predicate, *args):
+def mk_evaluation(predicate, *args) -> Atom:
     pred = PredicateNode(predicate)
     if len(args) == 1:
         if not isinstance(args[-1], bool):
@@ -36,7 +36,7 @@ def mk_evaluation(predicate, *args):
     return EvaluationLink(pred, arg_listlink)
 
 
-def mk_list(*args) -> ListLink:
+def mk_list(*args) -> Atom:
     processed_items = []
     for arg in args:
         if isinstance(arg, list):
