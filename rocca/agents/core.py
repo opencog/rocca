@@ -5,15 +5,14 @@
 ##############
 
 # Python
-import os
 import math
+import multiprocessing
 from collections import Counter
 
 # OpenCog
 from opencog.pln import *
 from opencog.utilities import is_closed
 from opencog.scheme import scheme_eval_h, scheme_eval
-from opencog.ure import ure_logger
 
 # OpencogAgent
 from .utils import *
@@ -133,10 +132,10 @@ class OpencogAgent:
 
         agent_log.fine("pln_bc(query={}, maxiter={})".format(query, maxiter))
 
-        command = "(pln-bc "
-        command += str(query)
-        command += " #:maximum-iterations " + str(maxiter)
-        command += ")"
+        command = f"""(pln-bc {query}
+        #:maximum-iterations {maxiter}
+        #:jobs {multiprocessing.cpu_count()})"""
+
         return scheme_eval_h(self.atomspace, command).out
 
     def learn(self):
@@ -609,29 +608,17 @@ class OpencogAgent:
 
         # Launch pattern miner
         # " #:ignore " + str(ignore) + \
-        mine_query = (
-            "(cog-mine "
-            + str(self.percepta_record)
-            + " #:minimum-support "
-            + str(minsup)
-            + " #:initial-pattern "
-            + str(initpat)
-            + " #:maximum-iterations "
-            + str(maxiter)
-            + " #:conjunction-expansion "
-            + cnjexp
-            + " #:enforce-specialization "
-            + enfspe
-            + " #:maximum-variables "
-            + str(maxvars)
-            + " #:maximum-conjuncts "
-            + str(maxcjnts)
-            + " #:maximum-spcial-conjuncts "
-            + str(mspc)
-            + " #:surprisingness "
-            + surprise
-            + ")"
-        )
+        mine_query = f"""(cog-mine {self.percepta_record}
+              #:minimum-support {minsup}
+              #:initial-pattern {initpat}
+              #:maximum-iterations {maxiter}
+              #:conjunction-expansion {cnjexp}
+              #:enforce-specialization {enfspe}
+              #:maximum-variables {maxvars}
+              #:maximum-conjuncts {maxcjnts}
+              #:maximum-spcial-conjuncts {mspc}
+              #:surprisingness {surprise}
+              #:jobs {multiprocessing.cpu_count()})"""
         agent_log.fine("mine_query = {}".format(mine_query))
         surprises = scheme_eval_h(self.atomspace, "(List " + mine_query + ")")
         agent_log.fine("surprises = {}".format(surprises))
