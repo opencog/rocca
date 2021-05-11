@@ -4,6 +4,8 @@
 # Initialize #
 ##############
 
+import logging
+
 # Python
 import math
 import multiprocessing
@@ -11,14 +13,14 @@ from collections import Counter
 
 # OpenCog
 from opencog.pln import *
+from opencog.scheme import scheme_eval, scheme_eval_h
 from opencog.utilities import is_closed
-from opencog.scheme import scheme_eval_h, scheme_eval
-
-# OpencogAgent
-from .utils import *
-
 from rocca.envs.wrappers import Wrapper
 
+from .utils import *
+
+logging.basicConfig(filename="agent.log", format="%(asctime)s %(message)s")
+logger = logging.getLogger(__name__)
 
 #########
 # Class #
@@ -131,6 +133,7 @@ class OpencogAgent:
         """
 
         agent_log.fine("pln_bc(query={}, maxiter={})".format(query, maxiter))
+        logger.info("pln_bc(query={}, maxiter={})".format(query, maxiter))
 
         command = f"""(pln-bc {query}
         #:maximum-iterations {maxiter}
@@ -193,6 +196,7 @@ class OpencogAgent:
                 cogscms.update(set(pos_multi_prdi))
 
         agent_log.fine("cogscms = {}".format(cogscms))
+        logger.info("cogscms = {}".format(cogscms))
         self.cognitive_schematics.update(cogscms)
 
     def get_pattern(self, surprise_eval):
@@ -320,6 +324,7 @@ class OpencogAgent:
             )
         else:
             agent_log.error("Not supported yet!")
+            logger.error("Not supported yet!")
 
     def to_predictive_implicant(self, pattern):
         """Turn a temporal pattern into predictive implicant."""
@@ -620,8 +625,10 @@ class OpencogAgent:
               #:surprisingness {surprise}
               #:jobs {multiprocessing.cpu_count()})"""
         agent_log.fine("mine_query = {}".format(mine_query))
+        logger.info("mine_query = {}".format(mine_query))
         surprises = scheme_eval_h(self.atomspace, "(List " + mine_query + ")")
         agent_log.fine("surprises = {}".format(surprises))
+        logger.info("surprises = {}".format(surprises))
 
         return surprises.out
 
@@ -861,6 +868,7 @@ class OpencogAgent:
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
         agent_log.fine("valid_cogscms = {}".format(valid_cogscms))
+        logger.debug("valid_cogscms = {}".format(valid_cogscms))
 
         # Size of the complete data set, including all observations
         # used to build the models. For simplicity we're gonna assume
@@ -908,6 +916,7 @@ class OpencogAgent:
         """Run one step of observation, decision and env update"""
 
         agent_log.debug("atomese_obs = {}".format(self.observation))
+        logger.debug("atomese_obs = {}".format(self.observation))
         obs_record = [
             self.record(o, self.step_count, tv=TRUE_TV) for o in self.observation
         ]
@@ -916,6 +925,7 @@ class OpencogAgent:
         # Make the goal for that iteration
         goal = self.make_goal()
         agent_log.debug("goal = {}".format(goal))
+        logger.debug("goal = {}".format(goal))
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
         # goal expiry is 2, i.e. must be fulfilled set for the next two iterations.
@@ -929,6 +939,11 @@ class OpencogAgent:
         # Select the next action
         action, pblty = self.decide(mxmdl)
         agent_log.debug(
+            "action with probability of success = {}".format(
+                act_pblt_to_str((action, pblty))
+            )
+        )
+        logger.debug(
             "action with probability of success = {}".format(
                 act_pblt_to_str((action, pblty))
             )

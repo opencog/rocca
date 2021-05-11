@@ -9,7 +9,6 @@ import minerl  # noqa
 import time
 
 # OpenCog
-from opencog.atomspace import *
 from opencog.logger import log
 from opencog.pln import *
 from opencog.type_constructors import *

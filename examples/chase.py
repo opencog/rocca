@@ -11,7 +11,6 @@ import time
 import gym
 
 # OpenCog
-from opencog.atomspace import *
 from opencog.pln import *
 from opencog.ure import ure_logger
 from opencog.logger import log
