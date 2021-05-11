@@ -59,6 +59,8 @@ Third party tools
 - OpenAI Gym https://gym.openai.com/
 - MineRL https://minerl.io
 - nbdev https://nbdev.fast.ai
+- tensorboard
+- tensorboardX
 
 ## Install
 
@@ -97,8 +99,3 @@ that will have the contents of this repository mounted and all dependencies inst
 to reopen the directory in a container if you have its _Remote-Containers_ extension installed.
 
 Running the provided configuration will start a JupyterLab instance that will be available on port 8888.
-
-**You have to inspect `.devcontainer/docker-compose.yml` and take care to set environment variables mentioned there.**
-
-There is also the `.devcontainer/docker-compose-custom.yml` that you can use to add your own configuration, matching your
-personal needs.

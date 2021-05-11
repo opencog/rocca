@@ -70,7 +70,7 @@ nb_path: "01_cartpole.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h2 id="CartPoleWrapper" class="doc_header"><code>class</code> <code>CartPoleWrapper</code><a href="https://github.com/opencog/rocca/tree/master/rocca/agents/cartpole.py#L29" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>CartPoleWrapper</code>(<strong><code>env</code></strong>) :: <code>GymWrapper</code></p>
+<h2 id="CartPoleWrapper" class="doc_header"><code>class</code> <code>CartPoleWrapper</code><a href="https://github.com/opencog/rocca/tree/master/rocca/agents/cartpole.py#L28" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>CartPoleWrapper</code>(<strong><code>env</code></strong>) :: <code>GymWrapper</code></p>
 </blockquote>
 <p>This wrapper abstracts and decorates components of environments in order to
 run agents on any environment. It is supposed to be derived by concrete
@@ -133,13 +133,6 @@ environment wrappers with the following specifications.</p>
 </div>
 </div>
 </div>
-<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>???</p>
-
-</div>
-</div>
-</div>
     {% raw %}
     
 <div class="cell border-box-sizing code_cell rendered">
@@ -151,7 +144,7 @@ environment wrappers with the following specifications.</p>
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h2 id="FixedCartPoleAgent" class="doc_header"><code>class</code> <code>FixedCartPoleAgent</code><a href="https://github.com/opencog/rocca/tree/master/rocca/agents/cartpole.py#L87" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>FixedCartPoleAgent</code>(<strong><code>env</code></strong>:<code>GymWrapper</code>) :: <code>OpencogAgent</code></p>
+<h2 id="FixedCartPoleAgent" class="doc_header"><code>class</code> <code>FixedCartPoleAgent</code><a href="https://github.com/opencog/rocca/tree/master/rocca/agents/cartpole.py#L86" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>FixedCartPoleAgent</code>(<strong><code>env</code></strong>:<code>GymWrapper</code>) :: <code>OpencogAgent</code></p>
 </blockquote>
 
 </div>
@@ -167,6 +160,103 @@ environment wrappers with the following specifications.</p>
     {% raw %}
     
 <div class="cell border-box-sizing code_cell rendered">
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">seed_with</span><span class="p">(</span><span class="n">agent</span><span class="p">,</span> <span class="n">knowledge</span><span class="p">):</span>  <span class="c1"># TODO: figure out how to pass atoms to be inserted.</span>
+    <span class="n">set_default_atomspace</span><span class="p">(</span><span class="n">agent</span><span class="o">.</span><span class="n">atomspace</span><span class="p">)</span>
+
+    <span class="n">angle</span> <span class="o">=</span> <span class="n">VariableNode</span><span class="p">(</span><span class="s2">&quot;$angle&quot;</span><span class="p">)</span>
+    <span class="n">numt</span> <span class="o">=</span> <span class="n">TypeNode</span><span class="p">(</span><span class="s2">&quot;NumberNode&quot;</span><span class="p">)</span>
+    <span class="n">time_offset</span> <span class="o">=</span> <span class="n">to_nat</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">pole_angle</span> <span class="o">=</span> <span class="n">PredicateNode</span><span class="p">(</span><span class="s2">&quot;Pole Angle&quot;</span><span class="p">)</span>
+    <span class="n">go_right</span> <span class="o">=</span> <span class="n">SchemaNode</span><span class="p">(</span><span class="s2">&quot;Go Right&quot;</span><span class="p">)</span>
+    <span class="n">go_left</span> <span class="o">=</span> <span class="n">SchemaNode</span><span class="p">(</span><span class="s2">&quot;Go Left&quot;</span><span class="p">)</span>
+    <span class="n">reward</span> <span class="o">=</span> <span class="n">PredicateNode</span><span class="p">(</span><span class="s2">&quot;Reward&quot;</span><span class="p">)</span>
+    <span class="n">epsilon</span> <span class="o">=</span> <span class="n">NumberNode</span><span class="p">(</span><span class="s2">&quot;0.01&quot;</span><span class="p">)</span>
+    <span class="n">mepsilon</span> <span class="o">=</span> <span class="n">NumberNode</span><span class="p">(</span><span class="s2">&quot;-0.01&quot;</span><span class="p">)</span>
+    <span class="n">unit</span> <span class="o">=</span> <span class="n">NumberNode</span><span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">)</span>
+    <span class="n">hTV</span> <span class="o">=</span> <span class="n">TruthValue</span><span class="p">(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>  <span class="c1"># High TV</span>
+    <span class="n">lTV</span> <span class="o">=</span> <span class="n">TruthValue</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>  <span class="c1"># Low TV</span>
+
+    <span class="n">cs_rr</span> <span class="o">=</span> <span class="n">PredictiveImplicationScopeLink</span><span class="p">(</span>
+            <span class="n">TypedVariableLink</span><span class="p">(</span><span class="n">angle</span><span class="p">,</span> <span class="n">numt</span><span class="p">),</span>
+            <span class="n">time_offset</span><span class="p">,</span>
+            <span class="n">AndLink</span><span class="p">(</span>
+                <span class="c1"># Context</span>
+                <span class="n">EvaluationLink</span><span class="p">(</span><span class="n">pole_angle</span><span class="p">,</span> <span class="n">angle</span><span class="p">),</span>
+                <span class="n">GreaterThanLink</span><span class="p">(</span><span class="n">angle</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">),</span>
+                <span class="c1"># Action</span>
+                <span class="n">ExecutionLink</span><span class="p">(</span><span class="n">go_right</span><span class="p">),</span>
+            <span class="p">),</span>
+            <span class="c1"># Goal</span>
+            <span class="n">EvaluationLink</span><span class="p">(</span><span class="n">reward</span><span class="p">,</span> <span class="n">unit</span><span class="p">),</span>
+            <span class="c1"># TV</span>
+            <span class="n">tv</span><span class="o">=</span><span class="n">hTV</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">cs_ll</span> <span class="o">=</span> <span class="n">PredictiveImplicationScopeLink</span><span class="p">(</span>
+            <span class="n">TypedVariableLink</span><span class="p">(</span><span class="n">angle</span><span class="p">,</span> <span class="n">numt</span><span class="p">),</span>
+            <span class="n">time_offset</span><span class="p">,</span>
+            <span class="n">AndLink</span><span class="p">(</span>
+                <span class="c1"># Context</span>
+                <span class="n">EvaluationLink</span><span class="p">(</span><span class="n">pole_angle</span><span class="p">,</span> <span class="n">angle</span><span class="p">),</span>
+                <span class="n">GreaterThanLink</span><span class="p">(</span><span class="n">mepsilon</span><span class="p">,</span> <span class="n">angle</span><span class="p">),</span>
+                <span class="c1"># Action</span>
+                <span class="n">ExecutionLink</span><span class="p">(</span><span class="n">go_left</span><span class="p">),</span>
+            <span class="p">),</span>
+            <span class="c1"># Goal</span>
+            <span class="n">EvaluationLink</span><span class="p">(</span><span class="n">reward</span><span class="p">,</span> <span class="n">unit</span><span class="p">),</span>
+            <span class="c1"># TV</span>
+            <span class="n">tv</span><span class="o">=</span><span class="n">hTV</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">cs_rl</span> <span class="o">=</span> <span class="n">PredictiveImplicationScopeLink</span><span class="p">(</span>
+            <span class="n">TypedVariableLink</span><span class="p">(</span><span class="n">angle</span><span class="p">,</span> <span class="n">numt</span><span class="p">),</span>
+            <span class="n">time_offset</span><span class="p">,</span>
+            <span class="n">AndLink</span><span class="p">(</span>
+                <span class="c1"># Context</span>
+                <span class="n">EvaluationLink</span><span class="p">(</span><span class="n">pole_angle</span><span class="p">,</span> <span class="n">angle</span><span class="p">),</span>
+                <span class="n">GreaterThanLink</span><span class="p">(</span><span class="n">angle</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">),</span>
+                <span class="c1"># Action</span>
+                <span class="n">ExecutionLink</span><span class="p">(</span><span class="n">go_left</span><span class="p">),</span>
+            <span class="p">),</span>
+            <span class="c1"># Goal</span>
+            <span class="n">EvaluationLink</span><span class="p">(</span><span class="n">reward</span><span class="p">,</span> <span class="n">unit</span><span class="p">),</span>
+            <span class="c1"># TV</span>
+            <span class="n">tv</span><span class="o">=</span><span class="n">lTV</span><span class="p">,</span>
+        <span class="p">)</span>
+        
+    <span class="n">cs_lr</span> <span class="o">=</span> <span class="n">PredictiveImplicationScopeLink</span><span class="p">(</span>
+            <span class="n">TypedVariableLink</span><span class="p">(</span><span class="n">angle</span><span class="p">,</span> <span class="n">numt</span><span class="p">),</span>
+            <span class="n">time_offset</span><span class="p">,</span>
+            <span class="n">AndLink</span><span class="p">(</span>
+                <span class="c1"># Context</span>
+                <span class="n">EvaluationLink</span><span class="p">(</span><span class="n">pole_angle</span><span class="p">,</span> <span class="n">angle</span><span class="p">),</span>
+                <span class="n">GreaterThanLink</span><span class="p">(</span><span class="n">mepsilon</span><span class="p">,</span> <span class="n">angle</span><span class="p">),</span>
+                <span class="c1"># Action</span>
+                <span class="n">ExecutionLink</span><span class="p">(</span><span class="n">go_right</span><span class="p">),</span>
+            <span class="p">),</span>
+            <span class="c1"># Goal</span>
+            <span class="n">EvaluationLink</span><span class="p">(</span><span class="n">reward</span><span class="p">,</span> <span class="n">unit</span><span class="p">),</span>
+            <span class="c1"># TV</span>
+            <span class="n">tv</span><span class="o">=</span><span class="n">lTV</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">agent</span><span class="o">.</span><span class="n">cognitive_schematics</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">cs_ll</span><span class="p">,</span> <span class="n">cs_rr</span><span class="p">,</span> <span class="n">cs_rl</span><span class="p">,</span> <span class="n">cs_lr</span><span class="p">]))</span>  <span class="c1"># TODO: the code should update Python-side automatically.</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
 
 </div>
     {% endraw %}
@@ -188,7 +278,7 @@ environment wrappers with the following specifications.</p>
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h2 id="LearningCartPoleAgent" class="doc_header"><code>class</code> <code>LearningCartPoleAgent</code><a href="https://github.com/opencog/rocca/tree/master/rocca/agents/cartpole.py#L290" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>LearningCartPoleAgent</code>(<strong><code>env</code></strong>:<code>GymWrapper</code>) :: <code>OpencogAgent</code></p>
+<h2 id="LearningCartPoleAgent" class="doc_header"><code>class</code> <code>LearningCartPoleAgent</code><a href="https://github.com/opencog/rocca/tree/master/rocca/agents/cartpole.py#L289" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>LearningCartPoleAgent</code>(<strong><code>env</code></strong>:<code>GymWrapper</code>) :: <code>OpencogAgent</code></p>
 </blockquote>
 
 </div>
@@ -297,25 +387,6 @@ environment wrappers with the following specifications.</p>
 </div>
     {% endraw %}
 
-    {% raw %}
-    
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">atomspace</span> <span class="o">=</span> <span class="n">AtomSpace</span><span class="p">()</span>
-<span class="n">set_default_atomspace</span><span class="p">(</span><span class="n">atomspace</span><span class="p">)</span>
-<span class="n">wrapped_env</span> <span class="o">=</span> <span class="n">CartPoleWrapper</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>  <span class="c1"># TODO: can I just use the `GymWrapper`?</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-</div>
-    {% endraw %}
-
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h3 id="Fixed-Agent">Fixed Agent<a class="anchor-link" href="#Fixed-Agent"> </a></h3>
@@ -329,17 +400,35 @@ environment wrappers with the following specifications.</p>
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">tb_writer</span> <span class="o">=</span> <span class="n">SummaryWriter</span><span class="p">(</span><span class="n">comment</span><span class="o">=</span><span class="s2">&quot;cartpole-fixed&quot;</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">atomspace</span> <span class="o">=</span> <span class="n">AtomSpace</span><span class="p">()</span>
+<span class="n">set_default_atomspace</span><span class="p">(</span><span class="n">atomspace</span><span class="p">)</span>
+<span class="n">wrapped_env</span> <span class="o">=</span> <span class="n">CartPoleWrapper</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+</pre></div>
 
-<span class="n">cpa</span> <span class="o">=</span> <span class="n">FixedCartPoleAgent</span><span class="p">(</span><span class="n">wrapped_env</span><span class="p">)</span>
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">cpa</span> <span class="o">=</span> <span class="n">FixedCartPoleAgent</span><span class="p">(</span><span class="n">wrapped_env</span><span class="p">)</span>
 <span class="n">cpa</span><span class="o">.</span><span class="n">delta</span> <span class="o">=</span> <span class="mf">1.0e-16</span>
 
 <span class="c1"># Run control loop</span>
-<span class="c1"># TODO: run over 100 trials</span>
 <span class="k">while</span> <span class="ow">not</span> <span class="n">cpa</span><span class="o">.</span><span class="n">step</span><span class="p">():</span>
     <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
-    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;step_count = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cpa</span><span class="o">.</span><span class="n">step_count</span><span class="p">))</span>
-    <span class="n">tb_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s2">&quot;accumulated_reward&quot;</span><span class="p">,</span> <span class="n">cpa</span><span class="o">.</span><span class="n">accumulated_reward</span><span class="p">,</span> <span class="n">cpa</span><span class="o">.</span><span class="n">step_count</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;step_count = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cpa</span><span class="o">.</span><span class="n">step_count</span><span class="p">))</span>
+    <span class="c1"># tb_writer.add_scalar(</span>
+    <span class="c1">#     &quot;accumulated_reward&quot;, cpa.accumulated_reward, cpa.step_count</span>
+    <span class="c1"># )</span>
 
 <span class="n">log_msg</span><span class="p">(</span><span class="n">agent_log</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;The final reward is </span><span class="si">{</span><span class="n">cpa</span><span class="o">.</span><span class="n">accumulated_reward</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
 </pre></div>
@@ -354,9 +443,42 @@ environment wrappers with the following specifications.</p>
 <div class="output_area">
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>ic| msg: &#39;The final reward is 27.&#39;
+<pre>ic| msg: &#39;The final reward is 48.&#39;
 </pre>
 </div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">cpa</span><span class="o">.</span><span class="n">atomspace</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>&lt;opencog.atomspace.AtomSpace at 0x7f64043ac340&gt;</pre>
+</div>
+
 </div>
 
 </div>
@@ -378,10 +500,47 @@ environment wrappers with the following specifications.</p>
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">tb_writer</span> <span class="o">=</span> <span class="n">SummaryWriter</span><span class="p">(</span><span class="n">comment</span><span class="o">=</span><span class="s2">&quot;cartpole-learning&quot;</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">atomspace</span> <span class="o">=</span> <span class="n">AtomSpace</span><span class="p">()</span>
+<span class="n">set_default_atomspace</span><span class="p">(</span><span class="n">atomspace</span><span class="p">)</span>
+<span class="n">wrapped_env</span> <span class="o">=</span> <span class="n">CartPoleWrapper</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+</pre></div>
 
-<span class="n">agent</span> <span class="o">=</span> <span class="n">LearningCartPoleAgent</span><span class="p">(</span><span class="n">wrapped_env</span><span class="p">)</span>
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">agent</span> <span class="o">=</span> <span class="n">LearningCartPoleAgent</span><span class="p">(</span><span class="n">wrapped_env</span><span class="p">,</span> <span class="n">log_level</span><span class="o">=</span><span class="s2">&quot;fine&quot;</span><span class="p">)</span>
 <span class="n">agent</span><span class="o">.</span><span class="n">delta</span> <span class="o">=</span> <span class="mf">1.0e-16</span>
+
+<span class="n">seed_with</span><span class="p">(</span><span class="n">agent</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;fixme&quot;</span><span class="p">])</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">tb_writer</span> <span class="o">=</span> <span class="n">SummaryWriter</span><span class="p">(</span><span class="n">comment</span><span class="o">=</span><span class="s2">&quot;cartpole-learning-seeded&quot;</span><span class="p">)</span>
+<span class="n">ac_logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>  <span class="c1"># The agents.core logger</span>
 
 <span class="n">epochs</span> <span class="o">=</span> <span class="mi">10</span>  <span class="c1"># Number of epochs (learning / interacting episodes)</span>
 <span class="n">epoch_len</span> <span class="o">=</span> <span class="mi">200</span>
@@ -394,27 +553,23 @@ environment wrappers with the following specifications.</p>
     <span class="c1"># Learning phase: discover patterns to make more informed decisions</span>
     <span class="n">log_msg</span><span class="p">(</span><span class="n">agent_log</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Learning phase started. (</span><span class="si">{</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">epochs</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
     <span class="n">agent</span><span class="o">.</span><span class="n">learn</span><span class="p">()</span>
-
+    
     <span class="c1"># Run agent to accumulate percepta</span>
     <span class="n">log_msg</span><span class="p">(</span><span class="n">agent_log</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Interaction phase started. (</span><span class="si">{</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">epochs</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epoch_len</span><span class="p">):</span>
         <span class="n">done</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;step_count = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">agent</span><span class="o">.</span><span class="n">step_count</span><span class="p">))</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;step_count = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">agent</span><span class="o">.</span><span class="n">step_count</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
             <span class="k">break</span>
-
+        
     <span class="n">new_reward</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">accumulated_reward</span> <span class="o">-</span> <span class="n">accreward</span>
     <span class="n">tb_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s2">&quot;train/accumulated_reward&quot;</span><span class="p">,</span> <span class="n">new_reward</span><span class="p">,</span> <span class="n">agent</span><span class="o">.</span><span class="n">step_count</span><span class="p">)</span>
-    <span class="n">log_msg</span><span class="p">(</span>
-        <span class="n">agent_log</span><span class="p">,</span> <span class="s2">&quot;Accumulated reward during </span><span class="si">{}</span><span class="s2">th epoch = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">new_reward</span><span class="p">)</span>
-    <span class="p">)</span>
-    <span class="n">log_msg</span><span class="p">(</span>
-        <span class="n">agent_log</span><span class="p">,</span>
-        <span class="s2">&quot;Action counter during </span><span class="si">{}</span><span class="s2">th epoch:</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">agent</span><span class="o">.</span><span class="n">action_counter</span><span class="p">),</span>
-    <span class="p">)</span>  <span class="c1"># TODO: make the action counter look good</span>
+    <span class="n">log_msg</span><span class="p">(</span><span class="n">agent_log</span><span class="p">,</span> <span class="s2">&quot;Accumulated reward during </span><span class="si">{}</span><span class="s2">th epoch = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">new_reward</span><span class="p">))</span>
+    <span class="n">log_msg</span><span class="p">(</span><span class="n">agent_log</span><span class="p">,</span> <span class="s2">&quot;Action counter during </span><span class="si">{}</span><span class="s2">th epoch:</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">agent</span><span class="o">.</span><span class="n">action_counter</span><span class="p">))</span>  <span class="c1"># TODO: make the action counter look good</span>
 
-<span class="n">log_msg</span><span class="p">(</span><span class="n">agent_log</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;The average total reward over </span><span class="si">{</span><span class="n">epochs</span><span class="si">}</span><span class="s2"> trials: </span><span class="si">{</span><span class="n">agent</span><span class="o">.</span><span class="n">accumulated_reward</span> <span class="o">/</span> <span class="n">epochs</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+<span class="n">log_msg</span><span class="p">(</span><span class="n">agent_log</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;The average total reward over </span><span class="si">{</span><span class="n">epochs</span><span class="si">}</span><span class="s2"> trials (training): </span><span class="si">{</span><span class="n">agent</span><span class="o">.</span><span class="n">accumulated_reward</span> <span class="o">/</span> <span class="n">epochs</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+<span class="c1"># TODO: add a separate testing loop and measure average total reward.</span>
 </pre></div>
 
     </div>
@@ -429,60 +584,60 @@ environment wrappers with the following specifications.</p>
 <div class="output_subarea output_stream output_stderr output_text">
 <pre>ic| msg: &#39;Learning phase started. (1/10)&#39;
 ic| msg: &#39;Interaction phase started. (1/10)&#39;
-ic| msg: &#39;Accumulated reward during 1th epoch = 24&#39;
+ic| msg: &#39;Accumulated reward during 1th epoch = 39&#39;
 ic| msg: (&#39;Action counter during 1th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 12, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 21, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 12})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 18})&#39;)
 ic| msg: &#39;Learning phase started. (2/10)&#39;
 ic| msg: &#39;Interaction phase started. (2/10)&#39;
-ic| msg: &#39;Accumulated reward during 2th epoch = 61&#39;
+ic| msg: &#39;Accumulated reward during 2th epoch = 13&#39;
 ic| msg: (&#39;Action counter during 2th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 33, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 11, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 28})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 2})&#39;)
 ic| msg: &#39;Learning phase started. (3/10)&#39;
 ic| msg: &#39;Interaction phase started. (3/10)&#39;
-ic| msg: &#39;Accumulated reward during 3th epoch = 29&#39;
+ic| msg: &#39;Accumulated reward during 3th epoch = 16&#39;
 ic| msg: (&#39;Action counter during 3th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 17, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 11, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 12})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 5})&#39;)
 ic| msg: &#39;Learning phase started. (4/10)&#39;
 ic| msg: &#39;Interaction phase started. (4/10)&#39;
-ic| msg: &#39;Accumulated reward during 4th epoch = 53&#39;
+ic| msg: &#39;Accumulated reward during 4th epoch = 12&#39;
 ic| msg: (&#39;Action counter during 4th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 30, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 10, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 23})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 2})&#39;)
 ic| msg: &#39;Learning phase started. (5/10)&#39;
 ic| msg: &#39;Interaction phase started. (5/10)&#39;
 ic| msg: &#39;Accumulated reward during 5th epoch = 11&#39;
@@ -490,83 +645,84 @@ ic| msg: (&#39;Action counter during 5th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 8, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 9, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 3})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 2})&#39;)
 ic| msg: &#39;Learning phase started. (6/10)&#39;
 ic| msg: &#39;Interaction phase started. (6/10)&#39;
-ic| msg: &#39;Accumulated reward during 6th epoch = 14&#39;
+ic| msg: &#39;Accumulated reward during 6th epoch = 13&#39;
 ic| msg: (&#39;Action counter during 6th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 10, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 10, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 4})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 3})&#39;)
 ic| msg: &#39;Learning phase started. (7/10)&#39;
 ic| msg: &#39;Interaction phase started. (7/10)&#39;
-ic| msg: &#39;Accumulated reward during 7th epoch = 10&#39;
+ic| msg: &#39;Accumulated reward during 7th epoch = 16&#39;
 ic| msg: (&#39;Action counter during 7th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 10, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 11, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 0})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 5})&#39;)
 ic| msg: &#39;Learning phase started. (8/10)&#39;
 ic| msg: &#39;Interaction phase started. (8/10)&#39;
-ic| msg: &#39;Accumulated reward during 8th epoch = 24&#39;
+ic| msg: &#39;Accumulated reward during 8th epoch = 12&#39;
 ic| msg: (&#39;Action counter during 8th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 17, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 9, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 7})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 3})&#39;)
 ic| msg: &#39;Learning phase started. (9/10)&#39;
 ic| msg: &#39;Interaction phase started. (9/10)&#39;
-ic| msg: &#39;Accumulated reward during 9th epoch = 18&#39;
+ic| msg: &#39;Accumulated reward during 9th epoch = 9&#39;
 ic| msg: (&#39;Action counter during 9th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 11, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 8, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 7})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 1})&#39;)
 ic| msg: &#39;Learning phase started. (10/10)&#39;
 ic| msg: &#39;Interaction phase started. (10/10)&#39;
-ic| msg: &#39;Accumulated reward during 10th epoch = 16&#39;
+ic| msg: &#39;Accumulated reward during 10th epoch = 10&#39;
 ic| msg: (&#39;Action counter during 10th epoch:
          &#39;
           &#39;Counter({(ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][2]
+          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][afc]
          &#39;
-          &#39;) ; [ecf3179b1d921593][2]: 12, (ExecutionLink
+          &#39;) ; [9073984dcee164b1][afc]: 10, (ExecutionLink
          &#39;
-          &#39;  (SchemaNode &#34;Go Right&#34;) ; [51c74c8fd94d22b3][2]
+          &#39;  (SchemaNode &#34;Go Left&#34;) ; [7ca1f8f2efc2f84d][afc]
          &#39;
-          &#39;) ; [9073984dcee164b1][2]: 4})&#39;)
+          &#39;) ; [ecf3179b1d921593][afc]: 0})&#39;)
+ic| msg: &#39;The average total reward over 10 trials (training): 15.1.&#39;
 </pre>
 </div>
 </div>
