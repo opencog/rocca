@@ -9,14 +9,17 @@ import time
 
 # OpenAI Gym
 import gym
+
 # OpenCog
+from opencog.atomspace import *
 from opencog.pln import *
 from opencog.ure import ure_logger
+from opencog.logger import log
 
 # OpenCog Gym
-from agent.OpencogAgent import OpencogAgent
-from agent.utils import *
-from envs.wrappers import GymWrapper
+from rocca.agents import OpencogAgent
+from rocca.agents.utils import *
+from rocca.envs.wrappers import GymWrapper
 
 env = gym.make('Chase-v0')
 # Uncomment the following to get a description of env
@@ -26,10 +29,10 @@ env = gym.make('Chase-v0')
 # Chase Wrapper #
 #################
 
-class CartPoleWrapper(GymWrapper):
+class ChaseWrapper(GymWrapper):
     def __init__(self, env):
         action_list = ["Go Left", "Go Right", "Stay", "Eat"]
-        GymWrapper.__init__(self, env, action_list)
+        super().__init__(env, action_list)
 
     def labeled_observations(self, space, obs, sbs=""):
         """Translate gym observation to Atomese
@@ -103,7 +106,7 @@ if __name__ == "__main__":
     set_default_atomspace(atomspace)
 
     # Wrap environment
-    wrapped_env = CartPoleWrapper(env)
+    wrapped_env = ChaseWrapper(env)
 
     # ChaseAgent
     ca = ChaseAgent(wrapped_env)

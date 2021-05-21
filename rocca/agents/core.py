@@ -24,7 +24,7 @@ from .utils import *
 #########
 
 class OpencogAgent:
-    def __init__(self, env, action_space, p_goal, n_goal):
+    def __init__(self, env, action_space, p_goal, n_goal, log_level="debug"):
         self.atomspace = AtomSpace()
         set_default_atomspace(self.atomspace)
         self.env = env
@@ -36,6 +36,7 @@ class OpencogAgent:
         self.positive_goal = p_goal
         self.negative_goal = n_goal
         self.cognitive_schematics = set()
+        self.log_level = log_level
         self.load_opencog_modules()
         self.reset_action_counter()
 
@@ -448,7 +449,7 @@ class OpencogAgent:
         agent_log.fine("pt = {}".format(pt))
         agent_log.fine("pd = {}".format(pd))
 
-        # TODO: big hack, pd is turned into positive goal
+        # HACK: big hack, pd is turned into positive goal
         if pd == self.negative_goal:
             pd = self.positive_goal
 

@@ -13,15 +13,15 @@ from opencog.pln import *
 from opencog.type_constructors import *
 from opencog.utilities import set_default_atomspace
 
-from agent.OpencogAgent import OpencogAgent
-from agent.utils import agent_log
-from envs.malmo_demo.chase_env import mission_xml
-from envs.wrappers import MalmoWrapper
+from rocca.agents import OpencogAgent
+from rocca.agents.utils import agent_log
+from rocca.envs.malmo_demo.chase_env import mission_xml
+from rocca.envs.wrappers import MalmoWrapper
 
 ###############
 # Chase Agent #
 ###############
-from envs.wrappers.utils import mk_action
+from rocca.envs.wrappers.utils import mk_action
 
 
 class ChaseAgent(OpencogAgent):

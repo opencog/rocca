@@ -21,7 +21,7 @@ from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
 from opencog.utilities import is_closed, get_free_variables
-from opencog.logger import Logger, log, create_logger
+from opencog.logger import create_logger
 
 #############
 # Constants #
