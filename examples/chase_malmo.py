@@ -1,4 +1,6 @@
 # Define an agent for the Chase env with OpencogAgent
+#
+# WARNING: unmaintained
 
 ##############
 # Initialize #
