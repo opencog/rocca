@@ -74,3 +74,4 @@ docs/_build/
 .envrc
 
 runs/
+snapshots/
