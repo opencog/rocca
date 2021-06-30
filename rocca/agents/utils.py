@@ -750,7 +750,12 @@ def to_nat(i):
 
     """
 
-    return ZLink() if i == 0 else SLink(to_nat(i - 1))
+    #return ZLink() if i == 0 else SLink(to_nat(i - 1))
+    ret = ZLink()
+    for i in range(0, i):
+        ret = SLink(ret)
+
+    return ret
 
 
 def lag_to_nat(i, T):
@@ -762,7 +767,12 @@ def lag_to_nat(i, T):
 
     """
 
-    return T if i == 0 else SLink(lag_to_nat(i - 1, T))
+    #return T if i == 0 else SLink(lag_to_nat(i - 1, T))
+    ret = T
+    for i in range(0, i):
+        ret = SLink(ret)
+
+    return ret
 
 
 def to_int(n):
@@ -773,7 +783,17 @@ def to_int(n):
 
     """
 
-    if is_Z(n):
-        return 0
-    if is_S(n):
-        return 1 + to_int(n.out[0])
+#    if is_Z(n):
+#        return 0
+#    if is_S(n):
+#        return 1 + to_int(n.out[0])
+
+    ret = 0
+    link = n
+    
+    while is_S(link):
+        ret += 1
+        link = link.out[0]
+    
+    return ret
+
