@@ -24,6 +24,7 @@ def mk_node(name):
         return ConceptNode(name)
     raise RuntimeError("Error: Unknown type.")
 
+last_compassAngle = None
 def convert_percept(predicate, *args):
     """Firstly, the MineRL environment gives us a different floating point
     reward number every step. This function converts it into +1 or -1 so that
@@ -36,7 +37,11 @@ def convert_percept(predicate, *args):
     that this function doesn't divide the screen into blobs of one color; it
     may find the average of multiple blobs of one color. Note that the pattern
     miner will still have difficulty with this feature so it's a work in
-    progress."""
+    progress.
+    
+    Thirdly, MineRL gives us the angle between the agent and the goal (compassAngle).
+    This function creates a boolean predicate for whether the angle has got closer
+    or not."""
     if predicate == "pov":
         #print (args, type(args))
         #args = ["some image"]
@@ -66,6 +71,20 @@ def convert_percept(predicate, *args):
             args = [1]
         elif float(args[0]) < 0:
             args = [-1]
+            
+    elif predicate == "compassAngle":
+        global last_compassAngle
+        lca = last_compassAngle
+        current = float(args[0])
+        links = []
+        
+        if not lca is None:
+            if abs(0 - current) < abs(0 - lca):
+                links = [mk_evaluation("compassAngleCloser")]
+                print(links)
+        
+        last_compassAngle = current
+        return links
 
     return [mk_evaluation(predicate, *args)]
 
