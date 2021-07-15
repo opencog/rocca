@@ -91,6 +91,8 @@ class ChaseAgent(OpencogAgent):
         # Call super ctor
         OpencogAgent.__init__(self, env, action_space, pgoal, ngoal)
 
+        # Overwrite some OpencogAgent parameters
+        self.multiaction_mining = True
 
 if __name__ == "__main__":
     # Init loggers
