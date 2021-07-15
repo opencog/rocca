@@ -68,8 +68,17 @@ class OpencogAgent:
         # as a rest in the Solomonoff mixture.
         self.delta = 1.0e-5
 
-        # Enable multi-action pattern mining
-        self.multiaction_mining = True
+        # Enable mono-action pattern mining with general succedent
+        # (not just about goal).  This is important to gather the
+        # knowledge in order to make temporal deduction useful.
+        self.monoaction_general_succedent_mining = True
+
+        # Enable poly-action pattern mining
+        self.polyaction_mining = True
+
+        # Enable temporal deduction, to string together polyaction
+        # plans from monoaction plans.
+        self.temporal_deduction = True
 
     def __del__(self):
         self.env.close()
@@ -180,17 +189,18 @@ class OpencogAgent:
             cogscms.update(set(neg_prdi))
 
             # Mine general succedents (only one for now)
-            postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
-            gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
-            gen_prdi = self.surprises_to_predictive_implications(gen_srps)
-            agent_log.fine("gen_prdi = {}".format(gen_prdi))
-            cogscms.update(set(gen_prdi))
+            if self.monoaction_general_succedent_mining:
+                postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
+                gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
+                gen_prdi = self.surprises_to_predictive_implications(gen_srps)
+                agent_log.fine("gen_prdi = {}".format(gen_prdi))
+                cogscms.update(set(gen_prdi))
 
-            # Mine positive succedent goals with multi-actions
-            if self.multiaction_mining:
+            # Mine positive succedent goals with poly-actions
+            if self.polyaction_mining:
                 postctxs = [self.positive_goal]
                 for snd_action in self.action_space:
-                    agent_log.fine("multiaction mining snd_action = {}".format(snd_action))
+                    agent_log.fine("polyaction mining snd_action = {}".format(snd_action))
                     ma_prectxs = (lag, prectxs, [snd_action])
                     pos_multi_srps = self.mine_temporal_patterns((lag, ma_prectxs, postctxs))
                     agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
@@ -212,17 +222,16 @@ class OpencogAgent:
         # All resulting cognitive schematics
         cogscms = set()
 
-        # NEXT
-        # # Call PLN to infer new cognitive schematics by combining
-        # # existing ones
-        # V = VariableNode("$V")
-        # T = VariableNode("$T")
-        # P = VariableNode("$P")
-        # Q = VariableNode("$Q")
-        # query = PredictiveImplicationScopeLink(V, T, P, Q)
-        # mi = 10
-        # rules = ["predictive-implication-scope-deduction"]
-        # cogscms = self.pln_bc(query, maxiter=mi, rules=rules)
+        # Call PLN to infer new cognitive schematics by combining
+        # existing ones
+        V = VariableNode("$V")
+        T = VariableNode("$T")
+        P = VariableNode("$P")
+        Q = VariableNode("$Q")
+        query = PredictiveImplicationScopeLink(V, T, P, Q)
+        mi = 10
+        rules = ["predictive-implication-scope-deduction"]
+        cogscms = self.pln_bc(query, maxiter=mi, rules=rules)
 
         agent_log.fine("Inferred cognitive schematics = {}".format(cogscms))
         return cogscms
@@ -236,12 +245,12 @@ class OpencogAgent:
 
         # Mine cognitive schematics
         mined_cogscms = self.mine_cogscms()
-
-        # # Infer cognitive schematics (via temporal deduction)
-        inferred_cogscms = self.infer_cogscms()
-
         self.cognitive_schematics.update(mined_cogscms)
-        self.cognitive_schematics.update(inferred_cogscms)
+
+        # Infer cognitive schematics (via temporal deduction)
+        if self.temporal_deduction:
+            inferred_cogscms = self.infer_cogscms()
+            self.cognitive_schematics.update(inferred_cogscms)
 
     def get_pattern(self, surprise_eval):
         """Extract the pattern wrapped in a surprisingness evaluation.
