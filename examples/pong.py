@@ -39,7 +39,7 @@ def to_atlocation(cord, obj):
     Each object will be stored as such:
 
         (AtLocationLink
-            (ObjectNode "Ball")
+            (ConceptNode "Ball")
             (ListLink
                 (ConceptNode "Pong"))
                 (ListLink
@@ -50,7 +50,7 @@ def to_atlocation(cord, obj):
     returns a list of AtlocationLink for one frame
     """
     tmp = [NumberNode(str(n)) for n in cord]
-    schema = AtLocationLink(ObjectNode(str(obj)),
+    schema = AtLocationLink(ConceptNode(str(obj)),
                             ListLink(ConceptNode("Pong"),
                             ListLink(tmp[0], tmp[1], NumberNode("0"))))
 
