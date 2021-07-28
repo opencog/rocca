@@ -92,9 +92,9 @@ class ChaseAgent(OpencogAgent):
         OpencogAgent.__init__(self, env, action_space, pgoal, ngoal)
 
         # Overwrite some OpencogAgent parameters
-        self.monoaction_general_succeedent_mining = True
-        self.polyaction_mining = True
-        self.temporal_deduction = True
+        self.monoaction_general_succeedent_mining = False
+        self.polyaction_mining = False
+        self.temporal_deduction = False
 
 if __name__ == "__main__":
     # Init loggers
