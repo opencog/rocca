@@ -26,23 +26,23 @@ class GymWrapper(Wrapper):
             return obs_list
         elif isinstance(space, sp.Box):
             label = sbs + "-Box" if sbs else "Box"
-            return [mk_evaluation(label, *obs)]
+            return self.convert_percept(label, *obs)
         elif isinstance(space, sp.Discrete):
             label = sbs + "-Discrete" if sbs else "Discrete"
-            return [mk_evaluation(label, obs)]
+            return self.convert_percept(label, obs)
         elif isinstance(space, sp.Dict):
             obs_list = []
             for k in obs.keys():
                 label = sbs + "-" + k if sbs else k
                 if isinstance(space[k], sp.Discrete):
-                    obs_list.append(mk_evaluation(label, obs[k]))
+                    obs_list+=self.convert_percept(label, obs[k])
                 elif isinstance(space[k], sp.Box):
                     l = (
                         listify(obs[k].tolist())
                         if isinstance(obs[k], np.ndarray)
                         else obs[k]
                     )
-                    obs_list.append(mk_evaluation(label, *l))
+                    obs_list+=self.convert_percept(label, *l)
                 elif isinstance(space[k], sp.Tuple):
                     _sbs = sbs + "-" + k if sbs else k
                     obs_list.extend(self.labeled_observations(space[k], obs[k], _sbs))
@@ -57,7 +57,7 @@ class GymWrapper(Wrapper):
 
     def parse_world_state(self, ospace, obs, reward, done):
         obs_list = self.labeled_observations(ospace, obs)
-        return mk_evaluation("Reward", reward), obs_list, done
+        return self.convert_percept("Reward", reward)[0], obs_list, done
 
     @staticmethod
     def restart_decorator(restart):
@@ -107,3 +107,7 @@ class GymWrapper(Wrapper):
 
     def close(self):
         self.env.close()
+    
+    def convert_percept(self, predicate, *args):
+        return [mk_evaluation(predicate, *args)]
+

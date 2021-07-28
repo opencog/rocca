@@ -6,6 +6,7 @@ from fastcore.basics import listify
 from opencog.atomspace import Atom, is_a
 from opencog.atomspace import types as AT
 from opencog.type_constructors import *
+from opencog.spacetime import *
 
 
 def mk_action(name, value):
