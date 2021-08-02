@@ -68,6 +68,11 @@ In the root folder enter the following command:
 pip install -e .
 ```
 
+For the tools used for development:
+```bash
+pip install -r requirements-dev.txt
+```
+
 ## How to use
 
 A gym agent defined under the `rocca/agents` folder is provided that
