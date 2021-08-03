@@ -81,6 +81,10 @@ under the `examples` folder.
 
 There are Jupyter notebooks provided for experimentation as well.
 
+## Develop
+
+If you write code in notebooks that is exported (has the `#export` comment on top of the cell), remember to invoke `nbdev_build_lib` to update the library.
+
 ## Tests
 
 ### Static type checking
