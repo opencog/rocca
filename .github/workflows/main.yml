@@ -14,8 +14,6 @@ jobs:
           architecture: "x64"
       - name: Install the library
         run: |
-          python --version
-          which python
           python -m pip install --upgrade pip
           pip install nbdev jupyter
           pip install -e .
