@@ -34,4 +34,6 @@ jobs:
           if [ -n "$(nbdev_diff_nbs)" ]; then echo -e "!!! Detected difference between the notebooks and the library"; false; fi
       - name: Run tests
         run: |
+          export DISPLAY=:1
+          export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
           nbdev_test_nbs
