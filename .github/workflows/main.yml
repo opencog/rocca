@@ -8,14 +8,14 @@ jobs:
       options: --user root
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.9"
-          architecture: "x64"
+      # - uses: actions/setup-python@v2
+      #   with:
+      #     python-version: "3.9"
+      #     architecture: "x64"
       - name: Install the library
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          pip install nbdev jupyter
+          pip install -r requirements-dev.txt
           pip install -e .
       - name: Read all notebooks
         run: |
