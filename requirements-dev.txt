@@ -2,3 +2,4 @@ nbdev
 jupyter
 black
 isort
+pytest
