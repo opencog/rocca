@@ -132,7 +132,7 @@ synchronous gym-like environment (via Kasim's wrapper), that can:
       involving time intervals (ultimately spatial intervals as well).
       This would however require to fiddle with the pattern matcher or
       the pattern miner to integrate that type of spacetime queries.
-	  
+
    3. Maybe a clever use of atom values could be an option as well.
 
    Beside these "low level" improvements there are certainly a number

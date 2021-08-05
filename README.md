@@ -75,3 +75,35 @@ can used to implement agents for given environments.  See the examples
 under the `examples` folder.
 
 There are Jupyter notebooks provided for experimentation as well.
+
+## Tests
+
+### Static type checking
+
+Using [type annotations](https://mypy.readthedocs.io/en/stable/getting_started.html)
+is highly encouraged.  One can type check the entire Python ROCCA code
+by calling
+
+```
+tests/mypy.sh
+```
+
+from the root folder.
+
+To only type check some subfolder, you may call `mypy.sh` from that
+subfolder.  For instance to type check the `examples` subfolder
+
+```
+cd examples
+../tests/mypy.sh
+```
+
+## References
+
+There is no ROCCA paper per se yet.  In the meantime here is a list of related references
+
++ [An Inferential Approach to Mining Surprising Patterns in Hypergraphs, Nil Geisweiller et Ben Goertzel](https://www.researchgate.net/publication/334769428_An_Inferential_Approach_to_Mining_Surprising_Patterns_in_Hypergraphs)
++ [Partial Operator Induction with Beta Distributions, Nil Geisweiller](https://raw.githubusercontent.com/ngeiswei/papers/master/PartialBetaOperatorInduction/PartialBetaOperatorInduction.pdf)
++ [Thompson Sampling is Asymptotically Optimal in General Environments, Jan Leike et al](http://auai.org/uai2016/proceedings/papers/20.pdf)
++ [Draft about temporal reasoning in PLN, Nil Geisweiller](https://github.com/opencog/pln/blob/master/opencog/pln/rules/temporal/temporal-reasoning.md)
++ [References about OpenCog including PLN](https://wiki.opencog.org/w/Background_Publications)

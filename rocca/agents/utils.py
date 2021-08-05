@@ -21,6 +21,7 @@ from opencog.type_constructors import *
 from opencog.spacetime import *
 from opencog.pln import *
 from opencog.utilities import is_closed, get_free_variables
+from opencog.scheme import scheme_eval_h, scheme_eval
 from opencog.logger import create_logger
 
 #############
@@ -790,10 +791,35 @@ def to_int(n):
 
     ret = 0
     link = n
-    
+
     while is_S(link):
         ret += 1
         link = link.out[0]
-    
+
     return ret
 
+def to_scheme_str(vs) -> str:
+    """Takes a python value and convert it to a scheme value string
+
+    """
+    if vs == True:
+        return "#t"
+    elif vs == False:
+        return "#f"
+    else:
+        return str(vs)
+
+class MinerLogger:
+    """Quick and dirty miner logger Python bindings """
+
+    def __init__(self, atomspace):
+        self.atomspace = atomspace
+        scheme_eval(self.atomspace, "(use-modules (opencog miner))")
+
+    def set_level(self, level: str) -> None:
+        cmd_str = "(miner-logger-set-level! \"" + level + "\")"
+        scheme_eval(self.atomspace, cmd_str)
+
+    def set_sync(self, sync: bool) -> None:
+        cmd_str = "(miner-logger-set-sync! " + to_scheme_str(sync) + ")"
+        scheme_eval(self.atomspace, cmd_str)

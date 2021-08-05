@@ -40,7 +40,7 @@ class OpencogAgent:
         self.load_opencog_modules()
         self.reset_action_counter()
 
-        # Parameters controlling learning and decision
+        # User parameters controlling learning and decision
 
         # Expiry time to fulfill the goal. The system will not plan
         # beyond expiry.
@@ -68,6 +68,17 @@ class OpencogAgent:
         # as a rest in the Solomonoff mixture.
         self.delta = 1.0e-5
 
+        # Enable mono-action pattern mining with general succedent
+        # (not just about goal).  This is important to gather the
+        # knowledge in order to make temporal deduction useful.
+        self.monoaction_general_succedent_mining = True
+
+        # Enable poly-action pattern mining
+        self.polyaction_mining = True
+
+        # Enable temporal deduction, to string together polyaction
+        # plans from monoaction plans.
+        self.temporal_deduction = True
 
     def __del__(self):
         self.env.close()
@@ -75,16 +86,13 @@ class OpencogAgent:
     def load_opencog_modules(self):
         # Load miner
         scheme_eval(self.atomspace, "(use-modules (opencog miner))")
-        scheme_eval(self.atomspace, "(miner-logger-set-level! \"fine\")")
-        # scheme_eval(self.atomspace, "(miner-logger-set-sync! #t)")
 
-        # Load PLN
+        # Load PLN.  All rules must be pre-loaded here
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
-        # scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-introduction)")
+        scheme_eval(self.atomspace, "(use-modules (opencog spacetime))")
         scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-evaluation)")
-        # No need of predictive implication for now
-        # scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-direct-evaluation)")
-        scheme_eval(self.atomspace, "(pln-log-atomspace)")
+        scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-deduction)")
+        # scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
     def reset_action_counter(self):
         self.action_counter = Counter({action: 0 for action in self.action_space})
@@ -119,8 +127,13 @@ class OpencogAgent:
 
         return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
-    def pln_bc(self, query, maxiter):
+    def pln_bc(self, query, vardecl=None, maxiter=10, rules=[]):
         """Call PLN backward chainer with the given query and parameters.
+
+        The parameters are
+
+        maxiter: the maximum number of iterations.
+        rules: optional list of rule symbols.  If empty keep current rule set.
 
         Return a python list of solutions.
 
@@ -128,18 +141,26 @@ class OpencogAgent:
 
         agent_log.fine("pln_bc(query={}, maxiter={})".format(query, maxiter))
 
+        # Load rules
+        if rules:
+            scheme_eval(self.atomspace, "(pln-rm-all-rules)")
+            for rule in rules:
+                scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
+
+        # Generate and run query
         command = "(pln-bc "
         command += str(query)
+        command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maxiter)
         command += ")"
         return scheme_eval_h(self.atomspace, command).out
 
-    def learn(self):
-        """Discover patterns in the world and in the self.
+    def mine_cogscms(self):
+        """Discover cognitive schematics via pattern mining.
+
+        Return the set of mined cognitive schematics.
 
         """
-
-        # For now we only learn cognitive schematics
 
         # All resulting cognitive schematics
         cogscms = set()
@@ -168,24 +189,68 @@ class OpencogAgent:
             cogscms.update(set(neg_prdi))
 
             # Mine general succedents (only one for now)
-            postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
-            gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
-            gen_prdi = self.surprises_to_predictive_implications(gen_srps)
-            agent_log.fine("gen_prdi = {}".format(gen_prdi))
-            cogscms.update(set(gen_prdi))
+            if self.monoaction_general_succedent_mining:
+                postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
+                gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
+                gen_prdi = self.surprises_to_predictive_implications(gen_srps)
+                agent_log.fine("gen_prdi = {}".format(gen_prdi))
+                cogscms.update(set(gen_prdi))
 
-            # Mine positive succedent goals with multi-actions
-            postctxs = [self.positive_goal]
-            for snd_action in self.action_space:
-                agent_log.fine("multiaction mining snd_action = {}".format(snd_action))
-                ma_prectxs = (lag, prectxs, [snd_action])
-                pos_multi_srps = self.mine_temporal_patterns((lag, ma_prectxs, postctxs))
-                agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
-                pos_multi_prdi = self.surprises_to_predictive_implications(pos_multi_srps)
-                cogscms.update(set(pos_multi_prdi))
+            # Mine positive succedent goals with poly-actions
+            if self.polyaction_mining:
+                postctxs = [self.positive_goal]
+                for snd_action in self.action_space:
+                    agent_log.fine("polyaction mining snd_action = {}".format(snd_action))
+                    ma_prectxs = (lag, prectxs, [snd_action])
+                    pos_multi_srps = self.mine_temporal_patterns((lag, ma_prectxs, postctxs))
+                    agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
+                    pos_multi_prdi = self.surprises_to_predictive_implications(pos_multi_srps)
+                    cogscms.update(set(pos_multi_prdi))
 
-        agent_log.fine("cogscms = {}".format(cogscms))
-        self.cognitive_schematics.update(cogscms)
+        agent_log.fine("Mined cognitive schematics = {}".format(cogscms))
+        return cogscms
+
+    def infer_cogscms(self):
+        """Discover cognitive schematics via reasoning.
+
+        For now only temporal deduction is implemented.
+
+        Return the set of inferred cognitive schematics.
+
+        """
+
+        # All resulting cognitive schematics
+        cogscms = set()
+
+        # Call PLN to infer new cognitive schematics by combining
+        # existing ones
+        V = VariableNode("$V")
+        T = VariableNode("$T")
+        P = VariableNode("$P")
+        Q = VariableNode("$Q")
+        query = PredictiveImplicationScopeLink(V, T, P, Q)
+        mi = 10
+        rules = ["predictive-implication-scope-deduction"]
+        cogscms = self.pln_bc(query, maxiter=mi, rules=rules)
+
+        agent_log.fine("Inferred cognitive schematics = {}".format(cogscms))
+        return cogscms
+
+    def learn(self):
+        """Discover patterns in the world and in itself.
+
+        """
+
+        # For now we only learn cognitive schematics
+
+        # Mine cognitive schematics
+        mined_cogscms = self.mine_cogscms()
+        self.cognitive_schematics.update(mined_cogscms)
+
+        # Infer cognitive schematics (via temporal deduction)
+        if self.temporal_deduction:
+            inferred_cogscms = self.infer_cogscms()
+            self.cognitive_schematics.update(inferred_cogscms)
 
     def get_pattern(self, surprise_eval):
         """Extract the pattern wrapped in a surprisingness evaluation.
@@ -285,30 +350,6 @@ class OpencogAgent:
         tvars = self.get_typed_variables(vardecl)
         nt_tvars = [tvar for tvar in tvars if not self.is_temporally_typed(tvar)]
         return VariableSet(*nt_tvars)
-
-    def predictive_implication_scope_query(self, goal, expiry):
-        """Build a PredictiveImplicationScope query for PLN.
-
-        """
-
-        vardecl = VariableNode("$vardecl")
-        antecedent = VariableNode("$antecedent")
-        # TODO: fix python PredictiveImplicationScopeLink binding!
-        # query = QuoteLink(PredictiveImplicationScopeLink(UnquoteLink(vardecl),
-        #                                                  to_nat(expiry),
-        #                                                  UnquoteLink(antecedent),
-        #                                                  goal))
-        query = QuoteLink(scheme_eval_h(self.atomspace, "(PredictiveImplicationScopeLink " + str(UnquoteLink(vardecl)) + str(to_nat(expiry)) + str(UnquoteLink(antecedent)) + str(goal) + ")"))
-        return query
-
-    def predictive_implication_query(self, goal, expiry):
-        """Build a PredictiveImplication query for PLN.
-
-        """
-
-        antecedent = VariableNode("$antecedent")
-        query = PredictiveImplicationLink(to_nat(expiry), antecedent, goal)
-        return query
 
     def to_sequential_and(self, timed_clauses):
         times = get_times(timed_clauses)
@@ -471,7 +512,8 @@ class OpencogAgent:
         agent_log.fine("preimp = {}".format(preimp))
         # Calculate the truth value of the predictive implication
         mi = 2
-        return self.pln_bc(preimp, mi)[0]
+        rules = ["predictive-implication-scope-direct-evaluation"]
+        return self.pln_bc(preimp, maxiter=mi, rules=rules)[0]
 
     def is_desirable(self, cogscm):
         """Return True iff the cognitive schematic is desirable.
@@ -611,8 +653,8 @@ class OpencogAgent:
         initpat = LambdaLink(vardecl, PresentLink(*timed_clauses))
 
         # Launch pattern miner
-            # " #:ignore " + str(ignore) + \
         mine_query = "(cog-mine " + str(self.percepta_record) + \
+            " #:ignore " + str(ignore) + \
             " #:minimum-support " + str(minsup) + \
             " #:initial-pattern " + str(initpat) + \
             " #:maximum-iterations " + str(maxiter) + \
