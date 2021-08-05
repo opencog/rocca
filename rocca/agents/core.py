@@ -655,8 +655,8 @@ class OpencogAgent:
         initpat = LambdaLink(vardecl, PresentLink(*timed_clauses))
 
         # Launch pattern miner
-            # " #:ignore " + str(ignore) + \
         mine_query = "(cog-mine " + str(self.percepta_record) + \
+            " #:ignore " + str(ignore) + \
             " #:minimum-support " + str(minsup) + \
             " #:initial-pattern " + str(initpat) + \
             " #:maximum-iterations " + str(maxiter) + \
