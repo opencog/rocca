@@ -75,3 +75,25 @@ can used to implement agents for given environments.  See the examples
 under the `examples` folder.
 
 There are Jupyter notebooks provided for experimentation as well.
+
+## Tests
+
+### Static type checking
+
+Using [type annotations](https://mypy.readthedocs.io/en/stable/getting_started.html)
+is highly encouraged.  One can type check the entire Python ROCCA code
+by calling
+
+```
+tests/mypy.sh
+```
+
+from the root folder.
+
+To only type check some subfolder, you may call `mypy.sh` from that
+subfolder.  For instance to type check the `examples` subfolder
+
+```
+cd examples
+../tests/mypy.sh
+```
