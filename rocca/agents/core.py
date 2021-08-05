@@ -86,8 +86,6 @@ class OpencogAgent:
     def load_opencog_modules(self):
         # Load miner
         scheme_eval(self.atomspace, "(use-modules (opencog miner))")
-        scheme_eval(self.atomspace, "(miner-logger-set-level! \"fine\")")
-        # scheme_eval(self.atomspace, "(miner-logger-set-sync! #t)")
 
         # Load PLN.  All rules must be pre-loaded here
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
