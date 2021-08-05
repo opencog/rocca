@@ -678,7 +678,13 @@ class OpencogAgent:
         order to make a decision based on their truth values and
         priors.
 
-        The format for a cognitive schematic is as follows
+        A cognitive schematic is a knowledge piece of the form
+
+        Context & Action ⇒ Goal
+
+        See https://wiki.opencog.org/w/Cognitive_Schematic for more
+        information.  The supported format for cognitive schematics
+        are as follows
 
         PredictiveImplicationScope <tv>
           <vardecl>
