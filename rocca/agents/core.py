@@ -97,6 +97,14 @@ class OpencogAgent:
     def reset_action_counter(self):
         self.action_counter = Counter({action: 0 for action in self.action_space})
 
+    def get_percepta(self):
+        """Return the list of all percepta record members.
+
+        """
+
+        cmd = "(List (get-members " + str(self.percepta_record) + "))"
+        return scheme_eval_h(self.atomspace, cmd).out
+
     def record(self, atom, i, tv=None):
         """Timestamp and record an atom to the Percepta Record.
 
@@ -113,7 +121,6 @@ class OpencogAgent:
         return MemberLink(timestamp(atom, i, tv), self.percepta_record, tv=TRUE_TV)
 
     def make_goal(self):
-
         """Define the goal of the current iteration.
 
         By default the goal of the current iteration is to have a
@@ -651,6 +658,12 @@ class OpencogAgent:
             variables.update(get_free_variables_of_atoms(timed_clauses))
             vardecl = VariableSet(*variables)
         initpat = LambdaLink(vardecl, PresentLink(*timed_clauses))
+
+        # Uncomment the following to log the mined corpus
+        # agent_log.fine("percepta = {}".format(self.get_percepta()))
+        # percepta_str = "\n".join(["(MemberLink {} {})".format(str(p), str(self.percepta_record))
+        #                 for p in self.get_percepta()])
+        # agent_log.fine("percepta_str = {}".format(percepta_str))
 
         # Launch pattern miner
         mine_query = "(cog-mine " + str(self.percepta_record) + \
