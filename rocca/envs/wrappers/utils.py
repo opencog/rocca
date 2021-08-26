@@ -61,14 +61,15 @@ def mk_minerl_single_action(env, name: str, value: Any):
 def minerl_single_action(env, action):
     """Insert a single action into a no-op
 
-        env: Gym environment or a wrapped gym environment.
-        action: action of the form `Execution (Schema name) args`
+    env: Gym environment or a wrapped gym environment.
+    action: action of the form `Execution (Schema name) args`
     """
     noop = env.action_space.noop()
     actions = [mk_action(k, noop[k]) for k in noop if k != action.out[0].name]
     actions.append(action)
 
     return actions
+
 
 def to_python(atom: Atom):
     """Return a Pythonic data representation of an atom"""

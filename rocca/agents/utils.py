@@ -42,6 +42,7 @@ agent_log.set_component("Agent")
 # Functions #
 #############
 
+
 def has_non_null_confidence(atom):
     """Return True iff the given atom has a confidence above 0."""
 
@@ -59,29 +60,25 @@ def tv_to_beta(tv, prior_a=1, prior_b=1):
     """
 
     count = tv.count
-    pos_count = count * tv.mean # the mean is actually the mode
+    pos_count = count * tv.mean  # the mean is actually the mode
     a = prior_a + pos_count
     b = prior_b + count - pos_count
     return st.beta(a, b)
 
 
 def tv_to_alpha_param(tv, prior_a=1, prior_b=1):
-    """Return the alpha parameter of a TV's beta-distribution.
-
-    """
+    """Return the alpha parameter of a TV's beta-distribution."""
 
     count = tv.count
-    pos_count = count * tv.mean # the mean is actually the mode
+    pos_count = count * tv.mean  # the mean is actually the mode
     return prior_a + pos_count
 
 
 def tv_to_beta_param(tv, prior_a=1, prior_b=1):
-    """Return the beta parameter of a TV's beta-distribution.
-
-    """
+    """Return the beta parameter of a TV's beta-distribution."""
 
     count = tv.count
-    pos_count = count * tv.mean # the mean is actually the mode
+    pos_count = count * tv.mean  # the mean is actually the mode
     return prior_b + count - pos_count
 
 
@@ -200,16 +197,26 @@ def thompson_sample(mxmdl, prior_a=1, prior_b=1):
 
     """
 
-    agent_log.fine("thompson_sample(mxmdl={}, prior_a={}, prior_b={})".format(mxmdl_to_str(mxmdl), prior_a, prior_b))
+    agent_log.fine(
+        "thompson_sample(mxmdl={}, prior_a={}, prior_b={})".format(
+            mxmdl_to_str(mxmdl), prior_a, prior_b
+        )
+    )
 
     # 1. For each action select its TV according its weight
-    act_w8d_cogscms = [(action, weighted_sampling(w8d_cogscms))
-                  for (action, w8d_cogscms) in mxmdl.listitems()]
-    agent_log.fine("act_w8d_cogscms:\n{}".format(act_w8d_cogscms_to_str(act_w8d_cogscms)))
+    act_w8d_cogscms = [
+        (action, weighted_sampling(w8d_cogscms))
+        for (action, w8d_cogscms) in mxmdl.listitems()
+    ]
+    agent_log.fine(
+        "act_w8d_cogscms:\n{}".format(act_w8d_cogscms_to_str(act_w8d_cogscms))
+    )
 
     # 2. For each action select its first order probability given its tv
-    act_pblts = [(action, tv_rv(get_cogscm_tv(w8_cogscm[1]), prior_a, prior_b))
-                 for (action, w8_cogscm) in act_w8d_cogscms]
+    act_pblts = [
+        (action, tv_rv(get_cogscm_tv(w8_cogscm[1]), prior_a, prior_b))
+        for (action, w8_cogscm) in act_w8d_cogscms
+    ]
     agent_log.fine("act_pblts:\n{}".format(act_pblts_to_str(act_pblts)))
 
     # Return an action with highest probability of success (TODO: take
@@ -376,6 +383,7 @@ def is_sequential_and(atom):
 
     return is_a(atom.type, get_type("AltSequentialAndLink"))
 
+
 def is_execution(atom):
     """Return True iff the atom is an ExecutionLink."""
 
@@ -395,9 +403,7 @@ def is_S(atom):
 
 
 def maybe_and(clauses):
-    """Wrap an And if multiple clauses, otherwise return the only one.
-
-    """
+    """Wrap an And if multiple clauses, otherwise return the only one."""
 
     return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
 
@@ -531,11 +537,10 @@ def has_all_variables_in_antecedent(cogscm):
     else:
         return True
 
+
 # TODO: optimize using comprehension
 def get_free_variables_of_atoms(atoms):
-    """Get the set of all free variables in all atoms.
-
-    """
+    """Get the set of all free variables in all atoms."""
 
     variables = set()
     for atom in atoms:
@@ -544,9 +549,7 @@ def get_free_variables_of_atoms(atoms):
 
 
 def get_times(timed_atoms):
-    """Given a list of timestamped clauses, return a set of all times.
-
-    """
+    """Given a list of timestamped clauses, return a set of all times."""
 
     if timed_atoms == []:
         return set()
@@ -554,17 +557,13 @@ def get_times(timed_atoms):
 
 
 def get_events(timed_atoms):
-    """Given a list of timestamped clauses, return a list of all events.
-
-    """
+    """Given a list of timestamped clauses, return a list of all events."""
 
     return [get_event(ta) for ta in timed_atoms]
 
 
 def get_latest_time(timed_clauses):
-    """Given a list of timestamped clauses, return the latest timestamp.
-
-    """
+    """Given a list of timestamped clauses, return the latest timestamp."""
 
     if timed_clauses == []:
         return ZLink()
@@ -589,9 +588,7 @@ def get_latest_clauses(timed_clauses):
 
 
 def get_early_clauses(timed_clauses):
-    """Return all clauses that are not the latest.
-
-    """
+    """Return all clauses that are not the latest."""
 
     lcs = set(get_latest_clauses(timed_clauses))
     return list(set(timed_clauses).difference(lcs))
@@ -683,10 +680,12 @@ def get_context_actual_truth(atomspace, cogscm, i):
     vardecl = get_vardecl(cogscm)
     present_clauses, virtual_clauses = get_context(cogscm)
     stamped_present_clauses = [timestamp(pc, i) for pc in present_clauses]
-    body = AndLink(PresentLink(*stamped_present_clauses),
-                   IsClosedLink(*stamped_present_clauses),
-                   IsTrueLink(*stamped_present_clauses),
-                   *virtual_clauses)
+    body = AndLink(
+        PresentLink(*stamped_present_clauses),
+        IsClosedLink(*stamped_present_clauses),
+        IsTrueLink(*stamped_present_clauses),
+        *virtual_clauses
+    )
     query = SatisfactionLink(vardecl, body)
     tv = execute_atom(atomspace, query)
     return tv
@@ -709,9 +708,7 @@ def get_event(timed_atom):
 
 
 def get_time(timed_atom):
-    """Given (AtTime A T) return T.
-
-    """
+    """Given (AtTime A T) return T."""
 
     return timed_atom.out[1]
 
@@ -751,7 +748,7 @@ def to_nat(i):
 
     """
 
-    #return ZLink() if i == 0 else SLink(to_nat(i - 1))
+    # return ZLink() if i == 0 else SLink(to_nat(i - 1))
     ret = ZLink()
     for i in range(0, i):
         ret = SLink(ret)
@@ -768,7 +765,7 @@ def lag_to_nat(i, T):
 
     """
 
-    #return T if i == 0 else SLink(lag_to_nat(i - 1, T))
+    # return T if i == 0 else SLink(lag_to_nat(i - 1, T))
     ret = T
     for i in range(0, i):
         ret = SLink(ret)
@@ -784,10 +781,10 @@ def to_int(n):
 
     """
 
-#    if is_Z(n):
-#        return 0
-#    if is_S(n):
-#        return 1 + to_int(n.out[0])
+    #    if is_Z(n):
+    #        return 0
+    #    if is_S(n):
+    #        return 1 + to_int(n.out[0])
 
     ret = 0
     link = n
@@ -798,10 +795,9 @@ def to_int(n):
 
     return ret
 
-def to_scheme_str(vs) -> str:
-    """Takes a python value and convert it to a scheme value string
 
-    """
+def to_scheme_str(vs) -> str:
+    """Takes a python value and convert it to a scheme value string"""
     if vs == True:
         return "#t"
     elif vs == False:
@@ -809,15 +805,16 @@ def to_scheme_str(vs) -> str:
     else:
         return str(vs)
 
+
 class MinerLogger:
-    """Quick and dirty miner logger Python bindings """
+    """Quick and dirty miner logger Python bindings"""
 
     def __init__(self, atomspace):
         self.atomspace = atomspace
         scheme_eval(self.atomspace, "(use-modules (opencog miner))")
 
     def set_level(self, level: str) -> None:
-        cmd_str = "(miner-logger-set-level! \"" + level + "\")"
+        cmd_str = '(miner-logger-set-level! "' + level + '")'
         scheme_eval(self.atomspace, cmd_str)
 
     def set_sync(self, sync: bool) -> None:

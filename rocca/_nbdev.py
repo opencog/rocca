@@ -10,4 +10,6 @@ doc_url = "https://opencog.github.io/rocca/"
 
 git_url = "https://github.com/opencog/rocca/tree/master/"
 
-def custom_doc_links(name): return None
+
+def custom_doc_links(name):
+    return None

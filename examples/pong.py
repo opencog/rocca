@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from opencog.type_constructors import *
 from opencog.spacetime import *
+
 atomspace = AtomSpace()
 set_default_atomspace(atomspace)
 
@@ -17,7 +18,8 @@ atomese_action_space = (
     SchemaNode("Go Right"),
     SchemaNode("Go Left"),
     SchemaNode("Fire Right"),
-    SchemaNode("Fire Left"))
+    SchemaNode("Fire Left"),
+)
 
 ATOMESE_TO_KEYS = {
     "Noop": 0,
@@ -25,12 +27,13 @@ ATOMESE_TO_KEYS = {
     "Go Right": 2,
     "Go Left": 3,
     "Fire Right": 4,
-    "Fire Left": 5
-    }
+    "Fire Left": 5,
+}
 
 
 def atomese_action_sample():
     return atomese_action_space[random.randint(0, 5)]
+
 
 def to_atlocation(cord, obj):
     """
@@ -50,12 +53,12 @@ def to_atlocation(cord, obj):
     returns a list of AtlocationLink for one frame
     """
     tmp = [NumberNode(str(n)) for n in cord]
-    schema = AtLocationLink(ConceptNode(str(obj)),
-                            ListLink(ConceptNode("Pong"),
-                            ListLink(tmp[0], tmp[1], NumberNode("0"))))
+    schema = AtLocationLink(
+        ConceptNode(str(obj)),
+        ListLink(ConceptNode("Pong"), ListLink(tmp[0], tmp[1], NumberNode("0"))),
+    )
 
     return schema
-
 
 
 def preprocess(obs):
@@ -92,12 +95,12 @@ def observation_to_atomese(observation):
     for i in range(159):
         for j in range(160):
             temp = obs[i][j]
-            if ((temp == Player).all()):
+            if (temp == Player).all():
                 player.append([j, i])
-            elif ((temp == Ball).all()):
+            elif (temp == Ball).all():
                 ball.append([j, i])
 
-            elif ((temp == Opponent).all()):
+            elif (temp == Opponent).all():
                 opp.append([j, i])
             else:
                 pass
@@ -109,19 +112,18 @@ def observation_to_atomese(observation):
     schemaball = SchemaNode("Null")
     schemaopp = SchemaNode("Null")
 
-    if(len(ball) != 0):
+    if len(ball) != 0:
         beg = ball[0]
         end = ball.pop()
         midball = ((beg[0] + end[0]) / 2, (beg[1] + end[1]) / 2)
         schemaball = to_atlocation(midball, "Ball")
 
-    if(len(opp) !=0):
+    if len(opp) != 0:
         beg = opp[0]
         end = opp.pop()
         midopp = ((beg[0] + end[0]) / 2, (beg[1] + end[1]) / 2)
         schemaopp = to_atlocation(midopp, "Opponent")
     return [schemaplayer, schemaball, schemaopp]
-
 
 
 def reward_to_atomese(reward):
@@ -162,10 +164,10 @@ if __name__ == "__main__":
         env.reset()
         action = atomese_action_sample()
         for j in range(100):
-                env.render()
-                gym_action = action_to_gym(action)
-                observation, reward, done, info = env.step(gym_action)
-                atomese_ops = observation_to_atomese(observation)
-                action = dummy_atomese_agent(atomese_ops)
+            env.render()
+            gym_action = action_to_gym(action)
+            observation, reward, done, info = env.step(gym_action)
+            atomese_ops = observation_to_atomese(observation)
+            action = dummy_atomese_agent(atomese_ops)
 
     env.close()

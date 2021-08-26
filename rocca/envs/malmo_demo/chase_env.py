@@ -20,7 +20,8 @@ def drawRewards(y, count=1000, type="diamond_block"):
     return xml
 
 
-mission_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+mission_xml = (
+    """<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <Mission xmlns:xsi="http://www.w3.org/2001/XMLSchemainstance" xmlns="http://ProjectMalmo.microsoft.com"
          xsi:schemaLocation="http://ProjectMalmo.microsoft.com Mission.xsd">
     <About>
@@ -38,7 +39,9 @@ mission_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;3;,biome_1" 
                                 forceReset="true"/>
             <DrawingDecorator>
-                ''' + drawRewards(228, 2000, "diamond_block") + '''
+                """
+    + drawRewards(228, 2000, "diamond_block")
+    + """
             </DrawingDecorator>
             <ServerQuitWhenAnyAgentFinishes description=""/>
         </ServerHandlers>
@@ -75,10 +78,11 @@ mission_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
             </RewardForCollectingItem>
         </AgentHandlers>
     </AgentSection>
-</Mission>'''
+</Mission>"""
+)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     The following is some random heuristics to demo how you
     would use the MalmoWrapper and the environment defined
@@ -96,7 +100,9 @@ if __name__ == '__main__':
     rw, ob, done = malmoWrapper.restart()
 
     malmoWrapper.step(mk_action("hotbar.9", 1))  # Press the hotbar key
-    malmoWrapper.step(mk_action("hotbar.9", 0))  # Release hotbar key - agent should now be holding diamond_pickaxe
+    malmoWrapper.step(
+        mk_action("hotbar.9", 0)
+    )  # Release hotbar key - agent should now be holding diamond_pickaxe
 
     # Wait a second until we are looking in roughly the right direction
     time.sleep(1)
@@ -113,8 +119,9 @@ if __name__ == '__main__':
     while not done:
         print(".", end="")
         time.sleep(0.2)
-        rw, ob, done = malmoWrapper.step(mk_action("attack", 1),
-                                         update_callback=stp_callback)
+        rw, ob, done = malmoWrapper.step(
+            mk_action("attack", 1), update_callback=stp_callback
+        )
 
         print("Reward : \n", rw)
         print("Observation : \n", ob)

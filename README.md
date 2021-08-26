@@ -1,5 +1,12 @@
 # Rational OpenCog Controlled Agent
 
+<p align="left">
+  [![CI](https://github.com/opencog/rocca/actions/workflows/main.yml/badge.svg)](https://github.com/opencog/rocca/actions/workflows/main.yml)
+  <a href="https://github.com/psf/black">
+    <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black" />
+  </a>
+</p>
+
 ## Description
 
 Rational OpenCog Controlled Agent, or ROCCA, is a project aiming at
@@ -83,7 +90,7 @@ There are Jupyter notebooks provided for experimentation as well.
 
 ## Develop
 
-If you write code in notebooks that is exported (has the `#export` comment on top of the cell), remember to invoke `nbdev_build_lib` to update the library.
+If you write code in notebooks that is exported (has the `#export` comment on top of the cell), remember to invoke `nbdev_build_lib` to update the library. Remember to use `black` for formatting, you can invoke `black .` from the project root to format everything.
 
 ## Tests
 

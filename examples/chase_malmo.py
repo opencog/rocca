@@ -30,7 +30,9 @@ class ChaseAgent(OpencogAgent):
     def __init__(self, env, action_space, p_goal, n_goal):
         OpencogAgent.__init__(self, env, action_space, p_goal, n_goal)
         env.step(mk_action("hotbar.9", 1))  # Press the hotbar key
-        env.step(mk_action("hotbar.9", 0))  # Release hotbar key - agent should now be holding diamond_pickaxe
+        env.step(
+            mk_action("hotbar.9", 0)
+        )  # Release hotbar key - agent should now be holding diamond_pickaxe
 
     def eat(self, i):
         self.env.step(mk_action("move", 0))
@@ -56,12 +58,14 @@ if __name__ == "__main__":
 
     # Create Action Space. The set of allowed actions an agent can take.
     # TODO take care of action parameters.
-    action_space = {ExecutionLink(SchemaNode("tpz"), NumberNode("2.5")),
-                    ExecutionLink(SchemaNode("tpz"), NumberNode("-1.5")),
-                    ExecutionLink(SchemaNode("attack"), NumberNode("0")),
-                    ExecutionLink(SchemaNode("attack"), NumberNode("1")),
-                    ExecutionLink(SchemaNode("move"), NumberNode("0")),
-                    ExecutionLink(SchemaNode("move"), NumberNode("0.5"))}
+    action_space = {
+        ExecutionLink(SchemaNode("tpz"), NumberNode("2.5")),
+        ExecutionLink(SchemaNode("tpz"), NumberNode("-1.5")),
+        ExecutionLink(SchemaNode("attack"), NumberNode("0")),
+        ExecutionLink(SchemaNode("attack"), NumberNode("1")),
+        ExecutionLink(SchemaNode("move"), NumberNode("0")),
+        ExecutionLink(SchemaNode("move"), NumberNode("0.5")),
+    }
 
     # ChaseAgent
     ca = ChaseAgent(wrapped_env, action_space, pgoal, ngoal)
@@ -87,6 +91,10 @@ if __name__ == "__main__":
             time.sleep(0.01)
             log.info("step_count = {}".format(ca.step_count))
         nar = ca.accumulated_reward - par
-        agent_log.info("Accumulated reward during {}th iteration = {}".format(i + 1, nar))
-        agent_log.info("Action counter during {}th iteration:\n{}".format(i + 1, ca.action_counter))
+        agent_log.info(
+            "Accumulated reward during {}th iteration = {}".format(i + 1, nar)
+        )
+        agent_log.info(
+            "Action counter during {}th iteration:\n{}".format(i + 1, ca.action_counter)
+        )
         ca.eat(8 - i)

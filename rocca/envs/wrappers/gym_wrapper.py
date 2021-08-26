@@ -35,14 +35,14 @@ class GymWrapper(Wrapper):
             for k in obs.keys():
                 label = sbs + "-" + k if sbs else k
                 if isinstance(space[k], sp.Discrete):
-                    obs_list+=self.convert_percept(label, obs[k])
+                    obs_list += self.convert_percept(label, obs[k])
                 elif isinstance(space[k], sp.Box):
                     l = (
                         listify(obs[k].tolist())
                         if isinstance(obs[k], np.ndarray)
                         else obs[k]
                     )
-                    obs_list+=self.convert_percept(label, *l)
+                    obs_list += self.convert_percept(label, *l)
                 elif isinstance(space[k], sp.Tuple):
                     _sbs = sbs + "-" + k if sbs else k
                     obs_list.extend(self.labeled_observations(space[k], obs[k], _sbs))
@@ -107,7 +107,6 @@ class GymWrapper(Wrapper):
 
     def close(self):
         self.env.close()
-    
+
     def convert_percept(self, predicate, *args):
         return [mk_evaluation(predicate, *args)]
-

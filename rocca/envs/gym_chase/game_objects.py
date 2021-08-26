@@ -4,10 +4,7 @@ Simple GameObject class's to render in environment.
 
 from gym.envs.classic_control import rendering
 
-TAB_VERTICES = [(-1, -0.4),
-                (-1, 0.4),
-                (1, 0.4),
-                (1, -0.4)]
+TAB_VERTICES = [(-1, -0.4), (-1, 0.4), (1, 0.4), (1, -0.4)]
 
 
 class Table:
@@ -17,14 +14,12 @@ class Table:
 
     def draw(self, viewer):
         t = rendering.Transform(translation=(self.x, self.y))
-        viewer.draw_polygon(TAB_VERTICES, color=(0, 1, 0)).add_attr(t);
+        viewer.draw_polygon(TAB_VERTICES, color=(0, 1, 0)).add_attr(t)
 
 
 HEAD_RES = 20
 HEAD_RAD = 0.1
-LG_VERTICES = [(-HEAD_RAD, -HEAD_RAD),
-               (0, 0),
-               (HEAD_RAD, -HEAD_RAD)]
+LG_VERTICES = [(-HEAD_RAD, -HEAD_RAD), (0, 0), (HEAD_RAD, -HEAD_RAD)]
 
 
 class Player:
@@ -35,7 +30,9 @@ class Player:
     def draw(self, viewer):
         # draw the head
         h_t = rendering.Transform(translation=(self.x, self.y))
-        viewer.draw_circle(HEAD_RAD, HEAD_RES, filled=False, color=(0, 0, 0)).add_attr(h_t)
+        viewer.draw_circle(HEAD_RAD, HEAD_RES, filled=False, color=(0, 0, 0)).add_attr(
+            h_t
+        )
         # draw torso
         t_t = rendering.Transform(translation=(self.x, self.y - HEAD_RAD))
         viewer.draw_line((0, 0), (0, -HEAD_RAD * 2), color=(0, 0, 0)).add_attr(t_t)
@@ -62,7 +59,9 @@ class Pellet:
 
     def draw(self, viewer):
         p_t = rendering.Transform(translation=(self.x, self.y))
-        viewer.draw_circle(PELLET_RAD, PELLET_RES, filled=True, color=(1, 1, 0)).add_attr(p_t)
+        viewer.draw_circle(
+            PELLET_RAD, PELLET_RES, filled=True, color=(1, 1, 0)
+        ).add_attr(p_t)
 
     def set_pos(self, x, y):
         self.x = x
