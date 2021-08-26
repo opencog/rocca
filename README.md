@@ -107,6 +107,10 @@ cd examples
 ../tests/mypy.sh
 ```
 
+### Unit tests
+
+Simply run `pytest` in the root folder.
+
 ## References
 
 There is no ROCCA paper per se yet.  In the meantime here is a list of related references
