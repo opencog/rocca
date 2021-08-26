@@ -96,6 +96,10 @@ If you write code in notebooks that is exported (has the `#export` comment on to
 
 You can also use the Makefile for your convenience, invoking `make rocca` will do both of the above in sequence.
 
+### Development container
+
+The `.devcontainer` folder has configuration for [VS Code devcontainer](https://code.visualstudio.com/docs/remote/containers) functionality. You can use it to setup a development environment very quickly and regardless of the OS you use.
+
 ## Tests
 
 ### Static type checking
