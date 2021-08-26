@@ -1,10 +1,12 @@
 # Rational OpenCog Controlled Agent
 
 <p align="left">
-  [![CI](https://github.com/opencog/rocca/actions/workflows/main.yml/badge.svg)](https://github.com/opencog/rocca/actions/workflows/main.yml)
-  <a href="https://github.com/psf/black">
-    <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black" />
-  </a>
+   <a href="https://github.com/opencog/rocca/actions">
+      <img alt="CI Status" src="https://github.com/opencog/rocca/actions/workflows/main.yml/badge.svg">
+   </a>
+   <a href="https://github.com/psf/black">
+      <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black" />
+   </a>
 </p>
 
 ## Description
