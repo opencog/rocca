@@ -94,6 +94,8 @@ There are Jupyter notebooks provided for experimentation as well.
 
 If you write code in notebooks that is exported (has the `#export` comment on top of the cell), remember to invoke `nbdev_build_lib` to update the library. Remember to use `black` for formatting, you can invoke `black .` from the project root to format everything.
 
+You can also use the Makefile for your convenience, invoking `make rocca` will do both of the above in sequence.
+
 ## Tests
 
 ### Static type checking

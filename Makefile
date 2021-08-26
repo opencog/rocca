@@ -7,6 +7,7 @@ all: rocca docs
 rocca: $(SRC)
 	nbdev_build_lib
 	touch rocca
+	black .
 
 sync:
 	nbdev_update_lib
