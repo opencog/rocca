@@ -12,7 +12,9 @@ from .utils import *
 from .wrapper import Wrapper
 
 if sys.version_info[0] == 2:
-    sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)  # flush print output immediately
+    sys.stdout = os.fdopen(
+        sys.stdout.fileno(), "w", 0
+    )  # flush print output immediately
 else:
     import functools
 
@@ -20,7 +22,9 @@ else:
 
 
 class MalmoWrapper(Wrapper):
-    def __init__(self, missionXML, validate, setup_mission=None, ip="127.0.0.1", port=10000):
+    def __init__(
+        self, missionXML, validate, setup_mission=None, ip="127.0.0.1", port=10000
+    ):
         super()
         self.agent_host = MalmoPython.AgentHost()
         self.clientPool = MalmoPython.ClientPool()
@@ -28,7 +32,7 @@ class MalmoWrapper(Wrapper):
         try:
             self.agent_host.parse(sys.argv)
         except RuntimeError as e:
-            print('ERROR:', e)
+            print("ERROR:", e)
             print(self.agent_host.getUsage())
             exit(1)
         if self.agent_host.receivedArgument("help"):
@@ -37,12 +41,12 @@ class MalmoWrapper(Wrapper):
 
         self.mission = MalmoPython.MissionSpec(missionXML, validate)
         self.mission_record = MalmoPython.MissionRecordSpec()
-        if (setup_mission is not None):
+        if setup_mission is not None:
             setup_mission(self.mission)
 
     @classmethod
     def fromfile(cls, path, validate, setup_mission=None):
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             print("Loading mission from {}".format(path))
             missionXML = f.read()
         return cls(missionXML, validate, setup_mission=setup_mission)
@@ -65,9 +69,7 @@ class MalmoWrapper(Wrapper):
         else:
             obs_list = []
 
-        return mk_evaluation("Reward", rw), \
-               obs_list, \
-               not ws.is_mission_running
+        return mk_evaluation("Reward", rw), obs_list, not ws.is_mission_running
 
     @staticmethod
     def restart_decorator(restart):
@@ -92,10 +94,13 @@ class MalmoWrapper(Wrapper):
     def restart(self, max_retries=3):
         for retry in range(max_retries):
             try:
-                self.agent_host.startMission(self.mission,
-                                             self.clientPool,
-                                             self.mission_record,
-                                             0, str(uuid.uuid4()))
+                self.agent_host.startMission(
+                    self.mission,
+                    self.clientPool,
+                    self.mission_record,
+                    0,
+                    str(uuid.uuid4()),
+                )
                 break
             except RuntimeError as e:
                 if retry == max_retries - 1:
@@ -105,7 +110,7 @@ class MalmoWrapper(Wrapper):
                     time.sleep(2)
 
         # Loop until mission starts:
-        print("Waiting for the mission to start ", end=' ')
+        print("Waiting for the mission to start ", end=" ")
         self.world_state = self.agent_host.getWorldState()
         while not self.world_state.has_mission_begun:
             print(".", end="")
@@ -114,7 +119,7 @@ class MalmoWrapper(Wrapper):
             for error in self.world_state.errors:
                 print("Error:", error.text)
         print()
-        print("Mission running ", end=' ')
+        print("Mission running ", end=" ")
         return self.world_state
 
     @step_decorator.__func__
@@ -127,7 +132,7 @@ class MalmoWrapper(Wrapper):
             for error in self.world_state.errors:
                 print("Error: ", error.text)
 
-            if (update_callback is not None):
+            if update_callback is not None:
                 update_callback(action, self.world_state)
         except RuntimeError as e:
             print("Error sending command:", e)

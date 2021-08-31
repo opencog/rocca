@@ -54,17 +54,13 @@ class ChaseEnv(gym.Env):
     receives a reward of 1.
     """
 
-    metadata = {
-        'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': FPS
-    }
+    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": FPS}
 
     def __init__(self):
         self.action_space = spaces.Discrete(4)
-        self.observation_space = spaces.Tuple((
-            spaces.Discrete(2),  # Agent Position
-            spaces.Discrete(3)  # Food pellet
-        ))
+        self.observation_space = spaces.Tuple(
+            (spaces.Discrete(2), spaces.Discrete(3))  # Agent Position  # Food pellet
+        )
         self.food_position = None
         self.player_position = None
         self.prev_food_position = None
@@ -115,7 +111,10 @@ class ChaseEnv(gym.Env):
         return reward, done
 
     def step(self, action):
-        assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
+        assert self.action_space.contains(action), "%r (%s) invalid" % (
+            action,
+            type(action),
+        )
 
         reward, done = self._update_state(Action(action))
         self.player.set_pos(*self.get_player_transform())
@@ -129,16 +128,17 @@ class ChaseEnv(gym.Env):
         self.pellet = Pellet(*self.get_pellet_transform())
         return self._get_ob()
 
-    def render(self, mode='human'):
+    def render(self, mode="human"):
         if self.viewer is None:
             self.viewer = rendering.Viewer(WINDOW_W, WINDOW_H)
-            self.viewer.set_bounds(-WINDOW_W / SCALE, WINDOW_W / SCALE,
-                                   -WINDOW_H / SCALE, WINDOW_H / SCALE)
+            self.viewer.set_bounds(
+                -WINDOW_W / SCALE, WINDOW_W / SCALE, -WINDOW_H / SCALE, WINDOW_H / SCALE
+            )
 
         self.table.draw(self.viewer)
         self.player.draw(self.viewer)
         self.pellet.draw(self.viewer)
-        return self.viewer.render(return_rgb_array=mode == 'rgb_array')
+        return self.viewer.render(return_rgb_array=mode == "rgb_array")
 
     def close(self):
         if self.viewer is not None:
@@ -146,11 +146,10 @@ class ChaseEnv(gym.Env):
             self.viewer = None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from pyglet.window import key
 
     a = np.array([2])
-
 
     def key_press(k, mod):
         if k == key.LEFT:
@@ -163,7 +162,6 @@ if __name__ == '__main__':
             a[0] = 3
 
         print("pressed {}".format(a))
-
 
     treward = 0
     nsteps = 0
@@ -178,7 +176,8 @@ if __name__ == '__main__':
         treward += r
 
         isopen = env.render()
-        if isopen == False: break
+        if isopen == False:
+            break
 
         nsteps += 1
         if nsteps % 200 == 0:
@@ -186,5 +185,6 @@ if __name__ == '__main__':
             print("step {} total_reward {:+0.2f}".format(nsteps, treward))
             print("current action is {}".format(a[0]))
 
-        if done or treward > 5: break
+        if done or treward > 5:
+            break
     env.close()

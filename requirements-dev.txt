@@ -1,3 +1,6 @@
-nbdev==1.1.14
-black==20.8b1
-isort==5.8.0
+nbdev
+jupyter
+black
+isort
+pytest
+mypy

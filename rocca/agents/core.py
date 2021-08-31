@@ -23,6 +23,7 @@ from .utils import *
 # Class #
 #########
 
+
 class OpencogAgent:
     def __init__(self, env, action_space, p_goal, n_goal, log_level="debug"):
         self.atomspace = AtomSpace()
@@ -90,8 +91,13 @@ class OpencogAgent:
         # Load PLN.  All rules must be pre-loaded here
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
         scheme_eval(self.atomspace, "(use-modules (opencog spacetime))")
-        scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-direct-evaluation)")
-        scheme_eval(self.atomspace, "(pln-load-rule 'predictive-implication-scope-deduction)")
+        scheme_eval(
+            self.atomspace,
+            "(pln-load-rule 'predictive-implication-scope-direct-evaluation)",
+        )
+        scheme_eval(
+            self.atomspace, "(pln-load-rule 'predictive-implication-scope-deduction)"
+        )
         # scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
     def reset_action_counter(self):
@@ -177,9 +183,11 @@ class OpencogAgent:
         # succedents.
         for action in self.action_space:
             lag = 1
-            prectxs = [EvaluationLink(VariableNode("$P"), VariableNode("$X")),
-                       EvaluationLink(VariableNode("$Q"), VariableNode("$Y")),
-                       action]
+            prectxs = [
+                EvaluationLink(VariableNode("$P"), VariableNode("$X")),
+                EvaluationLink(VariableNode("$Q"), VariableNode("$Y")),
+                action,
+            ]
 
             # Mine positive succedent goals
             postctxs = [self.positive_goal]
@@ -207,11 +215,17 @@ class OpencogAgent:
             if self.polyaction_mining:
                 postctxs = [self.positive_goal]
                 for snd_action in self.action_space:
-                    agent_log.fine("polyaction mining snd_action = {}".format(snd_action))
+                    agent_log.fine(
+                        "polyaction mining snd_action = {}".format(snd_action)
+                    )
                     ma_prectxs = (lag, prectxs, [snd_action])
-                    pos_multi_srps = self.mine_temporal_patterns((lag, ma_prectxs, postctxs))
+                    pos_multi_srps = self.mine_temporal_patterns(
+                        (lag, ma_prectxs, postctxs)
+                    )
                     agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
-                    pos_multi_prdi = self.surprises_to_predictive_implications(pos_multi_srps)
+                    pos_multi_prdi = self.surprises_to_predictive_implications(
+                        pos_multi_srps
+                    )
                     cogscms.update(set(pos_multi_prdi))
 
         agent_log.fine("Mined cognitive schematics = {}".format(cogscms))
@@ -244,9 +258,7 @@ class OpencogAgent:
         return cogscms
 
     def learn(self):
-        """Discover patterns in the world and in itself.
-
-        """
+        """Discover patterns in the world and in itself."""
 
         # For now we only learn cognitive schematics
 
@@ -277,14 +289,12 @@ class OpencogAgent:
         return surprise_eval.out[1].out[0]
 
     def is_T(self, var):
-        """Return True iff the variable is (Variable "$T").
-
-        """
+        """Return True iff the variable is (Variable "$T")."""
 
         return var == VariableNode("$T")
 
     def is_temporally_typed(self, tvar):
-        """"Return True iff the variable is typed as temporal.
+        """ "Return True iff the variable is typed as temporal.
 
         For now a variable is typed as temporal if it is
 
@@ -311,9 +321,7 @@ class OpencogAgent:
         return self.is_T(clause.out[1])
 
     def get_pattern_timed_clauses(self, pattern):
-        """Return all timestamped clauses of a pattern.
-
-        """
+        """Return all timestamped clauses of a pattern."""
 
         return pattern.out[1].out
 
@@ -338,9 +346,7 @@ class OpencogAgent:
         return [get_event(tc) for tc in tclauses]
 
     def get_typed_variables(self, vardecl):
-        """Get the list of possibly typed variables in vardecl.
-
-        """
+        """Get the list of possibly typed variables in vardecl."""
 
         vt = vardecl.type
         if is_a(vt, types.VariableList) or is_a(vt, types.VariableSet):
@@ -349,9 +355,7 @@ class OpencogAgent:
             return [vardecl]
 
     def get_nt_vardecl(self, pattern):
-        """Get the vardecl of pattern excluding the time variable.
-
-        """
+        """Get the vardecl of pattern excluding the time variable."""
 
         vardecl = get_vardecl(pattern)
         tvars = self.get_typed_variables(vardecl)
@@ -367,16 +371,14 @@ class OpencogAgent:
             early_events = get_events(early_clauses)
             latest_clauses = get_latest_clauses(timed_clauses)
             latest_events = get_events(latest_clauses)
-            return AltSequentialAndLink(to_nat(1),
-                                        maybe_and(early_events),
-                                        maybe_and(latest_events))
+            return AltSequentialAndLink(
+                to_nat(1), maybe_and(early_events), maybe_and(latest_events)
+            )
         else:
             agent_log.error("Not supported yet!")
 
     def to_predictive_implicant(self, pattern):
-        """Turn a temporal pattern into predictive implicant.
-
-        """
+        """Turn a temporal pattern into predictive implicant."""
 
         agent_log.fine("to_predictive_implicant(pattern={})".format(pattern))
 
@@ -386,15 +388,13 @@ class OpencogAgent:
         agent_log.fine("timed_clauses = {})".format(timed_clauses))
         agent_log.fine("early_clauses = {})".format(early_clauses))
         agent_log.fine("early_times = {})".format(early_times))
-        if len(early_times) == 1:     # No need of SequentialAnd
+        if len(early_times) == 1:  # No need of SequentialAnd
             return maybe_and(get_events(early_clauses))
         else:
             return self.to_sequential_and(early_clauses)
 
     def to_predictive_implicand(self, pattern):
-        """Turn a temporal pattern into predictive implicand.
-
-        """
+        """Turn a temporal pattern into predictive implicand."""
 
         return maybe_and(self.get_pattern_succedent_events(pattern))
 
@@ -507,7 +507,15 @@ class OpencogAgent:
         ntvardecl = self.get_nt_vardecl(pattern)
         # TODO: fix python PredictiveImplicationScopeLink binding!
         # preimp = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
-        preimp = scheme_eval_h(self.atomspace, "(PredictiveImplicationScopeLink " + str(ntvardecl) + str(lag) + str(pt) + str(pd) + ")")
+        preimp = scheme_eval_h(
+            self.atomspace,
+            "(PredictiveImplicationScopeLink "
+            + str(ntvardecl)
+            + str(lag)
+            + str(pt)
+            + str(pd)
+            + ")",
+        )
         # Make sure all variables are in the antecedent
         vardecl_vars = set(get_free_variables(ntvardecl))
         pt_vars = set(get_free_variables(pt))
@@ -534,21 +542,22 @@ class OpencogAgent:
 
         """
 
-        return cogscm \
-            and has_non_null_confidence(cogscm) \
-            and is_closed(get_t0_execution(cogscm)) \
+        return (
+            cogscm
+            and has_non_null_confidence(cogscm)
+            and is_closed(get_t0_execution(cogscm))
             and has_all_variables_in_antecedent(cogscm)
+        )
 
     def surprises_to_predictive_implications(self, srps):
-        """Like to_predictive_implication but takes surprises.
-
-        """
+        """Like to_predictive_implication but takes surprises."""
 
         agent_log.fine("surprises_to_predictive_implications(srps={})".format(srps))
 
         # Turn patterns into predictive implication scopes
-        cogscms = [self.to_predictive_implication_scope(self.get_pattern(srp))
-                   for srp in srps]
+        cogscms = [
+            self.to_predictive_implication_scope(self.get_pattern(srp)) for srp in srps
+        ]
 
         # Remove undesirable cognitive schematics
         #
@@ -635,7 +644,11 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("mine_temporal_patterns(lagged_antecedents_succedents={}, vardecl={})".format(lagged_antecedents_succedents, vardecl))
+        agent_log.fine(
+            "mine_temporal_patterns(lagged_antecedents_succedents={}, vardecl={})".format(
+                lagged_antecedents_succedents, vardecl
+            )
+        )
 
         # Set miner parameters
         minsup = 4
@@ -666,17 +679,31 @@ class OpencogAgent:
         # agent_log.fine("percepta_str = {}".format(percepta_str))
 
         # Launch pattern miner
-        mine_query = "(cog-mine " + str(self.percepta_record) + \
-            " #:ignore " + str(ignore) + \
-            " #:minimum-support " + str(minsup) + \
-            " #:initial-pattern " + str(initpat) + \
-            " #:maximum-iterations " + str(maxiter) + \
-            " #:conjunction-expansion " + cnjexp + \
-            " #:enforce-specialization " + enfspe + \
-            " #:maximum-variables " + str(maxvars) + \
-            " #:maximum-conjuncts " + str(maxcjnts) + \
-            " #:maximum-spcial-conjuncts " + str(mspc) + \
-            " #:surprisingness " + surprise + ")"
+        mine_query = (
+            "(cog-mine "
+            + str(self.percepta_record)
+            + " #:ignore "
+            + str(ignore)
+            + " #:minimum-support "
+            + str(minsup)
+            + " #:initial-pattern "
+            + str(initpat)
+            + " #:maximum-iterations "
+            + str(maxiter)
+            + " #:conjunction-expansion "
+            + cnjexp
+            + " #:enforce-specialization "
+            + enfspe
+            + " #:maximum-variables "
+            + str(maxvars)
+            + " #:maximum-conjuncts "
+            + str(maxcjnts)
+            + " #:maximum-spcial-conjuncts "
+            + str(mspc)
+            + " #:surprisingness "
+            + surprise
+            + ")"
+        )
         agent_log.fine("mine_query = {}".format(mine_query))
         surprises = scheme_eval_h(self.atomspace, "(List " + mine_query + ")")
         agent_log.fine("surprises = {}".format(surprises))
@@ -721,7 +748,9 @@ class OpencogAgent:
         """
 
         agent_log.fine("plan(goal={}, expiry={})".format(goal, expiry))
-        agent_log.fine("self.cognitive_schematics = {}".format(self.cognitive_schematics))
+        agent_log.fine(
+            "self.cognitive_schematics = {}".format(self.cognitive_schematics)
+        )
 
         # Retrieve all cognitive schematics meeting the constrains which are
         #
@@ -729,15 +758,15 @@ class OpencogAgent:
         #    equal to the expiry.
         #
         # 2. The succedent matches the goal
-        meet = lambda cogscm : get_total_lag(cogscm) <= expiry \
+        meet = (
+            lambda cogscm: get_total_lag(cogscm) <= expiry
             and get_succedent(cogscm) == goal
+        )
         return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
 
     # TODO: move to its own class (MixtureModel or something)
     def get_all_uniq_atoms(self, atom):
-        """Return the set of all unique atoms in atom.
-
-        """
+        """Return the set of all unique atoms in atom."""
 
         # Base cases
         if atom.is_node():
@@ -752,9 +781,7 @@ class OpencogAgent:
 
     # TODO: move to its own class (MixtureModel or something)
     def complexity(self, atom):
-        """Return the count of all unique atoms in atom.
-
-        """
+        """Return the count of all unique atoms in atom."""
 
         return len(self.get_all_uniq_atoms(atom))
 
@@ -797,14 +824,12 @@ class OpencogAgent:
 
     # TODO: move to its own class (MixtureModel or something)
     def prior_estimate(self, cogscm):
-        """Calculate the prior probability of cogscm.
-
-        """
+        """Calculate the prior probability of cogscm."""
 
         partial_complexity = self.complexity(cogscm)
         remain_data_size = self.data_set_size - cogscm.tv.count
-        kestimate = self.kolmogorov_estimate(remain_data_size);
-        return self.prior(partial_complexity + kestimate);
+        kestimate = self.kolmogorov_estimate(remain_data_size)
+        return self.prior(partial_complexity + kestimate)
 
     # TODO: move to its own class (MixtureModel or something)
     def beta_factor(self, cogscm):
@@ -922,8 +947,9 @@ class OpencogAgent:
         # be taken into account to lower the confidence of the final
         # result, as they allegedly exert an unknown influence (via
         # their invalid parts).
-        ctx_tv = lambda cogscm: \
-            get_context_actual_truth(self.atomspace, cogscm, self.step_count)
+        ctx_tv = lambda cogscm: get_context_actual_truth(
+            self.atomspace, cogscm, self.step_count
+        )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
         agent_log.fine("valid_cogscms = {}".format(valid_cogscms))
 
@@ -938,8 +964,12 @@ class OpencogAgent:
 
         # For each action, map a list of weighted valid cognitive
         # schematics.
-        mxmdl = omdict([(get_t0_execution(cogscm), (self.weight(cogscm), cogscm))
-                        for cogscm in valid_cogscms])
+        mxmdl = omdict(
+            [
+                (get_t0_execution(cogscm), (self.weight(cogscm), cogscm))
+                for cogscm in valid_cogscms
+            ]
+        )
         # Add delta (unknown) components
         for action in self.action_space:
             mxmdl.add(action, (self.delta, None))
@@ -966,12 +996,12 @@ class OpencogAgent:
         return (action, pblty)
 
     def step(self):
-        """Run one step of observation, decision and env update
-        """
+        """Run one step of observation, decision and env update"""
 
         agent_log.debug("atomese_obs = {}".format(self.observation))
-        obs_record = [self.record(o, self.step_count, tv=TRUE_TV)
-                      for o in self.observation]
+        obs_record = [
+            self.record(o, self.step_count, tv=TRUE_TV) for o in self.observation
+        ]
         agent_log.debug("obs_record = {}".format(obs_record))
 
         # Make the goal for that iteration
@@ -989,7 +1019,11 @@ class OpencogAgent:
 
         # Select the next action
         action, pblty = self.decide(mxmdl)
-        agent_log.debug("action with probability of success = {}".format(act_pblt_to_str((action, pblty))))
+        agent_log.debug(
+            "action with probability of success = {}".format(
+                act_pblt_to_str((action, pblty))
+            )
+        )
 
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.step_count, tv=TRUE_TV)

@@ -43,6 +43,7 @@ class Wrapper(abc.ABC):
     7| Environment state is `True` if environments' session has ended.
 
     """
+
     @staticmethod
     @abc.abstractmethod
     def restart_decorator(restart):

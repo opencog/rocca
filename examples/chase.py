@@ -21,13 +21,14 @@ from rocca.agents import OpencogAgent
 from rocca.agents.utils import *
 from rocca.envs.wrappers import GymWrapper
 
-env = gym.make('Chase-v0')
+env = gym.make("Chase-v0")
 # Uncomment the following to get a description of env
 # help(env.unwrapped)
 
 #################
 # Chase Wrapper #
 #################
+
 
 class ChaseWrapper(GymWrapper):
     def __init__(self, env):
@@ -65,18 +66,23 @@ class ChaseWrapper(GymWrapper):
 
         """
 
-        to_atomese_position = {0 : ConceptNode("Left Square"),
-                               1 : ConceptNode("Right Square"),
-                               2 : ConceptNode("None")}
+        to_atomese_position = {
+            0: ConceptNode("Left Square"),
+            1: ConceptNode("Right Square"),
+            2: ConceptNode("None"),
+        }
         ap = to_atomese_position[obs[0]]
         pp = to_atomese_position[obs[1]]
-        return [EvaluationLink(PredicateNode("Agent Position"), ap),
-                EvaluationLink(PredicateNode("Pellet Position"), pp)]
+        return [
+            EvaluationLink(PredicateNode("Agent Position"), ap),
+            EvaluationLink(PredicateNode("Pellet Position"), pp),
+        ]
 
 
 ###############
 # Chase Agent #
 ###############
+
 
 class ChaseAgent(OpencogAgent):
     def __init__(self, env):
@@ -95,6 +101,7 @@ class ChaseAgent(OpencogAgent):
         self.monoaction_general_succeedent_mining = False
         self.polyaction_mining = False
         self.temporal_deduction = False
+
 
 if __name__ == "__main__":
     # Set main atomspace
@@ -119,11 +126,11 @@ if __name__ == "__main__":
     ca = ChaseAgent(wrapped_env)
 
     # Training/learning loop
-    lt_iterations = 2           # Number of learning-training iterations
-    lt_period = 200             # Duration of a learning-training iteration
+    lt_iterations = 2  # Number of learning-training iterations
+    lt_period = 200  # Duration of a learning-training iteration
     for i in range(lt_iterations):
         ca.reset_action_counter()
-        par = ca.accumulated_reward # Keep track of the reward before
+        par = ca.accumulated_reward  # Keep track of the reward before
         # Discover patterns to make more informed decisions
         agent_log.info("Start learning ({}/{})".format(i + 1, lt_iterations))
         ca.learn()
@@ -134,5 +141,9 @@ if __name__ == "__main__":
             time.sleep(0.1)
             log.info("step_count = {}".format(ca.step_count))
         nar = ca.accumulated_reward - par
-        agent_log.info("Accumulated reward during {}th iteration = {}".format(i + 1, nar))
-        agent_log.info("Action counter during {}th iteration:\n{}".format(i+1, ca.action_counter))
+        agent_log.info(
+            "Accumulated reward during {}th iteration = {}".format(i + 1, nar)
+        )
+        agent_log.info(
+            "Action counter during {}th iteration:\n{}".format(i + 1, ca.action_counter)
+        )

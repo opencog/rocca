@@ -1,5 +1,14 @@
 # Rational OpenCog Controlled Agent
 
+<p align="left">
+   <a href="https://github.com/opencog/rocca/actions">
+      <img alt="CI Status" src="https://github.com/opencog/rocca/actions/workflows/main.yml/badge.svg">
+   </a>
+   <a href="https://github.com/psf/black">
+      <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black" />
+   </a>
+</p>
+
 ## Description
 
 Rational OpenCog Controlled Agent, or ROCCA, is a project aiming at
@@ -68,6 +77,11 @@ In the root folder enter the following command:
 pip install -e .
 ```
 
+For the tools used for development:
+```bash
+pip install -r requirements-dev.txt
+```
+
 ## How to use
 
 A gym agent defined under the `rocca/agents` folder is provided that
@@ -75,6 +89,16 @@ can used to implement agents for given environments.  See the examples
 under the `examples` folder.
 
 There are Jupyter notebooks provided for experimentation as well.
+
+## Develop
+
+If you write code in notebooks that is exported (has the `#export` comment on top of the cell), remember to invoke `nbdev_build_lib` to update the library. Remember to use `black` for formatting, you can invoke `black .` from the project root to format everything.
+
+You can also use the Makefile for your convenience, invoking `make rocca` will do both of the above in sequence.
+
+### Development container
+
+The `.devcontainer` folder has configuration for [VS Code devcontainer](https://code.visualstudio.com/docs/remote/containers) functionality. You can use it to setup a development environment very quickly and regardless of the OS you use.
 
 ## Tests
 
@@ -97,6 +121,10 @@ subfolder.  For instance to type check the `examples` subfolder
 cd examples
 ../tests/mypy.sh
 ```
+
+### Unit tests
+
+Simply run `pytest` in the root folder.
 
 ## References
 
