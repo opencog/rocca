@@ -104,9 +104,7 @@ class OpencogAgent:
         self.action_counter = Counter({action: 0 for action in self.action_space})
 
     def get_percepta(self):
-        """Return the list of all percepta record members.
-
-        """
+        """Return the list of all percepta record members."""
 
         cmd = "(List (get-members " + str(self.percepta_record) + "))"
         return scheme_eval_h(self.atomspace, cmd).out
