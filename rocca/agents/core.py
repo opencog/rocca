@@ -5,19 +5,24 @@
 ##############
 
 # Python
-import os
+import logging
 import math
+import multiprocessing
 from collections import Counter
 
 # OpenCog
 from opencog.pln import *
-from opencog.utilities import is_closed
-from opencog.scheme import scheme_eval_h, scheme_eval
+from opencog.scheme import scheme_eval, scheme_eval_h
 from opencog.ure import ure_logger
+from opencog.utilities import is_closed
+
+from rocca.envs.wrappers import Wrapper
 
 # OpencogAgent
 from .utils import *
 
+logging.basicConfig(filename="agent.log", format="%(asctime)s %(message)s")
+logger = logging.getLogger(__name__)
 
 #########
 # Class #
@@ -25,11 +30,11 @@ from .utils import *
 
 
 class OpencogAgent:
-    def __init__(self, env, action_space, p_goal, n_goal, log_level="debug"):
+    def __init__(self, env: Wrapper, action_space, p_goal, n_goal, log_level="debug"):
         self.atomspace = AtomSpace()
         set_default_atomspace(self.atomspace)
         self.env = env
-        _, self.observation, _ = self.env.restart()
+        self.observation, _, _ = self.env.restart()
         self.step_count = 0
         self.accumulated_reward = 0
         self.percepta_record = ConceptNode("Percepta Record")
@@ -150,7 +155,9 @@ class OpencogAgent:
 
         """
 
+        # TODO: bring back multiprocessing
         agent_log.fine("pln_bc(query={}, maxiter={})".format(query, maxiter))
+        logger.info("pln_bc(query={}, maxiter={})".format(query, maxiter))
 
         # Load rules
         if rules:
@@ -374,6 +381,7 @@ class OpencogAgent:
             )
         else:
             agent_log.error("Not supported yet!")
+            logger.error("Not supported yet!")
 
     def to_predictive_implicant(self, pattern):
         """Turn a temporal pattern into predictive implicant."""
@@ -703,8 +711,10 @@ class OpencogAgent:
             + ")"
         )
         agent_log.fine("mine_query = {}".format(mine_query))
+        logger.info("mine_query = {}".format(mine_query))
         surprises = scheme_eval_h(self.atomspace, "(List " + mine_query + ")")
         agent_log.fine("surprises = {}".format(surprises))
+        logger.info("surprises = {}".format(surprises))
 
         return surprises.out
 
@@ -950,6 +960,7 @@ class OpencogAgent:
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
         agent_log.fine("valid_cogscms = {}".format(valid_cogscms))
+        logger.debug("valid_cogscms = {}".format(valid_cogscms))
 
         # Size of the complete data set, including all observations
         # used to build the models. For simplicity we're gonna assume
@@ -997,6 +1008,7 @@ class OpencogAgent:
         """Run one step of observation, decision and env update"""
 
         agent_log.debug("atomese_obs = {}".format(self.observation))
+        logger.debug("atomese_obs = {}".format(self.observation))
         obs_record = [
             self.record(o, self.step_count, tv=TRUE_TV) for o in self.observation
         ]
@@ -1005,6 +1017,7 @@ class OpencogAgent:
         # Make the goal for that iteration
         goal = self.make_goal()
         agent_log.debug("goal = {}".format(goal))
+        logger.debug("goal = {}".format(goal))
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
         # goal expiry is 2, i.e. must be fulfilled set for the next two iterations.
@@ -1022,6 +1035,11 @@ class OpencogAgent:
                 act_pblt_to_str((action, pblty))
             )
         )
+        logger.debug(
+            "action with probability of success = {}".format(
+                act_pblt_to_str((action, pblty))
+            )
+        )
 
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.step_count, tv=TRUE_TV)
@@ -1035,7 +1053,7 @@ class OpencogAgent:
         # Increase the step count and run the next step of the environment
         self.step_count += 1
         # TODO gather environment info.
-        reward, self.observation, done = self.env.step(action)
+        self.observation, reward, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
         agent_log.debug("observation = {}".format(self.observation))
         agent_log.debug("reward = {}".format(reward))
@@ -1044,7 +1062,4 @@ class OpencogAgent:
         reward_record = self.record(reward, self.step_count, tv=TRUE_TV)
         agent_log.debug("reward_record = {}".format(reward_record))
 
-        if done:
-            return False
-
-        return True
+        return done
