@@ -28,11 +28,13 @@ from rocca.agents import OpencogAgent
 from rocca.agents.utils import *
 from rocca.envs.wrappers import GymWrapper
 
+from rocca.utils import *
+
 ####################
 # CartPole Wrapper #
 ####################
 
-
+# TODO: move to a library module.
 class CartPoleWrapper(GymWrapper):
     def __init__(self, env):
         action_list = ["Go Left", "Go Right"]
@@ -110,7 +112,7 @@ class CartPoleAgent(OpencogAgent):
     def plan(self, goal, expiry) -> List:
         """Plan the next actions given a goal and its expiry time offset
 
-        Return a python list of cognivite schematics.  Whole cognitive
+        Return a python list of cognitive schematics.  Whole cognitive
         schematics are output (instead of action plans) in order to
         make a decision based on their truth values.  Alternatively it
         could return a pair (action plan, tv), where tv has been
@@ -319,11 +321,11 @@ def main():
     cpa.delta = 1.0e-16
 
     # Run control loop
-    while cpa.step():
+    while not cpa.step():
         time.sleep(0.1)
         log.info("step_count = {}".format(cpa.step_count))
 
-    print(f"The final reward is {cpa.accumulated_reward}.")
+    log_msg(agent_log, f"The final reward is {cpa.accumulated_reward}.")
 
 
 if __name__ == "__main__":
