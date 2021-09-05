@@ -6,23 +6,22 @@
 
 # Python
 import random
+
 from orderedmultidict import omdict
 
 # SciPy
-import scipy.stats as st
 import scipy.special as sp
+import scipy.stats as st
 
 # OpenCog
-from opencog.atomspace import AtomSpace, TruthValue
-from opencog.atomspace import types
-from opencog.atomspace import get_type, is_a
+from opencog.atomspace import AtomSpace, TruthValue, get_type, is_a, types
 from opencog.exec import execute_atom
-from opencog.type_constructors import *
-from opencog.spacetime import *
-from opencog.pln import *
-from opencog.utilities import is_closed, get_free_variables
-from opencog.scheme import scheme_eval_h, scheme_eval
 from opencog.logger import create_logger
+from opencog.pln import *
+from opencog.scheme import scheme_eval, scheme_eval_h
+from opencog.spacetime import *
+from opencog.type_constructors import *
+from opencog.utilities import get_free_variables, is_closed
 
 #############
 # Constants #

@@ -11,7 +11,6 @@ import time
 import gym
 
 # OpenCog
-from opencog.atomspace import *
 from opencog.pln import *
 from opencog.ure import ure_logger
 from opencog.logger import log
@@ -28,8 +27,7 @@ env = gym.make("Chase-v0")
 #################
 # Chase Wrapper #
 #################
-
-
+# TODO: move to a library module.
 class ChaseWrapper(GymWrapper):
     def __init__(self, env):
         action_list = ["Go Left", "Go Right", "Stay", "Eat"]
