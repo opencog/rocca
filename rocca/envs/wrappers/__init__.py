@@ -1,3 +1,4 @@
+from .wrapper import Wrapper
 from .gym_wrapper import GymWrapper
 from .minerl_wrapper import MineRLWrapper
 
