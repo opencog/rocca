@@ -7,7 +7,7 @@ services:
         ports:
             - "8888:8888" # Jupyter
             - "5901:5901" # VNC
-            - "6901:6901" # noVNC
+            - "6901:6901" # noVNC, currently doesn't work
         volumes:
             - ..:/workspace:cached
             - ~/.ccache:/home/opencog/.ccache # for persisting ccache artifacts

@@ -90,6 +90,12 @@ under the `examples` folder.
 
 There are Jupyter notebooks provided for experimentation as well.
 
+### TensorBoard support
+Some experiments, notably the notebooks, use TensorBoard via the `tensorboardX` library to store event files that show certain metrics over time for training / testing (for now it's just rewards).
+
+By default, event files will be created under the `runs/<datetime><comment>` directory. You can invoke
+`tensorboard --logdir runs` from the project root to start an instance that will see all the files under that directory. Open your browser to `http://localhost:6006` to see its interface.
+
 ## Develop
 
 If you write code in notebooks that is exported (has the `#export` comment on top of the cell), remember to invoke `nbdev_build_lib` to update the library. Remember to use `black` for formatting, you can invoke `black .` from the project root to format everything.
@@ -99,6 +105,10 @@ You can also use the Makefile for your convenience, invoking `make rocca` will d
 ### Development container
 
 The `.devcontainer` folder has configuration for [VS Code devcontainer](https://code.visualstudio.com/docs/remote/containers) functionality. You can use it to setup a development environment very quickly and regardless of the OS you use.
+
+The container has a JupyterLab instance running on the port 8888.
+The container has a VNC server running on the port 5901.
+The password for the VNC server started in the container is `vncpassword`. You can use any VNC client to see the results of rendering Gym environments this way.
 
 ## Tests
 
