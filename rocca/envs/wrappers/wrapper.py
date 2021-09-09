@@ -8,10 +8,10 @@ class Wrapper(abc.ABC):
     environment wrappers with the following specifications.
 
     1| Restart method is supposed to begin a new environment session and return
-       the initial reward, observation and environment state (is the environment
+       the initial observation, reward, and environment state (is the environment
        done?).
 
-    2| Step method is going to take an action and return a reward, observation
+    2| Step method is going to take an action and return an observation, reward
        and environment state.
 
     3| Close method to clean up env.
