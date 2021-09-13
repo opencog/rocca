@@ -30,8 +30,16 @@ logger = logging.getLogger(__name__)
 
 
 class OpencogAgent:
-    def __init__(self, env: Wrapper, action_space, p_goal, n_goal, log_level="debug"):
-        self.atomspace = AtomSpace()
+    def __init__(
+        self,
+        env: Wrapper,
+        atomspace: AtomSpace,
+        action_space,
+        p_goal,
+        n_goal,
+        log_level="debug",
+    ):
+        self.atomspace = atomspace
         set_default_atomspace(self.atomspace)
         self.env = env
         self.observation, _, _ = self.env.restart()
