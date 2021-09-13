@@ -17,7 +17,7 @@ from opencog.utilities import set_default_atomspace
 
 # ROCCA
 from ..envs.wrappers import MineRLWrapper
-from ..envs.wrappers.utils import minerl_single_action
+from ..envs.wrappers.minerl_wrapper import minerl_single_action
 from . import OpencogAgent
 from .utils import *
 

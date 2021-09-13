@@ -3,7 +3,6 @@
 __all__ = ["index", "modules", "custom_doc_links", "git_url"]
 
 index = {
-    "CartPoleWrapper": "01_cartpole.ipynb",
     "FixedCartPoleAgent": "01_cartpole.ipynb",
     "LearningCartPoleAgent": "01_cartpole.ipynb",
     "NavigateAgent": "03_minerl_navigate_agent.ipynb",

@@ -15,7 +15,7 @@ import scipy.stats as st
 
 # OpenCog
 from opencog.atomspace import AtomSpace, TruthValue, get_type, is_a, types
-from opencog.exec import execute_atom
+from opencog.execute import execute_atom
 from opencog.logger import create_logger
 from opencog.pln import *
 from opencog.scheme import scheme_eval, scheme_eval_h
