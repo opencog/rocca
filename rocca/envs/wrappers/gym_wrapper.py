@@ -5,66 +5,88 @@ import numpy as np
 from fastcore.basics import listify
 from gym import Env
 from gym import spaces as sp
-from opencog.atomspace import Atom
+from gym.spaces import Space
+from opencog.atomspace import Atom, AtomSpace
+from opencog.utilities import set_default_atomspace
 
 from .utils import *
 from .wrapper import Wrapper
 
 
 class GymWrapper(Wrapper):
-    def __init__(self, env: Env, action_list=[]):
-        super()
+    def __init__(self, env: Env, atomspace: AtomSpace, action_names: List[str] = []):
+        super().__init__()
+
+        self.atomspace = atomspace
+        set_default_atomspace(self.atomspace)
         self.env = env
         self.action_space = env.action_space
         self.observation_space = env.observation_space
-        self.action_list = action_list
+        self.action_names = action_names
 
-    def labeled_observations(self, space, obs, sbs=""):
+    def transform_percept(self, label: str, *args) -> List[Atom]:
+        """A function to apply custom transforms on observations"""
+
+        return [mk_evaluation(label, *args)]
+
+    def labeled_observation(self, space: Space, obs, sbs="") -> List[Atom]:
+        """The main processing block from Gym observations to Atomese
+
+        Uses Gym's `Space` types to determine what kind of data structure is passed
+        and produces a generic Atomese representation from it.
+        Use the `sbs` argument to add more into resulting Atom names.
+
+        Returns a list of created Atoms.
+        """
+
         if isinstance(space, sp.Tuple):
-            obs_list = []
+            observation: List[Atom] = []
             for s in space:
-                idx = len(obs_list)
+                idx = len(observation)
                 _sbs = sbs + "-" + str(idx) if sbs else str(idx)
-                obs_list.append(*self.labeled_observations(s, obs[idx], _sbs))
-            return obs_list
+                observation.extend(self.labeled_observation(s, obs[idx], _sbs))
+            return observation
         elif isinstance(space, sp.Box):
             label = sbs + "-Box" if sbs else "Box"
-            return self.convert_percept(label, *obs)
+            return self.transform_percept(label, *obs)
         elif isinstance(space, sp.Discrete):
             label = sbs + "-Discrete" if sbs else "Discrete"
-            return self.convert_percept(label, obs)
+            return self.transform_percept(label, obs)
         elif isinstance(space, sp.Dict):
-            obs_list = []
+            observation: List[Atom] = []
             for k in obs.keys():
                 label = sbs + "-" + k if sbs else k
                 if isinstance(space[k], sp.Discrete):
-                    obs_list += self.convert_percept(label, obs[k])
+                    observation += self.transform_percept(label, obs[k])
                 elif isinstance(space[k], sp.Box):
                     l = (
-                        listify(obs[k].tolist())
+                        obs[k].tolist()
                         if isinstance(obs[k], np.ndarray)
-                        else obs[k]
+                        else listify(obs[k])
                     )
-                    obs_list += self.convert_percept(label, *l)
+                    observation += self.transform_percept(label, *l)
                 elif isinstance(space[k], sp.Tuple):
                     _sbs = sbs + "-" + k if sbs else k
-                    obs_list.extend(self.labeled_observations(space[k], obs[k], _sbs))
+                    observation.extend(self.labeled_observation(space[k], obs[k], _sbs))
                 elif isinstance(space[k], sp.Dict):
                     _sbs = sbs + "-" + k if sbs else k
-                    obs_list.extend(self.labeled_observations(space[k], obs[k], _sbs))
+                    observation.extend(self.labeled_observation(space[k], obs[k], _sbs))
                 else:
                     raise NotImplementedError("ObservationSpace not implemented.")
-            return obs_list
+            return observation
         else:
             raise NotImplementedError("Unknown Observation Space.")
 
-    def parse_world_state(self, ospace, obs, reward, done) -> Tuple[list, Atom, bool]:
+    def parse_world_state(
+        self, ospace: Space, obs, reward: int, done: bool
+    ) -> Tuple[List[Atom], Atom, bool]:
         """Return a triple of `observation, reward, done` - in Atomese representation
 
         The `done` variable signifies whether the Gym environment is done.
         """
-        obs_list = self.labeled_observations(ospace, obs)
-        return obs_list, self.convert_percept("Reward", reward)[0], done
+
+        observation = self.labeled_observation(ospace, obs)
+        return observation, mk_evaluation("Reward", reward), done
 
     @staticmethod
     def restart_decorator(restart):
@@ -80,15 +102,15 @@ class GymWrapper(Wrapper):
         @wraps(step)
         def wrapper(ref: "GymWrapper", action):
             if isinstance(ref.action_space, sp.Discrete):
-                if not len(ref.action_list) == ref.action_space.n:
+                if not len(ref.action_names) == ref.action_space.n:
                     raise ValueError("Invalid action list.")
                 action_name = action.out[0].name
-                if not action_name in ref.action_list:
+                if not action_name in ref.action_names:
                     raise ValueError(
                         "Action {} not known in the environment.".format(action_name)
                     )
                 action_name = action.out[0].name
-                obs, r, done = step(ref, ref.action_list.index(action_name))
+                obs, r, done = step(ref, ref.action_names.index(action_name))
             elif isinstance(ref.action_space, sp.Dict):
                 actions = listify(action)
                 act_dict = {
@@ -108,11 +130,10 @@ class GymWrapper(Wrapper):
     @step_decorator.__func__
     def step(self, action):
         obs, r, done, _ = self.env.step(action)
-        self.env.render()
         return obs, r, done
 
     def close(self):
         self.env.close()
 
-    def convert_percept(self, predicate, *args):
-        return [mk_evaluation(predicate, *args)]
+    def render(self, mode: str = "human"):
+        return self.env.render(mode)

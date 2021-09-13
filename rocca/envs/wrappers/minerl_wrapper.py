@@ -1,13 +1,34 @@
+from collections import defaultdict
+from typing import *
+
+from gym import Env
+from gym.spaces import Space
+from opencog.atomspace import Atom, AtomSpace
+
 from .utils import *
 from .gym_wrapper import GymWrapper
 
 
-class MineRLWrapper(GymWrapper):
-    def __init__(self, env, action_list=[]):
-        super().__init__(env, action_list)
-        self.last_compassAngle = None
+def minerl_single_action(env: Union[Env, GymWrapper], action: Atom) -> List[Atom]:
+    """Insert a single action into a no-op
 
-    def convert_percept(self, predicate, *args):
+    env: Gym environment or a wrapped gym environment.
+    action: action of the form `Execution (Schema name) args`
+    """
+
+    noop = env.action_space.noop()
+    actions = [mk_action(k, noop[k]) for k in noop if k != action.out[0].name]
+    actions.append(action)
+
+    return actions
+
+
+class MineRLWrapper(GymWrapper):
+    def __init__(self, env: Env, atomspace: AtomSpace, action_names=[]):
+        super().__init__(env, atomspace, action_names)
+        self.last_compass_angle = None
+
+    def transform_percept(self, label: str, *args) -> List[Atom]:
         """Firstly, the MineRL environment gives us a different floating point
         reward number every step. This function converts it into +1 or -1 so that
         the pattern miner can find frequent patterns involving reward.
@@ -24,11 +45,7 @@ class MineRLWrapper(GymWrapper):
         Thirdly, MineRL gives us the angle between the agent and the goal (compassAngle).
         This function creates a boolean predicate for whether the angle has got closer
         or not."""
-        if predicate == "pov":
-            # print (args, type(args))
-            # args = ["some image"]
-            from collections import defaultdict
-
+        if label == "pov":
             colors = defaultdict(list)
 
             for y in range(0, 64):
@@ -37,15 +54,13 @@ class MineRLWrapper(GymWrapper):
                     rounded_color = tuple([subpixel // 25 * 25 for subpixel in color])
                     colors[rounded_color].append((x, y))
 
-            # print(f"{len(colors.keys())} colors in this frame")
-            # args = ["some image"]
-            links = []
+            observation: List[Atom] = []
             for (color, locations) in colors.items():
                 total_x = total_y = 0
                 for (x, y) in locations:
                     total_x += x
                     total_y += y
-                links.append(
+                observation.append(
                     AtLocationLink(
                         mk_node("color:" + str(color)),
                         mk_node(
@@ -56,25 +71,25 @@ class MineRLWrapper(GymWrapper):
                         ),
                     )
                 )
-            # print(links)
-            return links
+            return observation
 
-        elif predicate == "Reward":
-            if float(args[0]) > 0:
-                args = [1]
-            elif float(args[0]) < 0:
-                args = [-1]
-
-        elif predicate == "compassAngle":
-            lca = self.last_compassAngle
+        elif label == "compassAngle":
+            lca = self.last_compass_angle
             current = float(args[0])
-            links = []
+            observation = []
 
             if not lca is None:
                 if abs(0 - current) < abs(0 - lca):
-                    links = [mk_evaluation("compassAngleCloser")]
+                    observation = [mk_evaluation("compassAngleCloser")]
 
-            self.last_compassAngle = current
-            return links
+            self.last_compass_angle = current
+            return observation
 
-        return [mk_evaluation(predicate, *args)]
+        return super().transform_percept(label, *args)
+
+    def parse_world_state(
+        self, ospace: Space, obs, reward: float, done: bool
+    ) -> Tuple[List[Atom], Atom, bool]:
+        reward = 1 if reward > 0.0 else -1
+
+        return super().parse_world_state(ospace, obs, reward, done)
