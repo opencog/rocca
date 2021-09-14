@@ -33,7 +33,7 @@ class ChaseWrapper(GymWrapper):
         action_list = ["Go Left", "Go Right", "Stay", "Eat"]
         super().__init__(env, atomspace, action_list)
 
-    def labeled_observations(self, space, obs, sbs=""):
+    def labeled_observation(self, space, obs, sbs=""):
         """Translate gym observation to Atomese
 
         There are 2 gym observations:
