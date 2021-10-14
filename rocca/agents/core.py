@@ -91,13 +91,9 @@ class OpencogAgent:
         # Load PLN.  All rules must be pre-loaded here
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
         scheme_eval(self.atomspace, "(use-modules (opencog spacetime))")
-        scheme_eval(
-            self.atomspace,
-            "(pln-load-rule 'predictive-implication-scope-direct-evaluation)",
-        )
-        scheme_eval(
-            self.atomspace, "(pln-load-rule 'predictive-implication-scope-deduction)"
-        )
+        rules = ["back-predictive-implication-scope-direct-evaluation",
+                 "back-predictive-implication-scope-deduction-cogscm"]
+        self.pln_load_rules(rules)
         # scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
     def reset_action_counter(self):
@@ -138,6 +134,20 @@ class OpencogAgent:
 
         return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
+    def pln_load_rules(self, rules=[]):
+        """Load PLN rules.
+
+        Take a list of rule scheme symbols (but without the single
+        quote for the symbol), such as
+
+        ["back-predictive-implication-scope-direct-evaluation",
+         "back-predictive-implication-scope-deduction-cogscm"]
+
+        """
+
+        for rule in rules:
+            scheme_eval(self.atomspace, "(pln-load-rule '" + rule + ")")
+
     def pln_bc(self, query, vardecl=None, maxiter=10, rules=[]):
         """Call PLN backward chainer with the given query and parameters.
 
@@ -152,11 +162,13 @@ class OpencogAgent:
 
         agent_log.fine("pln_bc(query={}, maxiter={})".format(query, maxiter))
 
-        # Load rules
+        # Add rules (should be previously loaded)
         if rules:
             scheme_eval(self.atomspace, "(pln-rm-all-rules)")
             for rule in rules:
-                scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
+                er = scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
+                agent_log.info("(pln-add-rule '" + rule + ")")
+                agent_log.info("er = " + str(er))
 
         # Generate and run query
         command = "(pln-bc "
