@@ -13,7 +13,6 @@ from collections import Counter
 # OpenCog
 from opencog.pln import *
 from opencog.scheme import scheme_eval, scheme_eval_h
-from opencog.ure import ure_logger
 from opencog.utilities import is_closed
 
 from rocca.envs.wrappers import Wrapper

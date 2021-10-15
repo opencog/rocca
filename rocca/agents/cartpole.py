@@ -17,7 +17,7 @@ from opencog.type_constructors import *
 from opencog.utilities import set_default_atomspace
 
 # ROCCA
-from ..envs.wrappers import GymWrapper, CartPoleWrapper
+from ..envs.wrappers import CartPoleWrapper
 from . import OpencogAgent
 from .utils import *
 
