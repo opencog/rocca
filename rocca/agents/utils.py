@@ -258,7 +258,7 @@ def get_vardecl(cogscm):
 
     Given a cognitive schematic of that format
 
-    PredictiveImplicationScope <tv>
+    BackPredictiveImplicationScope <tv>
       <vardecl>
       <expiry>
       And (or SimultaneousAnd?)
@@ -271,7 +271,7 @@ def get_vardecl(cogscm):
 
     return <vardecl>.
 
-    If the cognitive schematic is an PredictiveImplicationLink then
+    If the cognitive schematic is an BackPredictiveImplicationLink then
     return an empty VariableSet.
 
     """
@@ -300,7 +300,7 @@ def get_context(cogscm):
 
     For instance given a cognitive schematic of that format
 
-    PredictiveImplicationScope <tv>
+    BackPredictiveImplicationScope <tv>
       <vardecl>
       <expiry>
       And
@@ -312,7 +312,7 @@ def get_context(cogscm):
 
     Another example, given a cognitive schematic of that format
 
-    PredictiveImplicationScope <tv>
+    BackPredictiveImplicationScope <tv>
       <vardecl>
       <expiry>
       SequentialAnd
@@ -358,13 +358,13 @@ def is_scope(atom):
 def is_predictive_implication(atom):
     """Return True iff the atom is a predictive implication link."""
 
-    return is_a(atom.type, get_type("PredictiveImplicationLink"))
+    return is_a(atom.type, get_type("BackPredictiveImplicationLink"))
 
 
 def is_predictive_implication_scope(atom):
     """Return True iff the atom is a predictive implication scope link."""
 
-    return is_a(atom.type, get_type("PredictiveImplicationScopeLink"))
+    return is_a(atom.type, get_type("BackPredictiveImplicationScopeLink"))
 
 
 def is_and(atom):
@@ -376,11 +376,11 @@ def is_and(atom):
 def is_sequential_and(atom):
     """Return True iff atom is a sequential and.
 
-    Also for now we use AltSequentialAndLink.
+    Also for now we use BackSequentialAndLink.
 
     """
 
-    return is_a(atom.type, get_type("AltSequentialAndLink"))
+    return is_a(atom.type, get_type("BackSequentialAndLink"))
 
 
 def is_execution(atom):
@@ -412,7 +412,7 @@ def get_antecedent(atom):
 
     For instance is the cognitive schematics is represented by
 
-    PredictiveImplicationScope <tv>
+    BackPredictiveImplicationScope <tv>
       <vardecl>
       <expiry>
       <antecedent>
@@ -436,7 +436,7 @@ def get_succedent(atom):
 
     For instance is the cognitive schematics is represented by
 
-    PredictiveImplicationScope <tv>
+    BackPredictiveImplicationScope <tv>
       <vardecl>
       <expiry>
       <antecedent>
@@ -458,9 +458,9 @@ def get_succedent(atom):
 def get_lag(atom):
     """Given an temporal atom, return its lag component.
 
-    For instance if it is a PredictiveImplicationScope
+    For instance if it is a BackPredictiveImplicationScope
 
-    PredictiveImplicationScope
+    BackPredictiveImplicationScope
       <vardecl>
       <lag>
       <antecedent>
@@ -493,7 +493,7 @@ def get_t0_clauses(antecedent):
 
     For instance if the cognitive schematics has the following format
 
-    PredictiveImplicationScope <tv>
+    BackPredictiveImplicationScope <tv>
       <vardecl>
       <lag>
       SequentialAnd
@@ -598,7 +598,7 @@ def get_total_lag(atom):
 
     For instance if the atom is
 
-    PredictiveImplicationScope <tv>
+    BackPredictiveImplicationScope <tv>
       <vardecl>
       <lag-1>
       SequentialAnd
@@ -627,7 +627,7 @@ def get_t0_execution(cogscm):
 
     Given a cognitive schematic of that formats
 
-    PredictiveImplicationScope <tv>
+    BackPredictiveImplicationScope <tv>
       <vardecl>
       <expiry>
       And (or SimultaneousAnd?)
@@ -656,7 +656,7 @@ def get_context_actual_truth(atomspace, cogscm, i):
 
     Given a cognitive schematic of that format
 
-    PredictiveImplicationScope <tv>
+    BackPredictiveImplicationScope <tv>
       <vardecl>
       <expiry>
       And (or SimultaneousAnd?)

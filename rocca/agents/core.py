@@ -104,13 +104,9 @@ class OpencogAgent:
         # Load PLN.  All rules must be pre-loaded here
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
         scheme_eval(self.atomspace, "(use-modules (opencog spacetime))")
-        scheme_eval(
-            self.atomspace,
-            "(pln-load-rule 'predictive-implication-scope-direct-evaluation)",
-        )
-        scheme_eval(
-            self.atomspace, "(pln-load-rule 'predictive-implication-scope-deduction)"
-        )
+        rules = ["back-predictive-implication-scope-direct-evaluation",
+                 "back-predictive-implication-scope-deduction-cogscm"]
+        self.pln_load_rules(rules)
         # scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
     def reset_action_counter(self):
@@ -151,6 +147,20 @@ class OpencogAgent:
 
         return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
+    def pln_load_rules(self, rules=[]):
+        """Load PLN rules.
+
+        Take a list of rule scheme symbols (but without the single
+        quote for the symbol), such as
+
+        ["back-predictive-implication-scope-direct-evaluation",
+         "back-predictive-implication-scope-deduction-cogscm"]
+
+        """
+
+        for rule in rules:
+            scheme_eval(self.atomspace, "(pln-load-rule '" + rule + ")")
+
     def pln_bc(self, query, vardecl=None, maxiter=10, rules=[]):
         """Call PLN backward chainer with the given query and parameters.
 
@@ -167,11 +177,13 @@ class OpencogAgent:
         agent_log.fine("pln_bc(query={}, maxiter={})".format(query, maxiter))
         logger.info("pln_bc(query={}, maxiter={})".format(query, maxiter))
 
-        # Load rules
+        # Add rules (should be previously loaded)
         if rules:
             scheme_eval(self.atomspace, "(pln-rm-all-rules)")
             for rule in rules:
-                scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
+                er = scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
+                agent_log.info("(pln-add-rule '" + rule + ")")
+                agent_log.info("er = " + str(er))
 
         # Generate and run query
         command = "(pln-bc "
@@ -262,9 +274,9 @@ class OpencogAgent:
         T = VariableNode("$T")
         P = VariableNode("$P")
         Q = VariableNode("$Q")
-        query = PredictiveImplicationScopeLink(V, T, P, Q)
+        query = BackPredictiveImplicationScopeLink(V, T, P, Q)
         mi = 10
-        rules = ["predictive-implication-scope-deduction"]
+        rules = ["back-predictive-implication-scope-deduction-cogscm"]
         cogscms = self.pln_bc(query, maxiter=mi, rules=rules)
 
         agent_log.fine("Inferred cognitive schematics = {}".format(cogscms))
@@ -384,7 +396,7 @@ class OpencogAgent:
             early_events = get_events(early_clauses)
             latest_clauses = get_latest_clauses(timed_clauses)
             latest_events = get_events(latest_clauses)
-            return AltSequentialAndLink(
+            return BackSequentialAndLink(
                 to_nat(1), maybe_and(early_events), maybe_and(latest_events)
             )
         else:
@@ -433,7 +445,7 @@ class OpencogAgent:
 
         then the resulting predictive implication scope is
 
-        PredictiveImplicationScope
+        BackPredictiveImplicationScope
           VariableList
           S Z
           Execution
@@ -469,7 +481,7 @@ class OpencogAgent:
 
         then the resulting predictive implication scope is
 
-        PredictiveImplicationScope
+        BackPredictiveImplicationScope
           Variable "$X"
           S Z
           And
@@ -490,7 +502,7 @@ class OpencogAgent:
 
         then the resulting predictive implication (scope) is
 
-        PredictiveImplication <1 - s, c>
+        BackPredictiveImplication <1 - s, c>
           <antecedent>
           Evaluation
             Predicate "Reward"
@@ -519,11 +531,11 @@ class OpencogAgent:
         lag = SLink(ZLink())
 
         ntvardecl = self.get_nt_vardecl(pattern)
-        # TODO: fix python PredictiveImplicationScopeLink binding!
-        # preimp = PredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
+        # TODO: fix python BackPredictiveImplicationScopeLink binding!
+        # preimp = BackPredictiveImplicationScopeLink(ntvardecl, lag, pt, pd)
         preimp = scheme_eval_h(
             self.atomspace,
-            "(PredictiveImplicationScopeLink "
+            "(BackPredictiveImplicationScopeLink "
             + str(ntvardecl)
             + str(lag)
             + str(pt)
@@ -541,7 +553,7 @@ class OpencogAgent:
         agent_log.fine("preimp = {}".format(preimp))
         # Calculate the truth value of the predictive implication
         mi = 2
-        rules = ["predictive-implication-scope-direct-evaluation"]
+        rules = ["back-predictive-implication-scope-direct-evaluation"]
         return self.pln_bc(preimp, maxiter=mi, rules=rules)[0]
 
     def is_desirable(self, cogscm):
@@ -742,7 +754,7 @@ class OpencogAgent:
         information.  The supported format for cognitive schematics
         are as follows
 
-        PredictiveImplicationScope <tv>
+        BackPredictiveImplicationScope <tv>
           <vardecl>
           <lag-n>
           SequentialAnd [optional]
