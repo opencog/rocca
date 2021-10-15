@@ -104,8 +104,10 @@ class OpencogAgent:
         # Load PLN.  All rules must be pre-loaded here
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
         scheme_eval(self.atomspace, "(use-modules (opencog spacetime))")
-        rules = ["back-predictive-implication-scope-direct-evaluation",
-                 "back-predictive-implication-scope-deduction-cogscm"]
+        rules = [
+            "back-predictive-implication-scope-direct-evaluation",
+            "back-predictive-implication-scope-deduction-cogscm",
+        ]
         self.pln_load_rules(rules)
         # scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
