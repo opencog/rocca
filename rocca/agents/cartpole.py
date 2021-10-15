@@ -55,7 +55,7 @@ class FixedCartPoleAgent(OpencogAgent):
 
         The format for a cognitive schematic is as follows
 
-        PredictiveImplicationScope <tv>
+        BackPredictiveImplicationScope <tv>
           <vardecl>
           <expiry>
           And (or SimultaneousAnd?)
@@ -87,7 +87,7 @@ class FixedCartPoleAgent(OpencogAgent):
         hTV = TruthValue(0.9, 0.1)  # High TV
         lTV = TruthValue(0.1, 0.1)  # Low TV
 
-        # PredictiveImplicationScope <high TV>
+        # BackPredictiveImplicationScope <high TV>
         #   TypedVariable
         #     Variable "$angle"
         #     Type "NumberNode"
@@ -104,7 +104,7 @@ class FixedCartPoleAgent(OpencogAgent):
         #   Evaluation
         #     Predicate "Reward"
         #     Number "1"
-        cs_rr = PredictiveImplicationScopeLink(
+        cs_rr = BackPredictiveImplicationScopeLink(
             TypedVariableLink(angle, numt),
             time_offset,
             AndLink(
@@ -120,7 +120,7 @@ class FixedCartPoleAgent(OpencogAgent):
             tv=hTV,
         )
 
-        # PredictiveImplicationScope <high TV>
+        # BackPredictiveImplicationScope <high TV>
         #   TypedVariable
         #     Variable "$angle"
         #     Type "NumberNode"
@@ -137,7 +137,7 @@ class FixedCartPoleAgent(OpencogAgent):
         #   Evaluation
         #     Predicate "Reward"
         #     Number "1"
-        cs_ll = PredictiveImplicationScopeLink(
+        cs_ll = BackPredictiveImplicationScopeLink(
             TypedVariableLink(angle, numt),
             time_offset,
             AndLink(
@@ -157,7 +157,7 @@ class FixedCartPoleAgent(OpencogAgent):
         # actions, i.e. going left when the pole is falling to the right
         # and such, which should make the situation worse.
 
-        # PredictiveImplicationScope <low TV>
+        # BackPredictiveImplicationScope <low TV>
         #   TypedVariable
         #     Variable "$angle"
         #     Type "NumberNode"
@@ -174,7 +174,7 @@ class FixedCartPoleAgent(OpencogAgent):
         #   Evaluation
         #     Predicate "Reward"
         #     Number "1"
-        cs_rl = PredictiveImplicationScopeLink(
+        cs_rl = BackPredictiveImplicationScopeLink(
             TypedVariableLink(angle, numt),
             time_offset,
             AndLink(
@@ -190,7 +190,7 @@ class FixedCartPoleAgent(OpencogAgent):
             tv=lTV,
         )
 
-        # PredictiveImplicationScope <low TV>
+        # BackPredictiveImplicationScope <low TV>
         #   TypedVariable
         #     Variable "$angle"
         #     Type "NumberNode"
@@ -207,7 +207,7 @@ class FixedCartPoleAgent(OpencogAgent):
         #   Evaluation
         #     Predicate "Reward"
         #     Number "1"
-        cs_lr = PredictiveImplicationScopeLink(
+        cs_lr = BackPredictiveImplicationScopeLink(
             TypedVariableLink(angle, numt),
             time_offset,
             AndLink(
