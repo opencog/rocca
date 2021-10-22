@@ -294,6 +294,15 @@ class OpencogAgent:
 
         """
 
+        agent_log.fine("infer_cogscms()")
+        agent_log.fine("self.atomspace = " + str(scheme_eval(self.atomspace, "(cog-get-all-roots)").decode("utf-8")))
+        agent_log.fine("self.cognitive_schematics = " + str(self.cognitive_schematics))
+        perfect_cogscms = {cogscm for cogscm in self.cognitive_schematics
+                           if (0.99 < cogscm.tv.mean and 0.0 < cogscm.tv.confidence and
+                               # Only consider empty vardecl
+                               get_vardecl(cogscm).out == [])}
+        agent_log.fine("perfect_cogscms = " + str(perfect_cogscms))
+
         # All resulting cognitive schematics
         cogscms = set()
 
@@ -303,10 +312,16 @@ class OpencogAgent:
         T = VariableNode("$T")
         P = VariableNode("$P")
         Q = VariableNode("$Q")
-        query = BackPredictiveImplicationScopeLink(V, T, P, Q)
+        source = \
+            QuoteLink(
+                BackPredictiveImplicationScopeLink(
+                    UnquoteLink(V),
+                    UnquoteLink(T),
+                    UnquoteLink(P),
+                    UnquoteLink(Q)))
         mi = 10
         rules = ["back-predictive-implication-scope-deduction-cogscm"]
-        cogscms = self.pln_bc(query, maxiter=mi, rules=rules)
+        cogscms = self.pln_fc(source, maxiter=mi, rules=rules)
 
         agent_log.fine("Inferred cognitive schematics = {}".format(cogscms))
         return cogscms
