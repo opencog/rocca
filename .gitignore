@@ -70,3 +70,7 @@ checklink/cookies.txt
 docs/
 
 .mypy_cache/
+
+# TensorBoard events and RocksDB AtomSpace snapshots
+runs/
+snapshots/

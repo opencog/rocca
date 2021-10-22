@@ -5,19 +5,23 @@
 ##############
 
 # Python
-import os
+import logging
 import math
+import multiprocessing
 from collections import Counter
 
 # OpenCog
 from opencog.pln import *
+from opencog.scheme import scheme_eval, scheme_eval_h
 from opencog.utilities import is_closed
-from opencog.scheme import scheme_eval_h, scheme_eval
-from opencog.ure import ure_logger
+
+from rocca.envs.wrappers import Wrapper
 
 # OpencogAgent
 from .utils import *
 
+logging.basicConfig(filename="agent.log", format="%(asctime)s %(message)s")
+logger = logging.getLogger(__name__)
 
 #########
 # Class #
@@ -25,11 +29,19 @@ from .utils import *
 
 
 class OpencogAgent:
-    def __init__(self, env, action_space, p_goal, n_goal, log_level="debug"):
-        self.atomspace = AtomSpace()
+    def __init__(
+        self,
+        env: Wrapper,
+        atomspace: AtomSpace,
+        action_space,
+        p_goal,
+        n_goal,
+        log_level="debug",
+    ):
+        self.atomspace = atomspace
         set_default_atomspace(self.atomspace)
         self.env = env
-        _, self.observation, _ = self.env.restart()
+        self.observation, _, _ = self.env.restart()
         self.step_count = 0
         self.accumulated_reward = 0
         self.percepta_record = ConceptNode("Percepta Record")
@@ -91,8 +103,10 @@ class OpencogAgent:
         # Load PLN.  All rules must be pre-loaded here
         scheme_eval(self.atomspace, "(use-modules (opencog pln))")
         scheme_eval(self.atomspace, "(use-modules (opencog spacetime))")
-        rules = ["back-predictive-implication-scope-direct-evaluation",
-                 "back-predictive-implication-scope-deduction-cogscm"]
+        rules = [
+            "back-predictive-implication-scope-direct-evaluation",
+            "back-predictive-implication-scope-deduction-cogscm",
+        ]
         self.pln_load_rules(rules)
         # scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
@@ -160,6 +174,7 @@ class OpencogAgent:
 
         """
 
+        # TODO: bring back multiprocessing
         agent_log.fine("pln_bc(query={}, maxiter={})".format(query, maxiter))
 
         # Add rules (should be previously loaded)
@@ -1047,7 +1062,7 @@ class OpencogAgent:
         # Increase the step count and run the next step of the environment
         self.step_count += 1
         # TODO gather environment info.
-        reward, self.observation, done = self.env.step(action)
+        self.observation, reward, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
         agent_log.debug("observation = {}".format(self.observation))
         agent_log.debug("reward = {}".format(reward))
@@ -1056,7 +1071,4 @@ class OpencogAgent:
         reward_record = self.record(reward, self.step_count, tv=TRUE_TV)
         agent_log.debug("reward_record = {}".format(reward_record))
 
-        if done:
-            return False
-
-        return True
+        return done

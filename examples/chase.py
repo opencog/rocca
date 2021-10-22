@@ -11,7 +11,6 @@ import time
 import gym
 
 # OpenCog
-from opencog.atomspace import *
 from opencog.pln import *
 from opencog.ure import ure_logger
 from opencog.logger import log
@@ -28,14 +27,13 @@ env = gym.make("Chase-v0")
 #################
 # Chase Wrapper #
 #################
-
-
+# TODO: move to a library module.
 class ChaseWrapper(GymWrapper):
-    def __init__(self, env):
+    def __init__(self, env, atomspace):
         action_list = ["Go Left", "Go Right", "Stay", "Eat"]
-        super().__init__(env, action_list)
+        super().__init__(env, atomspace, action_list)
 
-    def labeled_observations(self, space, obs, sbs=""):
+    def labeled_observation(self, space, obs, sbs=""):
         """Translate gym observation to Atomese
 
         There are 2 gym observations:
@@ -85,17 +83,19 @@ class ChaseWrapper(GymWrapper):
 
 
 class ChaseAgent(OpencogAgent):
-    def __init__(self, env):
+    def __init__(self, env, atomspace):
+        set_default_atomspace(atomspace)
+
         # Create Action Space. The set of allowed actions an agent can take.
         # TODO take care of action parameters.
-        action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_list}
+        action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_names}
 
         # Create Goal
         pgoal = EvaluationLink(PredicateNode("Reward"), NumberNode("1"))
         ngoal = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
 
         # Call super ctor
-        OpencogAgent.__init__(self, env, action_space, pgoal, ngoal)
+        OpencogAgent.__init__(self, env, atomspace, action_space, pgoal, ngoal)
 
         # Overwrite some OpencogAgent parameters
         self.monoaction_general_succeedent_mining = False
@@ -120,15 +120,16 @@ if __name__ == "__main__":
     # miner_log.set_sync(True)
 
     # Wrap environment
-    wrapped_env = ChaseWrapper(env)
+    wrapped_env = ChaseWrapper(env, atomspace)
 
     # ChaseAgent
-    ca = ChaseAgent(wrapped_env)
+    ca = ChaseAgent(wrapped_env, atomspace)
 
     # Training/learning loop
     lt_iterations = 2  # Number of learning-training iterations
     lt_period = 200  # Duration of a learning-training iteration
     for i in range(lt_iterations):
+        wrapped_env.restart()
         ca.reset_action_counter()
         par = ca.accumulated_reward  # Keep track of the reward before
         # Discover patterns to make more informed decisions
@@ -138,6 +139,7 @@ if __name__ == "__main__":
         agent_log.info("Start training ({}/{})".format(i + 1, lt_iterations))
         for j in range(lt_period):
             ca.step()
+            wrapped_env.render()
             time.sleep(0.1)
             log.info("step_count = {}".format(ca.step_count))
         nar = ca.accumulated_reward - par
