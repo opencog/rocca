@@ -162,7 +162,7 @@ class OpencogAgent:
         for rule in rules:
             scheme_eval(self.atomspace, "(pln-load-rule '" + rule + ")")
 
-    def pln_bc(self, query, vardecl=None, maxiter=10, rules=[]):
+    def pln_fc(self, source, vardecl=None, maxiter=10, rules=[]):
         """Call PLN backward chainer with the given query and parameters.
 
         The parameters are
@@ -174,20 +174,49 @@ class OpencogAgent:
 
         """
 
-        # TODO: bring back multiprocessing
-        agent_log.fine("pln_bc(query={}, maxiter={})".format(query, maxiter))
+        agent_log.fine("pln_fc(source={}, maxiter={})".format(source, maxiter))
 
         # Add rules (should be previously loaded)
         if rules:
             scheme_eval(self.atomspace, "(pln-rm-all-rules)")
             for rule in rules:
                 er = scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
-                agent_log.info("(pln-add-rule '" + rule + ")")
-                agent_log.info("er = " + str(er))
+                # agent_log.fine("(pln-add-rule '" + rule + ")")
+                # agent_log.fine("er = " + str(er))
+
+        # Generate and run query
+        command = "(pln-fc "
+        command += str(source)
+        command += ("#:vardecl " + str(vardecl)) if vardecl else ""
+        command += " #:maximum-iterations " + str(maxiter)
+        command += ")"
+        return scheme_eval_h(self.atomspace, command).out
+
+    def pln_bc(self, target, vardecl=None, maxiter=10, rules=[]):
+        """Call PLN backward chainer with the given target and parameters.
+
+        The parameters are
+
+        maxiter: the maximum number of iterations.
+        rules: optional list of rule symbols.  If empty keep current rule set.
+
+        Return a python list of solutions.
+
+        """
+
+        agent_log.fine("pln_bc(target={}, maxiter={})".format(target, maxiter))
+
+        # Add rules (should be previously loaded)
+        if rules:
+            scheme_eval(self.atomspace, "(pln-rm-all-rules)")
+            for rule in rules:
+                er = scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
+                # agent_log.fine("(pln-add-rule '" + rule + ")")
+                # agent_log.fine("er = " + str(er))
 
         # Generate and run query
         command = "(pln-bc "
-        command += str(query)
+        command += str(target)
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maxiter)
         command += ")"
