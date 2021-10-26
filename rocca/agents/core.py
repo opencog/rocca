@@ -11,9 +11,12 @@ import multiprocessing
 from collections import Counter
 
 # OpenCog
-from opencog.pln import *
+from opencog.atomspace import Atom, AtomSpace
+from opencog.spacetime import AtTimeLink, TimeNode
+from opencog.pln import SLink, ZLink, BackPredictiveImplicationScopeLink, BackSequentialAndLink
 from opencog.scheme import scheme_eval, scheme_eval_h
-from opencog.utilities import is_closed
+from opencog.utilities import is_closed, set_default_atomspace
+from opencog.type_constructors import ConceptNode, AndLink, EvaluationLink, PredicateNode, NumberNode, VariableNode, SetLink, LambdaLink, QuoteLink, UnquoteLink, MemberLink
 
 from rocca.envs.wrappers import Wrapper
 
@@ -42,17 +45,23 @@ class OpencogAgent:
         self.atomspace = atomspace # Working atomspace
         self.percepta_atomspace = AtomSpace()
         self.cogscms_atomspace = AtomSpace()
+        self.working_atomspace = AtomSpace()
         set_default_atomspace(self.atomspace)
 
         self.env = env
         self.observation, _, _ = self.env.restart()
         self.step_count = 0
         self.accumulated_reward = 0
-        self.percepta_record = ConceptNode("Percepta Record")
+        self.percepta_record_cpt = ConceptNode("Percepta Record")
+        # The percepta_record is a list of sets of timestamped
+        # percepta.  The list is ordered by timestamp, that each
+        # element of that list is a set of percepta at the timestamp
+        # corresponding to its index.
+        self.percepta_record: list = []
         self.action_space = action_space
         self.positive_goal = p_goal
         self.negative_goal = n_goal
-        self.cognitive_schematics = set()
+        self.cognitive_schematics: set = set()
         self.log_level = log_level
         self.load_opencog_modules()
         self.reset_action_counter()
@@ -126,13 +135,21 @@ class OpencogAgent:
     def reset_action_counter(self):
         self.action_counter = Counter({action: 0 for action in self.action_space})
 
-    def get_percepta(self):
-        """Return the list of all percepta record members."""
+    def insert_to_percepta_record(self, timed_atom: Atom, i: int):
+        """Insert a timestamped atom into self.percepta_record.
 
-        cmd = "(List (get-members " + str(self.percepta_record) + "))"
-        return scheme_eval_h(self.atomspace, cmd).out
+        The percepta_record is a list of sets of timestamped percepta.
+        The list is ordered by timestamp, that each element of that
+        list is a set of percepta at the timestamp corresponding to
+        its index.
 
-    def record(self, atom, i, tv=None):
+        """
+
+        while len(self.percepta_record) <= i:
+            self.percepta_record.append(set())
+        self.percepta_record[i].add(timed_atom)
+
+    def record(self, atom: Atom, i: int, tv=None):
         """Timestamp and record an atom to the Percepta Record.
 
         That is add the following in the atomspace
@@ -141,14 +158,19 @@ class OpencogAgent:
           AtTimeLink <tv>
             <atom>
             <i>
-          <self.percepta_record>
+          <self.percepta_record_cpt>
+
+        As well as the AtTimeLink to self.percepta_record (see
+        insert_to_percepta_record method for more info).
 
         """
 
-        mbr = MemberLink(timestamp(atom, i, tv), self.percepta_record, tv=TRUE_TV)
+        timed_atom = timestamp(atom, i, tv)
+        mbr = MemberLink(timed_atom, self.percepta_record_cpt, tv=TRUE_TV)
+        self.insert_to_percepta_record(timed_atom, i)
         self.percepta_atomspace.add_atom(mbr)
 
-    def make_goal(self):
+    def make_goal(self) -> Atom:
         """Define the goal of the current iteration.
 
         By default the goal of the current iteration is to have a
@@ -162,7 +184,7 @@ class OpencogAgent:
 
         return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
-    def pln_load_rules(self, rules=[]):
+    def pln_load_rules(self, rules: list[str]=[]):
         """Load PLN rules.
 
         Take a list of rule scheme symbols (but without the single
@@ -176,11 +198,18 @@ class OpencogAgent:
         for rule in rules:
             scheme_eval(self.atomspace, "(pln-load-rule '" + rule + ")")
 
-    def pln_fc(self, atomspace, source, vardecl=None, maxiter=10, rules=[]):
-        """Call PLN backward chainer with the given query and parameters.
+    def pln_fc(self,
+               atomspace: AtomSpace,
+               source: Atom,
+               vardecl=None,
+               maxiter: int=10,
+               rules: list[str]=[]) -> set[Atom]:
+        """Call PLN forward chainer with the given source and parameters.
 
         The parameters are
 
+        atomspace: the atomspace over which to do the reasoning. # NEXT: find out if it really does that
+        source: the atom source to start from.
         maxiter: the maximum number of iterations.
         rules: optional list of rule symbols.  If empty keep current rule set.
 
@@ -191,7 +220,7 @@ class OpencogAgent:
         agent_log.fine("pln_fc(atomspace={}, source={}, maxiter={})".format(
             atomspace,
             source,
-            maxiter
+            maxiter,
         ))
 
         # Add rules (should be previously loaded)
@@ -208,9 +237,14 @@ class OpencogAgent:
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maxiter)
         command += ")"
-        return scheme_eval_h(atomspace, command).out
+        return set(scheme_eval_h(atomspace, command).out)
 
-    def pln_bc(self, atomspace, target, vardecl=None, maxiter=10, rules=[]):
+    def pln_bc(self,
+               atomspace: AtomSpace,
+               target: Atom,
+               vardecl=None,
+               maxiter: int=10,
+               rules: list[str]=[]) -> set[Atom]:
         """Call PLN backward chainer with the given target and parameters.
 
         The parameters are
@@ -242,9 +276,9 @@ class OpencogAgent:
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maxiter)
         command += ")"
-        return scheme_eval_h(atomspace, command).out
+        return set(scheme_eval_h(atomspace, command).out)
 
-    def mine_cogscms(self):
+    def mine_cogscms(self) -> set[Atom]:
         """Discover cognitive schematics via pattern mining.
 
         Return the set of mined cognitive schematics.
@@ -315,7 +349,45 @@ class OpencogAgent:
         agent_log.fine("Mined cognitive schematics = {}".format(cogscms))
         return cogscms
 
-    def infer_cogscms(self):
+    def directly_evaluate_conjunction(self, conjuncts: set[Atom]) -> Atom:
+        """Directly evaluate the TV of a conjunction of atoms.
+
+        conjunctions is a set of atoms and it returns a conjunction of
+        atoms with its properly updated.
+
+        """
+
+        agent_log.fine("directly_evaluate_conjunction(conjuncts={})".format(conjuncts))
+
+        pos_count = 0
+        for timed_events in self.percepta_record:
+            agent_log.fine("timed_events = {}".format(timed_events))
+            events = set(get_events(timed_events))
+            if conjuncts <= events:
+                pos_count += 1
+            # NEXT: check timestamped TV
+            # and has_one_mean(timed_percept) \
+            # and has_non_null_confidence(timed_percept):
+
+        mean = float(pos_count) / float(self.step_count)
+        count = self.step_count
+        # NEXT: make sure the atomspace is correct
+        # return AndLink(conjuncts).truth_value(mean, count)
+        atom = conjuncts.pop()
+        atom.truth_value(mean, count)
+        return atom
+
+    def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace):
+        """Directly evaluate the TVs of all cogscms outgoings."""
+
+        agent_log.fine("directly_evaluate_cogscms_ante_succ()")
+        for atom in atomspace:
+            if not is_predictive_implication_scope(atom):
+                continue
+            self.directly_evaluate_conjunction({get_antecedent(atom)})
+            self.directly_evaluate_conjunction({get_succedent(atom)})
+
+    def infer_cogscms(self) -> set[Atom]:
         """Discover cognitive schematics via reasoning.
 
         For now only temporal deduction is implemented.
@@ -325,16 +397,57 @@ class OpencogAgent:
         """
 
         agent_log.fine("infer_cogscms()")
-        agent_log.fine("self.cogscms_atomspace = " + str(scheme_eval(self.cogscms_atomspace, "(cog-get-all-roots)").decode("utf-8")))
-        agent_log.fine("self.cognitive_schematics = " + str(self.cognitive_schematics))
-        perfect_cogscms = {cogscm for cogscm in self.cognitive_schematics
-                           if (0.99 < cogscm.tv.mean and 0.0 < cogscm.tv.confidence and
-                               # Only consider empty vardecl
-                               get_vardecl(cogscm).out == [])}
-        agent_log.fine("perfect_cogscms = " + str(perfect_cogscms))
+
+        # DEBUG: Log atomspaces to be sure it contains what we want
+        agent_log.fine("self.percepta_atomspace [count={}] = {}".format(
+            len(self.percepta_atomspace),
+            atomspace_to_str(self.percepta_atomspace)
+        ))
+        agent_log.fine("self.percepta_record [count={}] = {}".format(
+            len(self.percepta_record),
+            self.percepta_record
+        ))
+        agent_log.fine("self.cogscms_atomspace [count={}] = {}".format(
+            len(self.cogscms_atomspace),
+            atomspace_to_str(self.cogscms_atomspace)
+        ))
+        agent_log.fine("self.cognitive_schematics [count={}] = {}".format(
+            len(self.cognitive_schematics),
+            self.cognitive_schematics
+        ))
+        agent_log.fine("self.atomspace [count={}] = {}".format(
+            len(self.atomspace),
+            atomspace_to_str(self.atomspace)
+        ))
+
+        # NEXT: Infer the TVs of all antecedents and consequents of
+        # cognitive schematics.  This is required with the current
+        # version of temporal deduction used.
+        #
+        # Note: this needs to be done after
+        # back-predictive-implication-scope-conditional-conjunction-introduction!!!
+
+        # NEXT: Maybe we want to clear the working atomspace and copy
+        # the content of self.percepta_atomspace and
+        # self.cognitive_schematics before launching that round of
+        # reasoning.  Then later on we could use Linas atomspace
+        # combinations instead of copying atomspace content.
+        self.working_atomspace.clear()
+        add_to_atomspace(self.percepta_atomspace, self.working_atomspace)
+        add_to_atomspace(self.cogscms_atomspace, self.working_atomspace)
+        agent_log.fine("self.working_atomspace [count={}] = {}".format(
+            len(self.working_atomspace),
+            atomspace_to_str(self.working_atomspace)
+        ))
 
         # All resulting cognitive schematics
-        cogscms = set()
+        cogscms: set[Atom] = set()
+
+        # NEXT: we probably want to create this query in a child
+        # atomspace of self.cogscms_atomspace
+        #
+        # cogscms_atomspace_child = AtomSpace(self.cogscms_atomspace)
+        # set_default_atomspace(cogscms_atomspace_child)
 
         # Call PLN to infer new cognitive schematics by combining
         # existing ones
@@ -349,23 +462,59 @@ class OpencogAgent:
                     UnquoteLink(T),
                     UnquoteLink(P),
                     UnquoteLink(Q)))
-        mi = 10
+        mi = 2
         rules = [
             "back-predictive-implication-scope-conditional-conjunction-introduction",
-            "back-predictive-implication-scope-deduction-cogscm",
         ]
+
+        # Split in 3 operations
+        # 1. Infer conditional conjunctions
+        # 2. Infer conjunctions TVs
+        # 3. Infer temporal deductions
+
         cogscms = self.pln_fc(
-            # NEXT: use cogscms_atomspace
-            self.atomspace,
+            self.cogscms_atomspace,
             source,
             maxiter=mi,
             rules=rules
         )
 
+        agent_log.fine("MID self.cogscms_atomspace [count={}] = {}".format(
+            len(self.cogscms_atomspace),
+            atomspace_to_str(self.cogscms_atomspace)
+        ))
+        agent_log.fine("MID self.working_atomspace [count={}] = {}".format(
+            len(self.working_atomspace),
+            atomspace_to_str(self.working_atomspace)
+        ))
+
+        # # Infer antecedents and consequents TVs of cognitive schematics
+        self.directly_evaluate_cogscms_ante_succ(self.working_atomspace)
+
+        # rules = [
+        #     "back-predictive-implication-scope-deduction-cogscm",
+        # ]
+        # cogscms = self.pln_fc(
+        #     # NEXT: use cogscms_atomspace
+        #     self.working_atomspace,
+        #     source,
+        #     maxiter=mi,
+        #     rules=rules
+        # )
+
+        agent_log.fine("AFTER self.cogscms_atomspace [count={}] = {}".format(
+            len(self.cogscms_atomspace),
+            atomspace_to_str(self.cogscms_atomspace)
+        ))
+        agent_log.fine("AFTER self.working_atomspace [count={}] = {}".format(
+            len(self.working_atomspace),
+            atomspace_to_str(self.working_atomspace)
+        ))
+
         agent_log.fine("Inferred cognitive schematics = {}".format(cogscms))
         return cogscms
 
-    def update_cognitive_schematics(self, new_cogscms):
+    def update_cognitive_schematics(self, new_cogscms: set[Atom]):
         """Insert the new cognitive schematics into the proper container."""
 
         add_to_atomspace(new_cogscms, self.cogscms_atomspace)
@@ -449,7 +598,7 @@ class OpencogAgent:
         """
 
         tclauses = get_early_clauses(self.get_pattern_timed_clauses(pattern))
-        return [get_event(tc) for tc in tclauses]
+        return get_events(tclauses)
 
     def get_pattern_succedent_events(self, pattern):
         """Return the succedent events of a temporal pattern.
@@ -459,7 +608,7 @@ class OpencogAgent:
         """
 
         tclauses = get_latest_clauses(self.get_pattern_timed_clauses(pattern))
-        return [get_event(tc) for tc in tclauses]
+        return get_events(tclauses)
 
     def get_typed_variables(self, vardecl):
         """Get the list of possibly typed variables in vardecl."""
@@ -680,9 +829,6 @@ class OpencogAgent:
         ]
 
         # Remove undesirable cognitive schematics
-        #
-        # TODO: its still in the atomspace, maybe should be move to
-        # its own atomspace or labelled as such.
         cogscms = [cogscm for cogscm in cogscms if self.is_desirable(cogscm)]
 
         return cogscms
@@ -735,6 +881,9 @@ class OpencogAgent:
 
         More precisely it takes
 
+        # NEXT: should it be the atomspace to mine
+        # (which would bedetermined by Percepta Record anyway)?
+        # Or the atomspace to dump the result into?
         1. an atomspace to mine
 
         2. las, a list of triples
@@ -796,16 +945,10 @@ class OpencogAgent:
             vardecl = VariableSet(*variables)
         initpat = LambdaLink(vardecl, PresentLink(*timed_clauses))
 
-        # Uncomment the following to log the mined corpus
-        # agent_log.fine("percepta = {}".format(self.get_percepta()))
-        # percepta_str = "\n".join(["(MemberLink {} {})".format(str(p), str(self.percepta_record))
-        #                 for p in self.get_percepta()])
-        # agent_log.fine("percepta_str = {}".format(percepta_str))
-
         # Launch pattern miner
         mine_query = (
             "(cog-mine "
-            + str(self.percepta_record)
+            + str(self.percepta_record_cpt)
             + " #:ignore "
             + str(ignore)
             + " #:minimum-support "

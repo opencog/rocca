@@ -11,6 +11,8 @@ import time
 import gym
 
 # OpenCog
+from opencog.type_constructors import ExecutionLink, SchemaNode, EvaluationLink, PredicateNode, NumberNode, ConceptNode
+from opencog.utilities import set_default_atomspace
 from opencog.pln import *
 from opencog.ure import ure_logger
 from opencog.logger import log
@@ -88,7 +90,9 @@ class ChaseAgent(OpencogAgent):
 
         # Create Action Space. The set of allowed actions an agent can take.
         # TODO take care of action parameters.
-        action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_names}
+        # TODO: temporary disable Stay to speed up learning
+        # action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_names}
+        action_space = {ExecutionLink(SchemaNode(a)) for a in ["Go Left", "Go Right", "Eat"]}
 
         # Create Goal
         pgoal = EvaluationLink(PredicateNode("Reward"), NumberNode("1"))
@@ -113,7 +117,7 @@ if __name__ == "__main__":
     # Init loggers
     log.set_level("info")
     # log.set_sync(True)
-    agent_log.set_level("debug")
+    agent_log.set_level("fine")
     # agent_log.set_sync(True)
     ure_logger().set_level("debug")
     # ure_logger().set_sync(True)
