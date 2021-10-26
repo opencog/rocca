@@ -38,8 +38,12 @@ class OpencogAgent:
         n_goal,
         log_level="debug",
     ):
-        self.atomspace = atomspace
+        # Construct the various atomspaces
+        self.atomspace = atomspace # Working atomspace
+        self.percepta_atomspace = AtomSpace()
+        self.cogscms_atomspace = AtomSpace()
         set_default_atomspace(self.atomspace)
+
         self.env = env
         self.observation, _, _ = self.env.restart()
         self.step_count = 0
@@ -113,6 +117,7 @@ class OpencogAgent:
         scheme_eval(self.atomspace, "(use-modules (opencog spacetime))")
         rules = [
             "back-predictive-implication-scope-direct-evaluation",
+            "back-predictive-implication-scope-conditional-conjunction-introduction",
             "back-predictive-implication-scope-deduction-cogscm",
         ]
         self.pln_load_rules(rules)
@@ -140,7 +145,8 @@ class OpencogAgent:
 
         """
 
-        return MemberLink(timestamp(atom, i, tv), self.percepta_record, tv=TRUE_TV)
+        mbr = MemberLink(timestamp(atom, i, tv), self.percepta_record, tv=TRUE_TV)
+        self.percepta_atomspace.add_atom(mbr)
 
     def make_goal(self):
         """Define the goal of the current iteration.
@@ -170,7 +176,7 @@ class OpencogAgent:
         for rule in rules:
             scheme_eval(self.atomspace, "(pln-load-rule '" + rule + ")")
 
-    def pln_fc(self, source, vardecl=None, maxiter=10, rules=[]):
+    def pln_fc(self, atomspace, source, vardecl=None, maxiter=10, rules=[]):
         """Call PLN backward chainer with the given query and parameters.
 
         The parameters are
@@ -182,7 +188,11 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("pln_fc(source={}, maxiter={})".format(source, maxiter))
+        agent_log.fine("pln_fc(atomspace={}, source={}, maxiter={})".format(
+            atomspace,
+            source,
+            maxiter
+        ))
 
         # Add rules (should be previously loaded)
         if rules:
@@ -198,9 +208,9 @@ class OpencogAgent:
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maxiter)
         command += ")"
-        return scheme_eval_h(self.atomspace, command).out
+        return scheme_eval_h(atomspace, command).out
 
-    def pln_bc(self, target, vardecl=None, maxiter=10, rules=[]):
+    def pln_bc(self, atomspace, target, vardecl=None, maxiter=10, rules=[]):
         """Call PLN backward chainer with the given target and parameters.
 
         The parameters are
@@ -212,7 +222,11 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("pln_bc(target={}, maxiter={})".format(target, maxiter))
+        agent_log.fine("pln_bc(atomspace={}, target={}, maxiter={})".format(
+            atomspace,
+            target,
+            maxiter
+        ))
 
         # Add rules (should be previously loaded)
         if rules:
@@ -228,7 +242,7 @@ class OpencogAgent:
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maxiter)
         command += ")"
-        return scheme_eval_h(self.atomspace, command).out
+        return scheme_eval_h(atomspace, command).out
 
     def mine_cogscms(self):
         """Discover cognitive schematics via pattern mining.
@@ -253,14 +267,18 @@ class OpencogAgent:
 
             # Mine positive succedent goals
             postctxs = [self.positive_goal]
-            pos_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
+            las = (lag, prectxs, postctxs)
+            # NEXT: use percepta_atomspace
+            pos_srps = self.mine_temporal_patterns(self.atomspace, las)
             pos_prdi = self.surprises_to_predictive_implications(pos_srps)
             agent_log.fine("pos_prdi = {}".format(pos_prdi))
             cogscms.update(set(pos_prdi))
 
             # Mine negative succedent goals
             postctxs = [self.negative_goal]
-            neg_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
+            las = (lag, prectxs, postctxs)
+            # NEXT: use percepta_atomspace
+            neg_srps = self.mine_temporal_patterns(self.atomspace, las)
             neg_prdi = self.surprises_to_predictive_implications(neg_srps)
             agent_log.fine("neg_prdi = {}".format(neg_prdi))
             cogscms.update(set(neg_prdi))
@@ -268,7 +286,9 @@ class OpencogAgent:
             # Mine general succedents (only one for now)
             if self.monoaction_general_succedent_mining:
                 postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
-                gen_srps = self.mine_temporal_patterns((lag, prectxs, postctxs))
+                las = (lag, prectxs, postctxs)
+                # NEXT: use percepta_atomspace
+                gen_srps = self.mine_temporal_patterns(self.atomspace, las)
                 gen_prdi = self.surprises_to_predictive_implications(gen_srps)
                 agent_log.fine("gen_prdi = {}".format(gen_prdi))
                 cogscms.update(set(gen_prdi))
@@ -281,8 +301,10 @@ class OpencogAgent:
                         "polyaction mining snd_action = {}".format(snd_action)
                     )
                     ma_prectxs = (lag, prectxs, [snd_action])
+                    las = (lag, ma_prectxs, postctxs)
+                    # NEXT: use percepta_atomspace
                     pos_multi_srps = self.mine_temporal_patterns(
-                        (lag, ma_prectxs, postctxs)
+                        self.atomspace, las
                     )
                     agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
                     pos_multi_prdi = self.surprises_to_predictive_implications(
@@ -303,7 +325,7 @@ class OpencogAgent:
         """
 
         agent_log.fine("infer_cogscms()")
-        agent_log.fine("self.atomspace = " + str(scheme_eval(self.atomspace, "(cog-get-all-roots)").decode("utf-8")))
+        agent_log.fine("self.cogscms_atomspace = " + str(scheme_eval(self.cogscms_atomspace, "(cog-get-all-roots)").decode("utf-8")))
         agent_log.fine("self.cognitive_schematics = " + str(self.cognitive_schematics))
         perfect_cogscms = {cogscm for cogscm in self.cognitive_schematics
                            if (0.99 < cogscm.tv.mean and 0.0 < cogscm.tv.confidence and
@@ -328,25 +350,42 @@ class OpencogAgent:
                     UnquoteLink(P),
                     UnquoteLink(Q)))
         mi = 10
-        rules = ["back-predictive-implication-scope-deduction-cogscm"]
-        cogscms = self.pln_fc(source, maxiter=mi, rules=rules)
+        rules = [
+            "back-predictive-implication-scope-conditional-conjunction-introduction",
+            "back-predictive-implication-scope-deduction-cogscm",
+        ]
+        cogscms = self.pln_fc(
+            # NEXT: use cogscms_atomspace
+            self.atomspace,
+            source,
+            maxiter=mi,
+            rules=rules
+        )
 
         agent_log.fine("Inferred cognitive schematics = {}".format(cogscms))
         return cogscms
 
+    def update_cognitive_schematics(self, new_cogscms):
+        """Insert the new cognitive schematics into the proper container."""
+
+        add_to_atomspace(new_cogscms, self.cogscms_atomspace)
+        self.cognitive_schematics.update(new_cogscms)
+
     def learn(self):
         """Discover patterns in the world and in itself."""
 
-        # For now we only learn cognitive schematics
+        # For now we only learn cognitive schematics.  Later on we can
+        # introduce more types of knowledge, temporal and more
+        # abstract.
 
         # Mine cognitive schematics
         mined_cogscms = self.mine_cogscms()
-        self.cognitive_schematics.update(mined_cogscms)
+        self.update_cognitive_schematics(mined_cogscms)
 
         # Infer cognitive schematics (via temporal deduction)
         if self.temporal_deduction:
             inferred_cogscms = self.infer_cogscms()
-            self.cognitive_schematics.update(inferred_cogscms)
+            self.update_cognitive_schematics(inferred_cogscms)
 
     def get_pattern(self, surprise_eval):
         """Extract the pattern wrapped in a surprisingness evaluation.
@@ -605,7 +644,7 @@ class OpencogAgent:
         # Calculate the truth value of the predictive implication
         mi = 2
         rules = ["back-predictive-implication-scope-direct-evaluation"]
-        return self.pln_bc(preimp, maxiter=mi, rules=rules)[0]
+        return self.pln_bc(self.atomspace, preimp, maxiter=mi, rules=rules)[0]
 
     def is_desirable(self, cogscm):
         """Return True iff the cognitive schematic is desirable.
@@ -691,10 +730,14 @@ class OpencogAgent:
         timed_clauses += [AtTimeLink(succ, lagnat) for succ in succedents]
         return timed_clauses, lag
 
-    def mine_temporal_patterns(self, lagged_antecedents_succedents, vardecl=None):
+    def mine_temporal_patterns(self, atomspace, las, vardecl=None):
         """Given nested lagged, antecedents, succedents, mine temporal patterns.
 
-        More precisely it takes a list of triples
+        More precisely it takes
+
+        1. an atomspace to mine
+
+        2. las, a list of triples
 
         (lag, antecedents, succedents)
 
@@ -726,8 +769,8 @@ class OpencogAgent:
         """
 
         agent_log.fine(
-            "mine_temporal_patterns(lagged_antecedents_succedents={}, vardecl={})".format(
-                lagged_antecedents_succedents, vardecl
+            "mine_temporal_patterns(atomspace={}, las={}, vardecl={})".format(
+                atomspace, las, vardecl
             )
         )
 
@@ -745,7 +788,7 @@ class OpencogAgent:
 
         # Define initial pattern
         # TODO: support any lag and vardecl
-        timed_clauses, _ = self.to_timed_clauses(lagged_antecedents_succedents, T)
+        timed_clauses, _ = self.to_timed_clauses(las, T)
         agent_log.fine("timed_clauses = {}".format(timed_clauses))
         if not vardecl:
             variables = set([T])
@@ -786,7 +829,7 @@ class OpencogAgent:
             + ")"
         )
         agent_log.fine("mine_query = {}".format(mine_query))
-        surprises = scheme_eval_h(self.atomspace, "(List " + mine_query + ")")
+        surprises = scheme_eval_h(atomspace, "(List " + mine_query + ")")
         agent_log.fine("surprises = {}".format(surprises))
 
         return surprises.out

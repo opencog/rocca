@@ -42,10 +42,23 @@ agent_log.set_component("Agent")
 #############
 
 
+def add_to_atomspace(atoms, atomspace):
+    """Add all atoms to the atomspace."""
+
+    for atom in atoms:
+        atomspace.add_atom(atom)
+
+
 def has_non_null_confidence(atom):
     """Return True iff the given atom has a confidence above 0."""
 
     return 0 < atom.tv.confidence
+
+
+def has_one_mean(atom):
+    """Return True iff the given atom has a mean of 1."""
+
+    return 1 <= atom.tv.mean
 
 
 def tv_to_beta(tv, prior_a=1, prior_b=1):
@@ -253,6 +266,14 @@ def weighted_average_tv(weighted_tvs):
     return None
 
 
+def has_empty_vardecl(cogscm):
+    """Return True iff the cognitive schematic has an empty vardecl."""
+
+    vardecl = get_vardecl(cogscm)
+    return (is_variable_list(vardecl) or is_variable_set(vardecl)) \
+        and is_empty_link(vardecl)
+
+
 def get_vardecl(cogscm):
     """Extract the vardecl of a cognitive schematic.
 
@@ -271,8 +292,8 @@ def get_vardecl(cogscm):
 
     return <vardecl>.
 
-    If the cognitive schematic is an BackPredictiveImplicationLink then
-    return an empty VariableSet.
+    If the cognitive schematic is not a scope then return an empty
+    VariableSet.
 
     """
 
@@ -347,6 +368,24 @@ def is_variable(atom):
     """Return True iff the atom is a variable node."""
 
     return is_a(atom.type, types.VariableNode)
+
+
+def is_variable_list(atom):
+    """Return True iff the atom is a VariableList."""
+
+    return is_a(atom.type, types.VariableList)
+
+
+def is_variable_set(atom):
+    """Return True iff the atom is a VariableSet."""
+
+    return is_a(atom.type, types.VariableSet)
+
+
+def is_empty_link(atom):
+    """Return True iff the atom is a link with empty outgoing set."""
+
+    return atom.is_link() and atom.out == []
 
 
 def is_scope(atom):

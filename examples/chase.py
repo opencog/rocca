@@ -113,9 +113,9 @@ if __name__ == "__main__":
     # Init loggers
     log.set_level("info")
     # log.set_sync(True)
-    agent_log.set_level("fine")
+    agent_log.set_level("debug")
     # agent_log.set_sync(True)
-    ure_logger().set_level("fine")
+    ure_logger().set_level("debug")
     # ure_logger().set_sync(True)
     miner_log = MinerLogger(atomspace)
     miner_log.set_level("debug")
