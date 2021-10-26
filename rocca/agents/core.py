@@ -93,6 +93,14 @@ class OpencogAgent:
         # plans from monoaction plans.
         self.temporal_deduction = True
 
+        # Only consider cognitive schematics with mean of 1 (and non
+        # null confidence)
+        self.true_cogscm = False
+
+        # Only consider cognitive schematics without variable (other
+        # than temporal of course)
+        self.empty_vardecl_cogscm = False
+
     def __del__(self):
         self.env.close()
 
@@ -608,6 +616,8 @@ class OpencogAgent:
         1. its confidence above zero
         2. its action fully grounded
         3. all its variables in the antecedent
+        4. A mean of one, if self.true_cogscm is true
+        5. An empty vardecl, if self.empty_vardecl_cogscm is true
 
         """
 
@@ -616,6 +626,8 @@ class OpencogAgent:
             and has_non_null_confidence(cogscm)
             and is_closed(get_t0_execution(cogscm))
             and has_all_variables_in_antecedent(cogscm)
+            and (not(self.true_cogscm) or has_one_mean(cogscm))
+            and (not(self.empty_vardecl_cogscm) or has_empty_vardecl(cogscm))
         )
 
     def surprises_to_predictive_implications(self, srps):

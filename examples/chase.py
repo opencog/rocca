@@ -101,6 +101,8 @@ class ChaseAgent(OpencogAgent):
         self.monoaction_general_succeedent_mining = True
         self.polyaction_mining = False
         self.temporal_deduction = True
+        self.true_cogscm = True
+        self.empty_vardecl_cogscm = True
 
 
 if __name__ == "__main__":
