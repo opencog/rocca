@@ -9,6 +9,7 @@ import logging
 import math
 import multiprocessing
 from collections import Counter
+from typing import Any
 
 # OpenCog
 from opencog.atomspace import Atom, AtomSpace
@@ -149,7 +150,7 @@ class OpencogAgent:
             self.percepta_record.append(set())
         self.percepta_record[i].add(timed_atom)
 
-    def record(self, atom: Atom, i: int, tv=None):
+    def record(self, atom: Atom, i: int, tv=None) -> Atom:
         """Timestamp and record an atom to the Percepta Record.
 
         That is add the following in the atomspace
@@ -168,7 +169,7 @@ class OpencogAgent:
         timed_atom = timestamp(atom, i, tv)
         mbr = MemberLink(timed_atom, self.percepta_record_cpt, tv=TRUE_TV)
         self.insert_to_percepta_record(timed_atom, i)
-        self.percepta_atomspace.add_atom(mbr)
+        return self.percepta_atomspace.add_atom(mbr)
 
     def make_goal(self) -> Atom:
         """Define the goal of the current iteration.
@@ -202,7 +203,8 @@ class OpencogAgent:
                atomspace: AtomSpace,
                source: Atom,
                vardecl=None,
-               maxiter: int=10,
+               maximum_iterations: int=10,
+               full_rule_application: bool=False,
                rules: list[str]=[]) -> set[Atom]:
         """Call PLN forward chainer with the given source and parameters.
 
@@ -536,7 +538,7 @@ class OpencogAgent:
             inferred_cogscms = self.infer_cogscms()
             self.update_cognitive_schematics(inferred_cogscms)
 
-    def get_pattern(self, surprise_eval):
+    def get_pattern(self, surprise_eval: Atom) -> Atom:
         """Extract the pattern wrapped in a surprisingness evaluation.
 
         That is given
@@ -553,12 +555,12 @@ class OpencogAgent:
 
         return surprise_eval.out[1].out[0]
 
-    def is_T(self, var):
+    def is_T(self, var: Atom) -> bool:
         """Return True iff the variable is (Variable "$T")."""
 
         return var == VariableNode("$T")
 
-    def is_temporally_typed(self, tvar):
+    def is_temporally_typed(self, tvar: Atom) -> bool:
         """ "Return True iff the variable is typed as temporal.
 
         For now a variable is typed as temporal if it is
@@ -571,7 +573,7 @@ class OpencogAgent:
 
         return self.is_T(tvar)
 
-    def is_attime_T(self, clause):
+    def is_attime_T(self, clause: Atom) -> bool:
 
         """Return True iff the clause is about an event occuring at time T.
 
@@ -585,12 +587,12 @@ class OpencogAgent:
 
         return self.is_T(clause.out[1])
 
-    def get_pattern_timed_clauses(self, pattern):
+    def get_pattern_timed_clauses(self, pattern: Atom) -> Atom:
         """Return all timestamped clauses of a pattern."""
 
         return pattern.out[1].out
 
-    def get_pattern_antecedent_events(self, pattern):
+    def get_pattern_antecedent_events(self, pattern: Atom) -> list[Atom]:
         """Return the antecedent events of a temporal pattern.
 
         That is all propositions not taking place at the latest time.
@@ -600,7 +602,7 @@ class OpencogAgent:
         tclauses = get_early_clauses(self.get_pattern_timed_clauses(pattern))
         return get_events(tclauses)
 
-    def get_pattern_succedent_events(self, pattern):
+    def get_pattern_succedent_events(self, pattern: Atom) -> Atom:
         """Return the succedent events of a temporal pattern.
 
         That is the propositions taking place at the lastest time.
@@ -610,7 +612,7 @@ class OpencogAgent:
         tclauses = get_latest_clauses(self.get_pattern_timed_clauses(pattern))
         return get_events(tclauses)
 
-    def get_typed_variables(self, vardecl):
+    def get_typed_variables(self, vardecl: Atom) -> list[Atom]:
         """Get the list of possibly typed variables in vardecl."""
 
         vt = vardecl.type
@@ -619,7 +621,7 @@ class OpencogAgent:
         else:
             return [vardecl]
 
-    def get_nt_vardecl(self, pattern):
+    def get_nt_vardecl(self, pattern: Atom) -> Atom:
         """Get the vardecl of pattern excluding the time variable."""
 
         vardecl = get_vardecl(pattern)
@@ -627,7 +629,7 @@ class OpencogAgent:
         nt_tvars = [tvar for tvar in tvars if not self.is_temporally_typed(tvar)]
         return VariableSet(*nt_tvars)
 
-    def to_sequential_and(self, timed_clauses):
+    def to_sequential_and(self, timed_clauses: list[Atom]) -> Atom:
         times = get_times(timed_clauses)
         if len(times) == 2:
             # Partition events in first and second time. For now lags
@@ -642,7 +644,7 @@ class OpencogAgent:
         else:
             agent_log.error("Not supported yet!")
 
-    def to_predictive_implicant(self, pattern):
+    def to_predictive_implicant(self, pattern: Atom) -> Atom:
         """Turn a temporal pattern into predictive implicant."""
 
         agent_log.fine("to_predictive_implicant(pattern={})".format(pattern))
@@ -658,12 +660,12 @@ class OpencogAgent:
         else:
             return self.to_sequential_and(early_clauses)
 
-    def to_predictive_implicand(self, pattern):
+    def to_predictive_implicand(self, pattern: Atom) -> Atom:
         """Turn a temporal pattern into predictive implicand."""
 
         return maybe_and(self.get_pattern_succedent_events(pattern))
 
-    def to_predictive_implication_scope(self, pattern):
+    def to_predictive_implication_scope(self, pattern: Atom) -> Atom:
         """Turn a given pattern into a predictive implication scope with its TV.
 
         For instance if the pattern is
@@ -795,7 +797,7 @@ class OpencogAgent:
         rules = ["back-predictive-implication-scope-direct-evaluation"]
         return self.pln_bc(self.atomspace, preimp, maxiter=mi, rules=rules)[0]
 
-    def is_desirable(self, cogscm):
+    def is_desirable(self, cogscm: Atom) -> bool:
         """Return True iff the cognitive schematic is desirable.
 
         For now to be desirable a cognitive schematic must have
@@ -818,7 +820,7 @@ class OpencogAgent:
             and (not(self.empty_vardecl_cogscm) or has_empty_vardecl(cogscm))
         )
 
-    def surprises_to_predictive_implications(self, srps):
+    def surprises_to_predictive_implications(self, srps : Atom) -> list[Atom]:
         """Like to_predictive_implication but takes surprises."""
 
         agent_log.fine("surprises_to_predictive_implications(srps={})".format(srps))
@@ -833,7 +835,9 @@ class OpencogAgent:
 
         return cogscms
 
-    def to_timed_clauses(self, lagged_antecedents_succedents, T):
+    def to_timed_clauses(self,
+                         lagged_antecedents_succedents: tuple,
+                         T: Atom) -> tuple[list[Atom], int]:
         """Turn nested lagged, antecedents, succedents to AtTime clauses.
 
         For instance the input is
@@ -876,7 +880,9 @@ class OpencogAgent:
         timed_clauses += [AtTimeLink(succ, lagnat) for succ in succedents]
         return timed_clauses, lag
 
-    def mine_temporal_patterns(self, atomspace, las, vardecl=None):
+    def mine_temporal_patterns(self, atomspace: AtomSpace,
+                               las: tuple,
+                               vardecl: Atom=None) -> list[Atom]:
         """Given nested lagged, antecedents, succedents, mine temporal patterns.
 
         More precisely it takes
@@ -977,7 +983,7 @@ class OpencogAgent:
 
         return surprises.out
 
-    def plan(self, goal, expiry):
+    def plan(self, goal: Atom, expiry: int) -> list[Atom]:
         """Plan the next actions given a goal and its expiry time offset
 
         Return a python list of cognivite schematics meeting the
@@ -1032,7 +1038,7 @@ class OpencogAgent:
         return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
 
     # TODO: move to its own class (MixtureModel or something)
-    def get_all_uniq_atoms(self, atom):
+    def get_all_uniq_atoms(self, atom: Atom) -> set[Atom]:
         """Return the set of all unique atoms in atom."""
 
         # Base cases
@@ -1047,13 +1053,13 @@ class OpencogAgent:
             return results
 
     # TODO: move to its own class (MixtureModel or something)
-    def complexity(self, atom):
+    def complexity(self, atom: Atom) -> int:
         """Return the count of all unique atoms in atom."""
 
         return len(self.get_all_uniq_atoms(atom))
 
     # TODO: move to its own class (MixtureModel or something)
-    def prior(self, length):
+    def prior(self, length: float) -> float:
         """Given the length of a model, calculate its prior.
 
         Specifically
@@ -1073,7 +1079,7 @@ class OpencogAgent:
         return math.exp(-self.cpx_penalty * length)
 
     # TODO: move to its own class (MixtureModel or something)
-    def kolmogorov_estimate(self, remain_count):
+    def kolmogorov_estimate(self, remain_count: float) -> float:
         """Given the size of the data set that isn't explained by a model,
         estimate the complexity of a model that would explain them
         perfectly. The heuristic used here is
@@ -1090,7 +1096,7 @@ class OpencogAgent:
         return pow(remain_count, 1.0 - self.compressiveness)
 
     # TODO: move to its own class (MixtureModel or something)
-    def prior_estimate(self, cogscm):
+    def prior_estimate(self, cogscm: Atom) -> float:
         """Calculate the prior probability of cogscm."""
 
         partial_complexity = self.complexity(cogscm)
@@ -1099,7 +1105,7 @@ class OpencogAgent:
         return self.prior(partial_complexity + kestimate)
 
     # TODO: move to its own class (MixtureModel or something)
-    def beta_factor(self, cogscm):
+    def beta_factor(self, cogscm: Atom) -> float:
         """Return the beta factor as described in Eq.26 of
 
         https://github.com/ngeiswei/papers/blob/master/PartialBetaOperatorInduction/PartialBetaOperatorInduction.pdf
@@ -1116,7 +1122,7 @@ class OpencogAgent:
         return sp.beta(a, b) / sp.beta(self.prior_a, self.prior_b)
 
     # TODO: move to its own class (MixtureModel or something)
-    def weight(self, cogscm):
+    def weight(self, cogscm: Atom) -> float:
         """Calculate the weight of a cogscm for Model Bayesian Averaging.
 
         The calculation is based on
@@ -1130,7 +1136,7 @@ class OpencogAgent:
         return self.prior_estimate(cogscm) * self.beta_factor(cogscm)
 
     # TODO: move to its own class (MixtureModel or something)
-    def infer_data_set_size(self, cogscms):
+    def infer_data_set_size(self, cogscms: list[Atom]) -> float:
         """Infer the data set size by taking the max count of all models
 
         (it works assuming that one of them is complete).
@@ -1140,7 +1146,7 @@ class OpencogAgent:
         if 0 < len(cogscms):
             return max(cogscms, key=lambda x: x.tv.count).tv.count
         else:
-            return 0
+            return 0.0
 
     def deduce(self, cogscms):
         """Return an action distribution given a list cognitive schematics.
