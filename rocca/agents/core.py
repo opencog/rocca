@@ -212,17 +212,18 @@ class OpencogAgent:
 
         atomspace: the atomspace over which to do the reasoning. # NEXT: find out if it really does that
         source: the atom source to start from.
-        maxiter: the maximum number of iterations.
+        maximum_iterations: the maximum number of iterations.
         rules: optional list of rule symbols.  If empty keep current rule set.
 
         Return a python list of solutions.
 
         """
 
-        agent_log.fine("pln_fc(atomspace={}, source={}, maxiter={})".format(
+        agent_log.fine("pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={})".format(
             atomspace,
             source,
-            maxiter,
+            maximum_iterations,
+            full_rule_application,
         ))
 
         # Add rules (should be previously loaded)
@@ -237,7 +238,8 @@ class OpencogAgent:
         command = "(pln-fc "
         command += str(source)
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
-        command += " #:maximum-iterations " + str(maxiter)
+        command += " #:maximum-iterations " + str(maximum_iterations)
+        command += " #:fc-full-rule-application " + str(full_rule_application)
         command += ")"
         return set(scheme_eval_h(atomspace, command).out)
 
@@ -245,23 +247,23 @@ class OpencogAgent:
                atomspace: AtomSpace,
                target: Atom,
                vardecl=None,
-               maxiter: int=10,
+               maximum_iterations: int=10,
                rules: list[str]=[]) -> set[Atom]:
         """Call PLN backward chainer with the given target and parameters.
 
         The parameters are
 
-        maxiter: the maximum number of iterations.
+        maximum_iterations: the maximum number of iterations.
         rules: optional list of rule symbols.  If empty keep current rule set.
 
         Return a python list of solutions.
 
         """
 
-        agent_log.fine("pln_bc(atomspace={}, target={}, maxiter={})".format(
+        agent_log.fine("pln_bc(atomspace={}, target={}, maximum_iterations={})".format(
             atomspace,
             target,
-            maxiter
+            maximum_iterations
         ))
 
         # Add rules (should be previously loaded)
@@ -276,7 +278,7 @@ class OpencogAgent:
         command = "(pln-bc "
         command += str(target)
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
-        command += " #:maximum-iterations " + str(maxiter)
+        command += " #:maximum-iterations " + str(maximum_iterations)
         command += ")"
         return set(scheme_eval_h(atomspace, command).out)
 
@@ -795,7 +797,7 @@ class OpencogAgent:
         # Calculate the truth value of the predictive implication
         mi = 2
         rules = ["back-predictive-implication-scope-direct-evaluation"]
-        return self.pln_bc(self.atomspace, preimp, maxiter=mi, rules=rules)[0]
+        return self.pln_bc(self.atomspace, preimp, maximum_iterations=mi, rules=rules).pop()
 
     def is_desirable(self, cogscm: Atom) -> bool:
         """Return True iff the cognitive schematic is desirable.
@@ -931,7 +933,7 @@ class OpencogAgent:
 
         # Set miner parameters
         minsup = 4
-        maxiter = 1000
+        maximum_iterations = 1000
         cnjexp = "#f"
         enfspe = "#t"
         mspc = 6
@@ -962,7 +964,7 @@ class OpencogAgent:
             + " #:initial-pattern "
             + str(initpat)
             + " #:maximum-iterations "
-            + str(maxiter)
+            + str(maximum_iterations)
             + " #:conjunction-expansion "
             + cnjexp
             + " #:enforce-specialization "
