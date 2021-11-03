@@ -49,6 +49,13 @@ def add_to_atomspace(atoms, atomspace: AtomSpace):
         atomspace.add_atom(atom)
 
 
+def fetch_cogscms(atomspace: AtomSpace) -> set[Atom]:
+    """Fetch all cognitive schematics from an given atomspace."""
+
+    pit = get_type("BackPredictiveImplicationScopeLink")
+    return set(atomspace.get_atoms_by_type(pit))
+
+
 def has_non_null_confidence(atom: Atom) -> bool:
     """Return True iff the given atom has a confidence above 0."""
 
