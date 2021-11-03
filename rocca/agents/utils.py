@@ -489,13 +489,27 @@ def get_succedent(atom):
 
     For instance is the cognitive schematics is represented by
 
-    BackPredictiveImplicationScope <tv>
-      <vardecl>
-      <expiry>
+    BackSequentialAnd <tv>
+      <lag>
       <antecedent>
       <succedent>
 
-    it returns <succedent>
+    it returns <succedent>.
+
+    If it is
+
+    BackPredictiveImplicationScope <tv>
+      <vardecl>
+      <lag>
+      <antecedent>
+      <succedent>
+
+    it also returns <succedent>.
+
+    Note that for predictive implication, succedent is also called
+    consequent.  However it does make much sense to call a succedent a
+    consequent for a SequentialAnd, or another link that is not an
+    implication, thus the use of the generic term succedent.
 
     """
 
