@@ -395,8 +395,8 @@ class OpencogAgent:
         for atom in atomspace:
             if not is_predictive_implication_scope(atom):
                 continue
-            self.directly_evaluate_conjunction({get_antecedent(atom)})
-            self.directly_evaluate_conjunction({get_succedent(atom)})
+            self.directly_evaluate(get_antecedent(atom))
+            self.directly_evaluate(get_succedent(atom))
 
     def infer_cogscms(self) -> set[Atom]:
         """Discover cognitive schematics via reasoning.
