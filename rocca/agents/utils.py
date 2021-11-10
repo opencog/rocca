@@ -384,55 +384,55 @@ def get_context(cogscm: Atom) -> tuple[Atom, Atom]:
     return (present_clauses, virtual_clauses)
 
 
-def is_variable(atom):
+def is_variable(atom: Atom) -> bool:
     """Return True iff the atom is a variable node."""
 
     return is_a(atom.type, types.VariableNode)
 
 
-def is_variable_list(atom):
+def is_variable_list(atom: Atom) -> bool:
     """Return True iff the atom is a VariableList."""
 
     return is_a(atom.type, types.VariableList)
 
 
-def is_variable_set(atom):
+def is_variable_set(atom: Atom) -> bool:
     """Return True iff the atom is a VariableSet."""
 
     return is_a(atom.type, types.VariableSet)
 
 
-def is_empty_link(atom):
+def is_empty_link(atom: Atom) -> bool:
     """Return True iff the atom is a link with empty outgoing set."""
 
     return atom.is_link() and atom.out == []
 
 
-def is_scope(atom):
+def is_scope(atom: Atom) -> bool:
     """Return True iff the atom is a scope link."""
 
     return is_a(atom.type, types.ScopeLink)
 
 
-def is_predictive_implication(atom):
+def is_predictive_implication(atom: Atom) -> bool:
     """Return True iff the atom is a predictive implication link."""
 
     return is_a(atom.type, get_type("BackPredictiveImplicationLink"))
 
 
-def is_predictive_implication_scope(atom):
+def is_predictive_implication_scope(atom: Atom) -> bool:
     """Return True iff the atom is a predictive implication scope link."""
 
     return is_a(atom.type, get_type("BackPredictiveImplicationScopeLink"))
 
 
-def is_and(atom):
+def is_and(atom: Atom) -> bool:
     """Return True iff the atom is an and link."""
 
     return is_a(atom.type, types.AndLink)
 
 
-def is_sequential_and(atom):
+def is_sequential_and(atom: Atom) -> bool:
     """Return True iff atom is a sequential and.
 
     Also for now we use BackSequentialAndLink.
@@ -442,25 +442,25 @@ def is_sequential_and(atom):
     return is_a(atom.type, get_type("BackSequentialAndLink"))
 
 
-def is_execution(atom):
+def is_execution(atom: Atom) -> bool:
     """Return True iff the atom is an ExecutionLink."""
 
     return is_a(atom.type, types.ExecutionLink)
 
 
-def is_Z(atom):
+def is_Z(atom: Atom) -> bool:
     """Return True iff the atom is Z."""
 
     return atom.type == get_type("ZLink")
 
 
-def is_S(atom):
+def is_S(atom: Atom) -> bool:
     """Return True iff the atom is S ..."""
 
     return atom.type == get_type("SLink")
 
 
-def maybe_and(clauses):
+def maybe_and(clauses) -> Atom:
     """Wrap an And if multiple clauses, otherwise return the only one."""
 
     return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
