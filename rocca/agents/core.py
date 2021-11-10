@@ -95,13 +95,13 @@ class OpencogAgent:
         # as a rest in the Solomonoff mixture.
         self.delta = 1.0e-5
 
+        # Enable poly-action pattern mining
+        self.polyaction_mining = True
+
         # Enable mono-action pattern mining with general succedent
         # (not just about goal).  This is important to gather the
         # knowledge in order to make temporal deduction useful.
         self.monoaction_general_succedent_mining = True
-
-        # Enable poly-action pattern mining
-        self.polyaction_mining = True
 
         # Enable temporal deduction, to string together polyaction
         # plans from monoaction plans.
