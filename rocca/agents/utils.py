@@ -14,21 +14,21 @@ import scipy.special as sp
 import scipy.stats as st
 
 # OpenCog
-from opencog.atomspace import TruthValue, get_type, is_a, types
+from opencog.atomspace import Atom, AtomSpace, TruthValue, get_type, is_a, types, createTruthValue
 from opencog.execute import execute_atom
 from opencog.logger import create_logger
-from opencog.pln import *
+from opencog.pln import ZLink, SLink
 from opencog.scheme import scheme_eval
-from opencog.spacetime import *
-from opencog.type_constructors import *
+from opencog.spacetime import AtTimeLink, TimeNode
+from opencog.type_constructors import VariableSet, AndLink, PresentLink, IsClosedLink, IsTrueLink, SatisfactionLink
 from opencog.utilities import get_free_variables
 
 #############
 # Constants #
 #############
 
-TRUE_TV = TruthValue(1, 1)
-DEFAULT_TV = TruthValue(1, 0)
+TRUE_TV = createTruthValue(1, 1)
+DEFAULT_TV = createTruthValue(1, 0)
 
 #############
 # Variables #
@@ -42,13 +42,46 @@ agent_log.set_component("Agent")
 #############
 
 
-def has_non_null_confidence(atom):
+def add_to_atomspace(atoms, atomspace: AtomSpace):
+    """Add all atoms to the atomspace."""
+
+    for atom in atoms:
+        atomspace.add_atom(atom)
+
+
+def fetch_cogscms(atomspace: AtomSpace) -> set[Atom]:
+    """Fetch all cognitive schematics from an given atomspace."""
+
+    pit = get_type("BackPredictiveImplicationScopeLink")
+    return set(atomspace.get_atoms_by_type(pit))
+
+
+def has_non_null_confidence(atom: Atom) -> bool:
     """Return True iff the given atom has a confidence above 0."""
 
     return 0 < atom.tv.confidence
 
 
-def tv_to_beta(tv, prior_a=1, prior_b=1):
+def has_one_mean(atom: Atom) -> bool:
+    """Return True iff the given atom has a mean of 1."""
+
+    return 1 <= atom.tv.mean
+
+
+def has_true_tv(atom: Atom) -> bool:
+    """Return True iff the given has a tv TRUE_TV."""
+
+    return atom.tv == TRUE_TV
+
+
+def count_to_confidence(count) -> float:
+    """Convert TV count to confidence."""
+
+    K = 800.0
+    return float(count) / (float(count) + K)
+
+
+def tv_to_beta(tv: TruthValue, prior_a=1.0, prior_b=1.0):
     """Convert a truth value to a beta distribution.
 
     Given a truth value, return the beta distribution that best fits
@@ -65,7 +98,7 @@ def tv_to_beta(tv, prior_a=1, prior_b=1):
     return st.beta(a, b)
 
 
-def tv_to_alpha_param(tv, prior_a=1, prior_b=1):
+def tv_to_alpha_param(tv: TruthValue, prior_a=1.0, prior_b=1.0) -> float:
     """Return the alpha parameter of a TV's beta-distribution."""
 
     count = tv.count
@@ -73,7 +106,7 @@ def tv_to_alpha_param(tv, prior_a=1, prior_b=1):
     return prior_a + pos_count
 
 
-def tv_to_beta_param(tv, prior_a=1, prior_b=1):
+def tv_to_beta_param(tv: TruthValue, prior_a=1.0, prior_b=1.0) -> float:
     """Return the beta parameter of a TV's beta-distribution."""
 
     count = tv.count
@@ -81,7 +114,7 @@ def tv_to_beta_param(tv, prior_a=1, prior_b=1):
     return prior_b + count - pos_count
 
 
-def tv_rv(tv, prior_a=1, prior_b=1):
+def tv_rv(tv: TruthValue, prior_a=1, prior_b=1) -> float:
 
     """Return a first order probability variate of a truth value.
 
@@ -96,11 +129,11 @@ def tv_rv(tv, prior_a=1, prior_b=1):
     return betadist.rvs()
 
 
-def atom_to_idstr(atom):
+def atom_to_idstr(atom: Atom) -> str:
     return atom.id_string() if atom else "None"
 
 
-def w8d_cogscm_to_str(w8d_cogscm, indent=""):
+def w8d_cogscm_to_str(w8d_cogscm, indent="") -> str:
     """Pretty print a pair (weight, cogscm)."""
 
     weight = w8d_cogscm[0]
@@ -111,7 +144,7 @@ def w8d_cogscm_to_str(w8d_cogscm, indent=""):
     return s
 
 
-def w8d_cogscms_to_str(w8d_cogscms, indent=""):
+def w8d_cogscms_to_str(w8d_cogscms, indent="") -> str:
     """Pretty print the given list of weighted cogscms"""
 
     w8d_cogscms_sorted = sorted(w8d_cogscms, key=lambda x: x[0], reverse=True)
@@ -122,7 +155,7 @@ def w8d_cogscms_to_str(w8d_cogscms, indent=""):
     return s
 
 
-def action_to_str(action, indent=""):
+def action_to_str(action, indent="") -> str:
     """Pretty print an action.
 
     For now it just outputs the schema corresponding to the action
@@ -133,14 +166,14 @@ def action_to_str(action, indent=""):
     return indent + str(action.out[0])
 
 
-def act_pblt_to_str(act_pblt, indent=""):
+def act_pblt_to_str(act_pblt, indent="") -> str:
     action = act_pblt[0]
     pblt = act_pblt[1]
     return indent + "({}, {})".format(action_to_str(action), pblt)
 
 
 # TODO: use join to optimize
-def act_pblts_to_str(act_pblts, indent=""):
+def act_pblts_to_str(act_pblts, indent="") -> str:
     """Pretty print a list of pairs (action, probability)."""
 
     s = ""
@@ -149,7 +182,7 @@ def act_pblts_to_str(act_pblts, indent=""):
     return s
 
 
-def act_w8d_cogscm_to_str(act_w8d_cogscm, indent=""):
+def act_w8d_cogscm_to_str(act_w8d_cogscm, indent="") -> str:
     """Pretty print a pair (action, (weight, cogscm))."""
 
     action = act_w8d_cogscm[0]
@@ -159,7 +192,7 @@ def act_w8d_cogscm_to_str(act_w8d_cogscm, indent=""):
 
 
 # TODO: use join to optimize
-def act_w8d_cogscms_to_str(act_w8d_cogscms, indent=""):
+def act_w8d_cogscms_to_str(act_w8d_cogscms, indent="") -> str:
     """Pretty print a list of pairs (action, (weight, cogscm))."""
 
     s = ""
@@ -168,7 +201,7 @@ def act_w8d_cogscms_to_str(act_w8d_cogscms, indent=""):
     return s
 
 
-def mxmdl_to_str(mxmdl, indent=""):
+def mxmdl_to_str(mxmdl, indent="") -> str:
     """Pretty print the given mixture model of cogscms"""
 
     s = ""
@@ -223,7 +256,7 @@ def thompson_sample(mxmdl, prior_a=1, prior_b=1):
     return max(act_pblts, key=lambda act_pblt: act_pblt[1])
 
 
-def get_cogscm_tv(cogscm):
+def get_cogscm_tv(cogscm) -> TruthValue:
     """Return the Truth Value of a cogscm or the default if it is None"""
 
     return cogscm.tv if cogscm else DEFAULT_TV
@@ -253,7 +286,15 @@ def weighted_average_tv(weighted_tvs):
     return None
 
 
-def get_vardecl(cogscm):
+def has_empty_vardecl(cogscm: Atom) -> bool:
+    """Return True iff the cognitive schematic has an empty vardecl."""
+
+    vardecl = get_vardecl(cogscm)
+    return (is_variable_list(vardecl) or is_variable_set(vardecl)) \
+        and is_empty_link(vardecl)
+
+
+def get_vardecl(cogscm: Atom) -> Atom:
     """Extract the vardecl of a cognitive schematic.
 
     Given a cognitive schematic of that format
@@ -271,15 +312,15 @@ def get_vardecl(cogscm):
 
     return <vardecl>.
 
-    If the cognitive schematic is an BackPredictiveImplicationLink then
-    return an empty VariableSet.
+    If the cognitive schematic is not a scope then return an empty
+    VariableSet.
 
     """
 
     return cogscm.out[0] if is_scope(cogscm) else VariableSet()
 
 
-def is_virtual(clause):
+def is_virtual(clause: Atom) -> bool:
     """Return true iff the clause is virtual.
 
     For instance
@@ -295,7 +336,7 @@ def is_virtual(clause):
     return is_a(clause.type, types.VirtualLink)
 
 
-def get_context(cogscm):
+def get_context(cogscm: Atom) -> tuple[Atom, Atom]:
     """Extract the context of a cognitive schematic.
 
     For instance given a cognitive schematic of that format
@@ -343,37 +384,55 @@ def get_context(cogscm):
     return (present_clauses, virtual_clauses)
 
 
-def is_variable(atom):
+def is_variable(atom: Atom) -> bool:
     """Return True iff the atom is a variable node."""
 
     return is_a(atom.type, types.VariableNode)
 
 
-def is_scope(atom):
+def is_variable_list(atom: Atom) -> bool:
+    """Return True iff the atom is a VariableList."""
+
+    return is_a(atom.type, types.VariableList)
+
+
+def is_variable_set(atom: Atom) -> bool:
+    """Return True iff the atom is a VariableSet."""
+
+    return is_a(atom.type, types.VariableSet)
+
+
+def is_empty_link(atom: Atom) -> bool:
+    """Return True iff the atom is a link with empty outgoing set."""
+
+    return atom.is_link() and atom.out == []
+
+
+def is_scope(atom: Atom) -> bool:
     """Return True iff the atom is a scope link."""
 
     return is_a(atom.type, types.ScopeLink)
 
 
-def is_predictive_implication(atom):
+def is_predictive_implication(atom: Atom) -> bool:
     """Return True iff the atom is a predictive implication link."""
 
     return is_a(atom.type, get_type("BackPredictiveImplicationLink"))
 
 
-def is_predictive_implication_scope(atom):
+def is_predictive_implication_scope(atom: Atom) -> bool:
     """Return True iff the atom is a predictive implication scope link."""
 
     return is_a(atom.type, get_type("BackPredictiveImplicationScopeLink"))
 
 
-def is_and(atom):
+def is_and(atom: Atom) -> bool:
     """Return True iff the atom is an and link."""
 
     return is_a(atom.type, types.AndLink)
 
 
-def is_sequential_and(atom):
+def is_sequential_and(atom: Atom) -> bool:
     """Return True iff atom is a sequential and.
 
     Also for now we use BackSequentialAndLink.
@@ -383,31 +442,31 @@ def is_sequential_and(atom):
     return is_a(atom.type, get_type("BackSequentialAndLink"))
 
 
-def is_execution(atom):
+def is_execution(atom: Atom) -> bool:
     """Return True iff the atom is an ExecutionLink."""
 
     return is_a(atom.type, types.ExecutionLink)
 
 
-def is_Z(atom):
+def is_Z(atom: Atom) -> bool:
     """Return True iff the atom is Z."""
 
     return atom.type == get_type("ZLink")
 
 
-def is_S(atom):
+def is_S(atom: Atom) -> bool:
     """Return True iff the atom is S ..."""
 
     return atom.type == get_type("SLink")
 
 
-def maybe_and(clauses):
+def maybe_and(clauses) -> Atom:
     """Wrap an And if multiple clauses, otherwise return the only one."""
 
     return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
 
 
-def get_antecedent(atom):
+def get_antecedent(atom: Atom): # TODO: requires Python 3.10 -> (Atom | None):
     """Return the antecedent of a temporal atom.
 
     For instance is the cognitive schematics is represented by
@@ -436,13 +495,27 @@ def get_succedent(atom):
 
     For instance is the cognitive schematics is represented by
 
-    BackPredictiveImplicationScope <tv>
-      <vardecl>
-      <expiry>
+    BackSequentialAnd <tv>
+      <lag>
       <antecedent>
       <succedent>
 
-    it returns <succedent>
+    it returns <succedent>.
+
+    If it is
+
+    BackPredictiveImplicationScope <tv>
+      <vardecl>
+      <lag>
+      <antecedent>
+      <succedent>
+
+    it also returns <succedent>.
+
+    Note that for predictive implication, succedent is also called
+    consequent.  However it does make much sense to call a succedent a
+    consequent for a SequentialAnd, or another link that is not an
+    implication, thus the use of the generic term succedent.
 
     """
 
@@ -455,7 +528,7 @@ def get_succedent(atom):
     return None
 
 
-def get_lag(atom):
+def get_lag(atom: Atom) -> int:
     """Given an temporal atom, return its lag component.
 
     For instance if it is a BackPredictiveImplicationScope
@@ -488,7 +561,7 @@ def get_lag(atom):
     return 0
 
 
-def get_t0_clauses(antecedent):
+def get_t0_clauses(antecedent: Atom) -> list[Atom]:
     """Return the list of clauses occuring at initial time.
 
     For instance if the cognitive schematics has the following format
@@ -526,7 +599,7 @@ def get_t0_clauses(antecedent):
         return [antecedent]
 
 
-def has_all_variables_in_antecedent(cogscm):
+def has_all_variables_in_antecedent(cogscm: Atom) -> bool:
     """Return True iff all variables are in the antecedent."""
 
     if is_scope(cogscm):
@@ -538,7 +611,7 @@ def has_all_variables_in_antecedent(cogscm):
 
 
 # TODO: optimize using comprehension
-def get_free_variables_of_atoms(atoms):
+def get_free_variables_of_atoms(atoms: Atom) -> set[Atom]:
     """Get the set of all free variables in all atoms."""
 
     variables = set()
@@ -547,7 +620,7 @@ def get_free_variables_of_atoms(atoms):
     return variables
 
 
-def get_times(timed_atoms):
+def get_times(timed_atoms: list[Atom]) -> set[Atom]:
     """Given a list of timestamped clauses, return a set of all times."""
 
     if timed_atoms == []:
@@ -555,13 +628,13 @@ def get_times(timed_atoms):
     return set.union(set([get_time(timed_atoms[0])]), get_times(timed_atoms[1:]))
 
 
-def get_events(timed_atoms):
-    """Given a list of timestamped clauses, return a list of all events."""
+def get_events(timed_atoms) -> list[Atom]:
+    """Given a container of timestamped clauses, return a list of all events."""
 
     return [get_event(ta) for ta in timed_atoms]
 
 
-def get_latest_time(timed_clauses):
+def get_latest_time(timed_clauses: list[Atom]) -> Atom:
     """Given a list of timestamped clauses, return the latest timestamp."""
 
     if timed_clauses == []:
@@ -569,7 +642,7 @@ def get_latest_time(timed_clauses):
     return nat_max(get_time(timed_clauses[0]), get_latest_time(timed_clauses[1:]))
 
 
-def get_latest_clauses(timed_clauses):
+def get_latest_clauses(timed_clauses: list[Atom]) -> list[Atom]:
     """Given a list of timestamped clauses, return the latest clauses.
 
     For instance if the timestamped clauses are
@@ -586,14 +659,14 @@ def get_latest_clauses(timed_clauses):
     return [tc for tc in timed_clauses if get_time(tc) == lt]
 
 
-def get_early_clauses(timed_clauses):
+def get_early_clauses(timed_clauses: list[Atom]) -> list[Atom]:
     """Return all clauses that are not the latest."""
 
     lcs = set(get_latest_clauses(timed_clauses))
     return list(set(timed_clauses).difference(lcs))
 
 
-def get_total_lag(atom):
+def get_total_lag(atom: Atom) -> int:
     """Return the total lag between earliest and lastest subatoms of atom.
 
     For instance if the atom is
@@ -622,7 +695,7 @@ def get_total_lag(atom):
     return tlg
 
 
-def get_t0_execution(cogscm):
+def get_t0_execution(cogscm: Atom) -> Atom:
     """Extract the action of a cognitive schematic.
 
     Given a cognitive schematic of that formats
@@ -651,7 +724,7 @@ def get_t0_execution(cogscm):
     return execution
 
 
-def get_context_actual_truth(atomspace, cogscm, i):
+def get_context_actual_truth(atomspace: AtomSpace, cogscm: Atom, i: int) -> TruthValue:
     """Calculate tv of the context of cognitive schematic cogscm at time i.
 
     Given a cognitive schematic of that format
@@ -690,7 +763,7 @@ def get_context_actual_truth(atomspace, cogscm, i):
     return tv
 
 
-def get_event(timed_atom):
+def get_event(timed_atom: Atom) -> Atom:
     """Return the event in a clause that is a timestamped event
 
     For instance if clause is
@@ -706,13 +779,13 @@ def get_event(timed_atom):
     return timed_atom.out[0]
 
 
-def get_time(timed_atom):
+def get_time(timed_atom: Atom) -> Atom:
     """Given (AtTime A T) return T."""
 
     return timed_atom.out[1]
 
 
-def timestamp(atom, i, tv=None, nat=True):
+def timestamp(atom: Atom, i: int, tv=None, nat=True) -> Atom:
     """Timestamp a given atom.  Optionally set its TV
 
     AtTimeLink <tv>               # if tv is provided
@@ -727,7 +800,7 @@ def timestamp(atom, i, tv=None, nat=True):
     return AtTimeLink(atom, time, tv=tv)
 
 
-def nat_max(n, m):
+def nat_max(n: Atom, m: Atom) -> Atom:
 
     """Return the max between two naturals (including if they wrap variables)."""
 
@@ -738,7 +811,7 @@ def nat_max(n, m):
     return SLink(nat_max(n.out[0], m.out[0]))
 
 
-def to_nat(i):
+def to_nat(i: int) -> Atom:
     """Convert i to a Natural.
 
     For instance if i = 3, then it returns
@@ -755,7 +828,7 @@ def to_nat(i):
     return ret
 
 
-def lag_to_nat(i, T):
+def lag_to_nat(i: int, T: Atom):
     """Given an int i and T, return as many SLinks wrapping around T.
 
     For instance if i=3 and T=VariableNode("$T") return
@@ -772,7 +845,7 @@ def lag_to_nat(i, T):
     return ret
 
 
-def to_int(n):
+def to_int(n: Atom) -> int:
 
     """Convert n to an Int.
 
@@ -803,6 +876,11 @@ def to_scheme_str(vs) -> str:
         return "#f"
     else:
         return str(vs)
+
+
+def atomspace_to_str(atomspace: AtomSpace) -> str:
+    """Takes an atomspace and return its content as a string"""
+    return str(scheme_eval(atomspace, "(cog-get-all-roots)").decode("utf-8"))
 
 
 class MinerLogger:

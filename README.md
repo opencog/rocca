@@ -132,6 +132,15 @@ cd examples
 ../tests/mypy.sh
 ```
 
+Or directly run `mypy` on files or directories, such as
+
+```
+mypy rocca/rocca/agents/core.py
+```
+
+`tests/mypy.sh` merely calls mypy on all python files in the directory
+from which it is called while filtering out some error messages.
+
 ### Unit tests
 
 Simply run `pytest` in the root folder.
