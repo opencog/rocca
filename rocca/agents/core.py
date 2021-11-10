@@ -1227,8 +1227,24 @@ class OpencogAgent:
         # Return the action (we don't need the probability for now)
         return (action, pblty)
 
-    def step(self):
-        """Run one step of observation, decision and env update"""
+    # TODO: replace step by a better method name
+    def step(self) -> bool:
+        """Run one step of observation, decision and env update
+
+        1. Timestamp current observations in percepta record
+        2. Select the goal for that iteration
+        3. Find plans for that goal
+        4. Deduce a distribution of actions
+        5. Select the next action
+        6. Timestamp that action
+        7. Run that action
+        8. Collect the resulting observations and reward
+        9. Timestamp the reward
+
+        Return whether we're done for that session (as determined by
+        the environment).
+
+        """
 
         agent_log.debug("atomese_obs = {}".format(self.observation))
         obs_record = [
