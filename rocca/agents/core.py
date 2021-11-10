@@ -367,9 +367,9 @@ class OpencogAgent:
         if self.step_count == 0:
             return
 
-        # Exit if the confidence cannot increase
+        # Exit if the confidence will not increase
         conf = count_to_confidence(self.step_count)
-        if conf < atom.tv.confidence:
+        if conf <= atom.tv.confidence:
             return
 
         # Count the positive occurrences of atom across time
@@ -401,64 +401,23 @@ class OpencogAgent:
     def infer_cogscms(self) -> set[Atom]:
         """Discover cognitive schematics via reasoning.
 
-        For now only temporal deduction is implemented.
+        For now only temporal deduction is implemented and the
+        reasoning task is decomposed into 3 phases:
 
-        Return the set of inferred cognitive schematics.
+          1. Infer conditional conjunctions
+          2. Infer conjunctions TVs inside predictive implications
+          3. Infer temporal deductions
+
+        then return the set of inferred cognitive schematics.
 
         """
 
         agent_log.fine("infer_cogscms()")
 
-        # DEBUG: Log atomspaces to be sure it contains what we want
-        agent_log.fine("self.percepta_atomspace [count={}] = {}".format(
-            len(self.percepta_atomspace),
-            atomspace_to_str(self.percepta_atomspace)
-        ))
-        agent_log.fine("self.percepta_record [count={}] = {}".format(
-            len(self.percepta_record),
-            self.percepta_record
-        ))
-        agent_log.fine("self.cogscms_atomspace [count={}] = {}".format(
-            len(self.cogscms_atomspace),
-            atomspace_to_str(self.cogscms_atomspace)
-        ))
-        agent_log.fine("self.cognitive_schematics [count={}] = {}".format(
-            len(self.cognitive_schematics),
-            self.cognitive_schematics
-        ))
-        agent_log.fine("self.atomspace [count={}] = {}".format(
-            len(self.atomspace),
-            atomspace_to_str(self.atomspace)
-        ))
-
-        # NEXT: Infer the TVs of all antecedents and consequents of
-        # cognitive schematics.  This is required with the current
-        # version of temporal deduction used.
-        #
-        # Note: this needs to be done after
-        # back-predictive-implication-scope-conditional-conjunction-introduction!!!
-
-        # NEXT: Maybe we want to clear the working atomspace and copy
-        # the content of self.percepta_atomspace and
-        # self.cognitive_schematics before launching that round of
-        # reasoning.  Then later on we could use Linas atomspace
-        # combinations instead of copying atomspace content.
-        self.working_atomspace.clear()
-        add_to_atomspace(self.percepta_atomspace, self.working_atomspace)
-        add_to_atomspace(self.cogscms_atomspace, self.working_atomspace)
-        agent_log.fine("self.working_atomspace [count={}] = {}".format(
-            len(self.working_atomspace),
-            atomspace_to_str(self.working_atomspace)
-        ))
-
         # All resulting cognitive schematics
         cogscms: set[Atom] = set()
 
-        # NEXT: we probably want to create this query in a child
-        # atomspace of self.cogscms_atomspace
-        #
-        # cogscms_atomspace_child = AtomSpace(self.cogscms_atomspace)
-        # set_default_atomspace(cogscms_atomspace_child)
+        # 1. Infer conditional conjunctions
 
         # Call PLN to infer new cognitive schematics by combining
         # existing ones
@@ -473,56 +432,43 @@ class OpencogAgent:
                     UnquoteLink(T),
                     UnquoteLink(P),
                     UnquoteLink(Q)))
-        mi = 2
+        mi = 1
         rules = [
             "back-predictive-implication-scope-conditional-conjunction-introduction",
         ]
-
-        # Split in 3 operations
-        # 1. Infer conditional conjunctions
-        # 2. Infer conjunctions TVs
-        # 3. Infer temporal deductions
-
         cogscms = self.pln_fc(
             self.cogscms_atomspace,
             source,
-            maxiter=mi,
+            maximum_iterations=mi,
             rules=rules
         )
 
-        agent_log.fine("MID self.cogscms_atomspace [count={}] = {}".format(
-            len(self.cogscms_atomspace),
-            atomspace_to_str(self.cogscms_atomspace)
-        ))
-        agent_log.fine("MID self.working_atomspace [count={}] = {}".format(
-            len(self.working_atomspace),
-            atomspace_to_str(self.working_atomspace)
-        ))
+        # 2. Infer conjunctions TVs
 
-        # # Infer antecedents and consequents TVs of cognitive schematics
-        self.directly_evaluate_cogscms_ante_succ(self.working_atomspace)
+        # Infer antecedents and consequents TVs of cognitive schematics
+        self.directly_evaluate_cogscms_ante_succ(self.cogscms_atomspace)
 
-        # rules = [
-        #     "back-predictive-implication-scope-deduction-cogscm",
-        # ]
-        # cogscms = self.pln_fc(
-        #     # NEXT: use cogscms_atomspace
-        #     self.working_atomspace,
-        #     source,
-        #     maxiter=mi,
-        #     rules=rules
-        # )
+        # 3. Infer temporal deductions
 
-        agent_log.fine("AFTER self.cogscms_atomspace [count={}] = {}".format(
-            len(self.cogscms_atomspace),
-            atomspace_to_str(self.cogscms_atomspace)
-        ))
-        agent_log.fine("AFTER self.working_atomspace [count={}] = {}".format(
-            len(self.working_atomspace),
-            atomspace_to_str(self.working_atomspace)
+        # TODO: apply all rules for now (till the unifier gets fixed)
+        source = SetLink()
+        mi = 1
+        rules = [
+            "back-predictive-implication-scope-deduction-cogscm",
+        ]
+        inferred_cogscms = self.pln_fc(
+            self.cogscms_atomspace,
+            source,
+            maximum_iterations=mi,
+            rules=rules
+        )
+        cogscms.update(inferred_cogscms)
+
+        agent_log.fine("Inferred cognitive schematics [count={}] = {}".format(
+            len(cogscms),
+            cogscms
         ))
 
-        agent_log.fine("Inferred cognitive schematics = {}".format(cogscms))
         return cogscms
 
     def update_cognitive_schematics(self, new_cogscms: set[Atom]):
