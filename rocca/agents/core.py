@@ -339,10 +339,10 @@ class OpencogAgent:
                         "polyaction mining snd_action = {}".format(snd_action)
                     )
                     ma_prectxs = (lag, prectxs, [snd_action])
-                    las = (lag, ma_prectxs, postctxs)
+                    compo_las = (lag, ma_prectxs, postctxs)
                     # NEXT: use percepta_atomspace
                     pos_multi_srps = self.mine_temporal_patterns(
-                        self.atomspace, las
+                        self.atomspace, compo_las
                     )
                     agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
                     pos_multi_prdi = self.surprises_to_predictive_implications(
