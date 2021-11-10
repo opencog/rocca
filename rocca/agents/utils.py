@@ -68,6 +68,12 @@ def has_one_mean(atom: Atom) -> bool:
     return 1 <= atom.tv.mean
 
 
+def has_true_tv(atom: Atom) -> bool:
+    """Return True iff the given has a tv TRUE_TV."""
+
+    return atom.tv == TRUE_TV
+
+
 def count_to_confidence(count) -> float:
     """Convert TV count to confidence."""
 
