@@ -841,16 +841,15 @@ class OpencogAgent:
         return timed_clauses, lag
 
     def mine_temporal_patterns(self, atomspace: AtomSpace,
-                               las: tuple,
+                               las: tuple[int, Any, Any],
                                vardecl: Atom=None) -> list[Atom]:
         """Given nested lagged, antecedents, succedents, mine temporal patterns.
 
         More precisely it takes
 
-        # NEXT: should it be the atomspace to mine
-        # (which would bedetermined by Percepta Record anyway)?
-        # Or the atomspace to dump the result into?
-        1. an atomspace to mine
+        1. an atomspace to mine (NEXT: should it be the atomspace to
+        mine (which would bedetermined by Percepta Record anyway)?  Or
+        the atomspace to dump the result into?)
 
         2. las, a list of triples
 
@@ -861,7 +860,7 @@ class OpencogAgent:
 
         For instance the input is
 
-        (lag-2, (lag-1, X, Y), Z)
+        (lag-2, (lag-1, [X], [Y]), [Z])
 
         then it is transformed into the following initial pattern
 
@@ -1001,16 +1000,16 @@ class OpencogAgent:
     def get_all_uniq_atoms(self, atom: Atom) -> set[Atom]:
         """Return the set of all unique atoms in atom."""
 
-        # Base cases
-        if atom.is_node():
-            return {atom}
-
         # Recursive cases
         if atom.is_link():
             results = {atom}
             for o in atom.out:
                 results.union(self.get_all_uniq_atoms(o))
             return results
+
+        # Base cases (atom is a node)
+        return {atom}
+
 
     # TODO: move to its own class (MixtureModel or something)
     def complexity(self, atom: Atom) -> int:
