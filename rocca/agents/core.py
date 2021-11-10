@@ -791,18 +791,21 @@ class OpencogAgent:
         return cogscms
 
     def to_timed_clauses(self,
-                         lagged_antecedents_succedents: tuple,
+                         las: tuple[int, Any, Any],
                          T: Atom) -> tuple[list[Atom], int]:
         """Turn nested lagged, antecedents, succedents to AtTime clauses.
 
         For instance the input is
 
-        (lag-2, (lag-1, X, Y), Z)
+        (lag-2, (lag-1, [X1, X2], [Y]), [Z])
 
         then it is transformed into the following clauses
 
         [AtTime
-           X
+           X1
+           T,
+        AtTime
+           X2
            T,
          AtTime
            Y
@@ -821,15 +824,17 @@ class OpencogAgent:
 
         """
 
-        lag = lagged_antecedents_succedents[0]
-        antecedents = lagged_antecedents_succedents[1]
-        succedents = lagged_antecedents_succedents[2]
+        agent_log.fine("to_timed_clauses(las={}, T={})".format(las, T))
 
-        if type(antecedents) is tuple:
+        lag = las[0]
+        antecedents = las[1]
+        succedents = las[2]
+
+        if type(antecedents) is list:
+            timed_clauses = [AtTimeLink(ante, T) for ante in antecedents]
+        else:
             timed_clauses, reclag = self.to_timed_clauses(antecedents, T)
             lag += reclag
-        else:
-            timed_clauses = [AtTimeLink(ante, T) for ante in antecedents]
 
         lagnat = lag_to_nat(lag, T)
         timed_clauses += [AtTimeLink(succ, lagnat) for succ in succedents]
