@@ -353,33 +353,40 @@ class OpencogAgent:
         agent_log.fine("Mined cognitive schematics = {}".format(cogscms))
         return cogscms
 
-    def directly_evaluate_conjunction(self, conjuncts: set[Atom]) -> Atom:
-        """Directly evaluate the TV of a conjunction of atoms.
+    def directly_evaluate(self, atom: Atom):
+        """Directly evaluate the TV of the given atoms.
 
-        conjunctions is a set of atoms and it returns a conjunction of
-        atoms with its properly updated.
+        If the atom is a conjunction, then split that atom into
+        conjuncts and directly evaluate their combination.
 
         """
 
-        agent_log.fine("directly_evaluate_conjunction(conjuncts={})".format(conjuncts))
+        agent_log.fine("directly_evaluate(atom={})".format(atom))
 
+        # Exit now to avoid division by zero
+        if self.step_count == 0:
+            return
+
+        # Exit if the confidence cannot increase
+        conf = count_to_confidence(self.step_count)
+        if conf < atom.tv.confidence:
+            return
+
+        # Count the positive occurrences of atom across time
         pos_count = 0
         for timed_events in self.percepta_record:
-            agent_log.fine("timed_events = {}".format(timed_events))
+            # agent_log.fine("timed_events = {}".format(timed_events))
             events = set(get_events(timed_events))
-            if conjuncts <= events:
+            # agent_log.fine("events = {}".format(events))
+            conjuncts = set(atom.out) if is_and(atom) else {atom}
+            # For now only absolutely true percepta are considered
+            all_true_tv = all(has_true_tv(cjn) for cjn in conjuncts)
+            if conjuncts <= events and all_true_tv:
                 pos_count += 1
-            # NEXT: check timestamped TV
-            # and has_one_mean(timed_percept) \
-            # and has_non_null_confidence(timed_percept):
 
+        # Update the TV of atom
         mean = float(pos_count) / float(self.step_count)
-        count = self.step_count
-        # NEXT: make sure the atomspace is correct
-        # return AndLink(conjuncts).truth_value(mean, count)
-        atom = conjuncts.pop()
-        atom.truth_value(mean, count)
-        return atom
+        atom.truth_value(mean, conf)
 
     def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace):
         """Directly evaluate the TVs of all cogscms outgoings."""
