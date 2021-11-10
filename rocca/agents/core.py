@@ -1107,7 +1107,7 @@ class OpencogAgent:
         else:
             return 0.0
 
-    def deduce(self, cogscms):
+    def deduce(self, cogscms: list[Atom]) -> omdict:
         """Return an action distribution given a list cognitive schematics.
 
         The action distribution is actually a second order
@@ -1208,7 +1208,7 @@ class OpencogAgent:
 
         return mxmdl
 
-    def decide(self, mxmdl):
+    def decide(self, mxmdl: omdict) -> tuple[Atom, float]:
         """Select the next action to enact from a mixture model of cogscms.
 
         The action is selected from the action distribution, a list of
