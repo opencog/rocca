@@ -50,7 +50,7 @@ class OpencogAgent:
         set_default_atomspace(self.atomspace)
 
         self.env = env
-        self.observation, _, _ = self.env.restart()
+        _, self.observation, _ = self.env.restart()
         self.step_count = 0
         self.accumulated_reward = 0
         self.percepta_record_cpt = ConceptNode("Percepta Record")
@@ -1285,7 +1285,7 @@ class OpencogAgent:
         # Increase the step count and run the next step of the environment
         self.step_count += 1
         # TODO gather environment info.
-        self.observation, reward, done = self.env.step(action)
+        reward, self.observation, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
         agent_log.debug("observation = {}".format(self.observation))
         agent_log.debug("reward = {}".format(reward))
