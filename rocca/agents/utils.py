@@ -83,8 +83,8 @@ def has_one_mean(atom: Atom) -> bool:
     return 1 <= atom.tv.mean
 
 
-def has_true_tv(atom: Atom) -> bool:
-    """Return True iff the given has a tv TRUE_TV."""
+def is_true(atom: Atom) -> bool:
+    """Return True iff the given has a tv equal to TRUE_TV."""
 
     return atom.tv == TRUE_TV
 
