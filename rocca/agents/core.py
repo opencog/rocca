@@ -372,16 +372,13 @@ class OpencogAgent:
         if conf <= atom.tv.confidence:
             return
 
-        # Count the positive occurrences of atom across time
+        # Count the positive occurrences of atom across time (percepta
+        # are assumed to be absolutely true).
         pos_count = 0
         for timed_events in self.percepta_record:
-            # agent_log.fine("timed_events = {}".format(timed_events))
             events = set(get_events(timed_events))
-            # agent_log.fine("events = {}".format(events))
             conjuncts = set(atom.out) if is_and(atom) else {atom}
-            # For now only absolutely true percepta are considered
-            all_true_tv = all(has_true_tv(cjn) for cjn in conjuncts)
-            if conjuncts <= events and all_true_tv:
+            if conjuncts <= events:
                 pos_count += 1
 
         # Update the TV of atom
