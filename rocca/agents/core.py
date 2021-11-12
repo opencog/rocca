@@ -1032,7 +1032,6 @@ class OpencogAgent:
         # Base cases (atom is a node)
         return {atom}
 
-
     # TODO: move to its own class (MixtureModel or something)
     def complexity(self, atom: Atom) -> int:
         """Return the count of all unique atoms in atom."""

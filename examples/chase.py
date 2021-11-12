@@ -11,7 +11,14 @@ import time
 import gym
 
 # OpenCog
-from opencog.type_constructors import ExecutionLink, SchemaNode, EvaluationLink, PredicateNode, NumberNode, ConceptNode
+from opencog.type_constructors import (
+    ExecutionLink,
+    SchemaNode,
+    EvaluationLink,
+    PredicateNode,
+    NumberNode,
+    ConceptNode,
+)
 from opencog.utilities import set_default_atomspace
 from opencog.pln import *
 from opencog.ure import ure_logger
