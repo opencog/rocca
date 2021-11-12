@@ -97,9 +97,7 @@ class ChaseAgent(OpencogAgent):
 
         # Create Action Space. The set of allowed actions an agent can take.
         # TODO take care of action parameters.
-        # TODO: temporary disable Stay to speed up learning
-        # action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_names}
-        action_space = {ExecutionLink(SchemaNode(a)) for a in ["Go Left", "Go Right", "Eat"]}
+        action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_names}
 
         # Create Goal
         pgoal = EvaluationLink(PredicateNode("Reward"), NumberNode("1"))
