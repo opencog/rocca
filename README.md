@@ -52,7 +52,7 @@ The next steps are
 OpenCog tools
 
 - cogutil
-- atomspace
+- atomspace (revision b15826224, others have a bug in the pattern matcher)
 - ure
 - spacetime
 - pln
