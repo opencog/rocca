@@ -14,10 +14,27 @@ from typing import Any
 # OpenCog
 from opencog.atomspace import Atom, AtomSpace
 from opencog.spacetime import AtTimeLink, TimeNode
-from opencog.pln import SLink, ZLink, BackPredictiveImplicationScopeLink, BackSequentialAndLink
+from opencog.pln import (
+    SLink,
+    ZLink,
+    BackPredictiveImplicationScopeLink,
+    BackSequentialAndLink,
+)
 from opencog.scheme import scheme_eval, scheme_eval_h
 from opencog.utilities import is_closed, set_default_atomspace
-from opencog.type_constructors import ConceptNode, AndLink, EvaluationLink, PredicateNode, NumberNode, VariableNode, SetLink, LambdaLink, QuoteLink, UnquoteLink, MemberLink
+from opencog.type_constructors import (
+    ConceptNode,
+    AndLink,
+    EvaluationLink,
+    PredicateNode,
+    NumberNode,
+    VariableNode,
+    SetLink,
+    LambdaLink,
+    QuoteLink,
+    UnquoteLink,
+    MemberLink,
+)
 
 from rocca.envs.wrappers import Wrapper
 
@@ -43,7 +60,7 @@ class OpencogAgent:
         log_level="debug",
     ):
         # Construct the various atomspaces
-        self.atomspace = atomspace # Working atomspace
+        self.atomspace = atomspace  # Working atomspace
         self.percepta_atomspace = AtomSpace()
         self.cogscms_atomspace = AtomSpace()
         self.working_atomspace = AtomSpace()
@@ -185,7 +202,7 @@ class OpencogAgent:
 
         return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
-    def pln_load_rules(self, rules: list[str]=[]):
+    def pln_load_rules(self, rules: list[str] = []):
         """Load PLN rules.
 
         Take a list of rule scheme symbols (but without the single
@@ -199,13 +216,15 @@ class OpencogAgent:
         for rule in rules:
             scheme_eval(self.atomspace, "(pln-load-rule '" + rule + ")")
 
-    def pln_fc(self,
-               atomspace: AtomSpace,
-               source: Atom,
-               vardecl=None,
-               maximum_iterations: int=10,
-               full_rule_application: bool=False,
-               rules: list[str]=[]) -> set[Atom]:
+    def pln_fc(
+        self,
+        atomspace: AtomSpace,
+        source: Atom,
+        vardecl=None,
+        maximum_iterations: int = 10,
+        full_rule_application: bool = False,
+        rules: list[str] = [],
+    ) -> set[Atom]:
         """Call PLN forward chainer with the given source and parameters.
 
         The parameters are
@@ -219,12 +238,14 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={})".format(
-            atomspace,
-            source,
-            maximum_iterations,
-            full_rule_application,
-        ))
+        agent_log.fine(
+            "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={})".format(
+                atomspace,
+                source,
+                maximum_iterations,
+                full_rule_application,
+            )
+        )
 
         # Add rules (should be previously loaded)
         if rules:
@@ -243,12 +264,14 @@ class OpencogAgent:
         command += ")"
         return set(scheme_eval_h(atomspace, command).out)
 
-    def pln_bc(self,
-               atomspace: AtomSpace,
-               target: Atom,
-               vardecl=None,
-               maximum_iterations: int=10,
-               rules: list[str]=[]) -> set[Atom]:
+    def pln_bc(
+        self,
+        atomspace: AtomSpace,
+        target: Atom,
+        vardecl=None,
+        maximum_iterations: int = 10,
+        rules: list[str] = [],
+    ) -> set[Atom]:
         """Call PLN backward chainer with the given target and parameters.
 
         The parameters are
@@ -260,11 +283,11 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("pln_bc(atomspace={}, target={}, maximum_iterations={})".format(
-            atomspace,
-            target,
-            maximum_iterations
-        ))
+        agent_log.fine(
+            "pln_bc(atomspace={}, target={}, maximum_iterations={})".format(
+                atomspace, target, maximum_iterations
+            )
+        )
 
         # Add rules (should be previously loaded)
         if rules:
@@ -422,22 +445,17 @@ class OpencogAgent:
         T = VariableNode("$T")
         P = VariableNode("$P")
         Q = VariableNode("$Q")
-        source = \
-            QuoteLink(
-                BackPredictiveImplicationScopeLink(
-                    UnquoteLink(V),
-                    UnquoteLink(T),
-                    UnquoteLink(P),
-                    UnquoteLink(Q)))
+        source = QuoteLink(
+            BackPredictiveImplicationScopeLink(
+                UnquoteLink(V), UnquoteLink(T), UnquoteLink(P), UnquoteLink(Q)
+            )
+        )
         mi = 1
         rules = [
             "back-predictive-implication-scope-conditional-conjunction-introduction",
         ]
         cogscms = self.pln_fc(
-            self.cogscms_atomspace,
-            source,
-            maximum_iterations=mi,
-            rules=rules
+            self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
         )
 
         # 2. Infer conjunctions TVs
@@ -447,6 +465,12 @@ class OpencogAgent:
 
         # 3. Infer temporal deductions
 
+        agent_log.fine(
+            "cogscms_atomspace before temporal deduction [count={}] = {}".format(
+                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
+            )
+        )
+
         # TODO: apply all rules for now (till the unifier gets fixed)
         source = SetLink()
         mi = 1
@@ -454,17 +478,15 @@ class OpencogAgent:
             "back-predictive-implication-scope-deduction-cogscm",
         ]
         inferred_cogscms = self.pln_fc(
-            self.cogscms_atomspace,
-            source,
-            maximum_iterations=mi,
-            rules=rules
+            self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
         )
         cogscms.update(inferred_cogscms)
 
-        agent_log.fine("Inferred cognitive schematics [count={}] = {}".format(
-            len(cogscms),
-            cogscms
-        ))
+        agent_log.fine(
+            "Inferred cognitive schematics [count={}] = {}".format(
+                len(cogscms), cogscms
+            )
+        )
 
         return cogscms
 
@@ -747,7 +769,10 @@ class OpencogAgent:
         # Calculate the truth value of the predictive implication
         mi = 2
         rules = ["back-predictive-implication-scope-direct-evaluation"]
-        return self.pln_bc(self.atomspace, preimp, maximum_iterations=mi, rules=rules).pop()
+        # TODO: use working_atomspace
+        return self.pln_bc(
+            self.atomspace, preimp, maximum_iterations=mi, rules=rules
+        ).pop()
 
     def is_desirable(self, cogscm: Atom) -> bool:
         """Return True iff the cognitive schematic is desirable.
@@ -768,11 +793,11 @@ class OpencogAgent:
             and has_non_null_confidence(cogscm)
             and is_closed(get_t0_execution(cogscm))
             and has_all_variables_in_antecedent(cogscm)
-            and (not(self.true_cogscm) or has_one_mean(cogscm))
-            and (not(self.empty_vardecl_cogscm) or has_empty_vardecl(cogscm))
+            and (not self.true_cogscm or has_one_mean(cogscm))
+            and (not self.empty_vardecl_cogscm or has_empty_vardecl(cogscm))
         )
 
-    def surprises_to_predictive_implications(self, srps : Atom) -> list[Atom]:
+    def surprises_to_predictive_implications(self, srps: Atom) -> list[Atom]:
         """Like to_predictive_implication but takes surprises."""
 
         agent_log.fine("surprises_to_predictive_implications(srps={})".format(srps))
@@ -787,9 +812,9 @@ class OpencogAgent:
 
         return cogscms
 
-    def to_timed_clauses(self,
-                         las: tuple[int, Any, Any],
-                         T: Atom) -> tuple[list[Atom], int]:
+    def to_timed_clauses(
+        self, las: tuple[int, Any, Any], T: Atom
+    ) -> tuple[list[Atom], int]:
         """Turn nested lagged, antecedents, succedents to AtTime clauses.
 
         For instance the input is
@@ -837,9 +862,9 @@ class OpencogAgent:
         timed_clauses += [AtTimeLink(succ, lagnat) for succ in succedents]
         return timed_clauses, lag
 
-    def mine_temporal_patterns(self, atomspace: AtomSpace,
-                               las: tuple[int, Any, Any],
-                               vardecl: Atom=None) -> list[Atom]:
+    def mine_temporal_patterns(
+        self, atomspace: AtomSpace, las: tuple[int, Any, Any], vardecl: Atom = None
+    ) -> list[Atom]:
         """Given nested lagged, antecedents, succedents, mine temporal patterns.
 
         More precisely it takes
