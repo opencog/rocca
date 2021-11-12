@@ -51,7 +51,7 @@ class OpencogAgent:
 
         self.env = env
         self.observation, _, _ = self.env.restart()
-        self.step_count = 0
+        self.cycle_count = 0
         self.accumulated_reward = 0
         self.percepta_record_cpt = ConceptNode("Percepta Record")
         # The percepta_record is a list of sets of timestamped
@@ -364,11 +364,11 @@ class OpencogAgent:
         agent_log.fine("directly_evaluate(atom={})".format(atom))
 
         # Exit now to avoid division by zero
-        if self.step_count == 0:
+        if self.cycle_count == 0:
             return
 
         # Exit if the confidence will not increase
-        conf = count_to_confidence(self.step_count)
+        conf = count_to_confidence(self.cycle_count)
         if conf <= atom.tv.confidence:
             return
 
@@ -382,7 +382,7 @@ class OpencogAgent:
                 pos_count += 1
 
         # Update the TV of atom
-        mean = float(pos_count) / float(self.step_count)
+        mean = float(pos_count) / float(self.cycle_count)
         atom.truth_value(mean, conf)
 
     def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace):
@@ -1177,7 +1177,7 @@ class OpencogAgent:
         # result, as they allegedly exert an unknown influence (via
         # their invalid parts).
         ctx_tv = lambda cogscm: get_context_actual_truth(
-            self.atomspace, cogscm, self.step_count
+            self.atomspace, cogscm, self.cycle_count
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
         agent_log.fine("valid_cogscms = {}".format(valid_cogscms))
@@ -1224,19 +1224,27 @@ class OpencogAgent:
         # Return the action (we don't need the probability for now)
         return (action, pblty)
 
-    # TODO: replace step by a better method name
-    def step(self) -> bool:
-        """Run one step of observation, decision and env update
+    def control_cycle(self) -> bool:
+        """Run one cycle of
 
-        1. Timestamp current observations in percepta record
-        2. Select the goal for that iteration
-        3. Find plans for that goal
-        4. Deduce a distribution of actions
-        5. Select the next action
-        6. Timestamp that action
-        7. Run that action
-        8. Collect the resulting observations and reward
-        9. Timestamp the reward
+        1. Observe
+        2. Plan
+        3. Act
+
+        More precisely
+
+        1. Observe
+        1.1. Timestamp current observations in percepta record
+        2. Plan
+        2.1. Select the goal for that iteration
+        2.2. Find plans for that goal
+        2.3. Deduce a distribution of actions
+        2.4. Select the next action
+        3. Act
+        3.1. Timestamp that action
+        3.2. Run that action (update the environment)
+        3.3. save the resulting observations and reward
+        3.4. Timestamp the reward
 
         Return whether we're done for that session (as determined by
         the environment).
@@ -1245,7 +1253,7 @@ class OpencogAgent:
 
         agent_log.debug("atomese_obs = {}".format(self.observation))
         obs_record = [
-            self.record(o, self.step_count, tv=TRUE_TV) for o in self.observation
+            self.record(o, self.cycle_count, tv=TRUE_TV) for o in self.observation
         ]
         agent_log.debug("obs_record = {}".format(obs_record))
 
@@ -1271,7 +1279,7 @@ class OpencogAgent:
         )
 
         # Timestamp the action that is about to be executed
-        action_record = self.record(action, self.step_count, tv=TRUE_TV)
+        action_record = self.record(action, self.cycle_count, tv=TRUE_TV)
         agent_log.debug("action_record = {}".format(action_record))
         agent_log.debug("action = {}".format(action))
 
@@ -1280,7 +1288,7 @@ class OpencogAgent:
         agent_log.debug("action_counter = {}".format(self.action_counter))
 
         # Increase the step count and run the next step of the environment
-        self.step_count += 1
+        self.cycle_count += 1
         # TODO gather environment info.
         self.observation, reward, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
@@ -1288,7 +1296,7 @@ class OpencogAgent:
         agent_log.debug("reward = {}".format(reward))
         agent_log.debug("accumulated reward = {}".format(self.accumulated_reward))
 
-        reward_record = self.record(reward, self.step_count, tv=TRUE_TV)
+        reward_record = self.record(reward, self.cycle_count, tv=TRUE_TV)
         agent_log.debug("reward_record = {}".format(reward_record))
 
         return done

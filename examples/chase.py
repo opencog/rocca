@@ -144,10 +144,10 @@ if __name__ == "__main__":
         # Run agent to accumulate percepta
         agent_log.info("Start training ({}/{})".format(i + 1, lt_iterations))
         for j in range(lt_period):
-            ca.step()
+            ca.control_cycle()
             wrapped_env.render()
             time.sleep(0.1)
-            log.info("step_count = {}".format(ca.step_count))
+            log.info("cycle_count = {}".format(ca.cycle_count))
         nar = ca.accumulated_reward - par
         agent_log.info(
             "Accumulated reward during {}th iteration = {}".format(i + 1, nar)
