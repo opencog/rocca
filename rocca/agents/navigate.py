@@ -30,11 +30,11 @@ class NavigateAgent(OpencogAgent):
     def __init__(self, env, action_space, p_goal, n_goal, log_level="info"):
         OpencogAgent.__init__(self, env, action_space, p_goal, n_goal, log_level)
 
-    def step(self):
+    def control_cycle(self):
         """Run one step of observation, decision and env update"""
         agent_log.debug("atomese_obs = {}".format(self.observation))
         obs_record = [
-            self.record(o, self.step_count, tv=TRUE_TV) for o in self.observation
+            self.record(o, self.cycle_count, tv=TRUE_TV) for o in self.observation
         ]
         agent_log.debug("obs_record = {}".format(obs_record))
 
@@ -60,7 +60,7 @@ class NavigateAgent(OpencogAgent):
         )
 
         # Timestamp the action that is about to be executed
-        action_record = self.record(action, self.step_count, tv=TRUE_TV)
+        action_record = self.record(action, self.cycle_count, tv=TRUE_TV)
         agent_log.debug("action_record = {}".format(action_record))
         agent_log.debug("action = {}".format(action))
 
@@ -69,7 +69,7 @@ class NavigateAgent(OpencogAgent):
         agent_log.debug("action_counter = {}".format(self.action_counter))
 
         # Increase the step count and run the next step of the environment
-        self.step_count += 1
+        self.cycle_count += 1
         # TODO gather environment info.
         reward, self.observation, done = self.env.step(
             minerl_single_action(self.env, action)
@@ -80,7 +80,7 @@ class NavigateAgent(OpencogAgent):
         agent_log.debug("reward = {}".format(reward))
         agent_log.debug("accumulated reward = {}".format(self.accumulated_reward))
 
-        reward_record = self.record(reward, self.step_count, tv=TRUE_TV)
+        reward_record = self.record(reward, self.cycle_count, tv=TRUE_TV)
         agent_log.debug("reward_record = {}".format(reward_record))
 
         if done:
