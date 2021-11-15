@@ -69,7 +69,7 @@ class MalmoWrapper(Wrapper):
         else:
             obs_list = []
 
-        return mk_evaluation("Reward", rw), obs_list, not ws.is_mission_running
+        return obs_list, mk_evaluation("Reward", rw), not ws.is_mission_running
 
     @staticmethod
     def restart_decorator(restart):
