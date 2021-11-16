@@ -13,6 +13,12 @@ jobs:
           sudo touch $GITHUB_PATH
           sudo chown $(whoami) $GITHUB_PATH
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Add .local Python library dir to sys.path
+        run: |
+          sudo touch $GITHUB_ENV
+          sudo chown $(whoami) $GITHUB_ENV
+          export PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
+          echo "PYTHONPATH=$HOME/.local/lib/python$PYTHON_VERSION/site-packages" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: Install the library
         run: |
