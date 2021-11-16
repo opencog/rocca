@@ -9,7 +9,10 @@ jobs:
       - name: Make the workspace accessible
         run: sudo chown -R $(whoami) $GITHUB_WORKSPACE
       - name: Add .local/bin to PATH
-        run: sudo sh -c 'echo "$HOME/.local/bin" >> $GITHUB_PATH'
+        run: |
+          sudo touch $GITHUB_PATH
+          sudo chown $(whoami) $GITHUB_PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
       - uses: actions/checkout@v2
       - name: Install the library
         run: |
