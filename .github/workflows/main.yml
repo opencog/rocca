@@ -7,7 +7,7 @@ jobs:
       image: synthillect/opencog-minerl
     steps:
       - name: Make the workspace accessible
-        run: sudo chown -R opencog $GITHUB_WORKSPACE
+        run: sudo chown -R $USER $GITHUB_WORKSPACE
       - uses: actions/checkout@v2
       - name: Install the library
         run: |
