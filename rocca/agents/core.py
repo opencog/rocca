@@ -14,10 +14,27 @@ from typing import Any
 # OpenCog
 from opencog.atomspace import Atom, AtomSpace
 from opencog.spacetime import AtTimeLink, TimeNode
-from opencog.pln import SLink, ZLink, BackPredictiveImplicationScopeLink, BackSequentialAndLink
+from opencog.pln import (
+    SLink,
+    ZLink,
+    BackPredictiveImplicationScopeLink,
+    BackSequentialAndLink,
+)
 from opencog.scheme import scheme_eval, scheme_eval_h
 from opencog.utilities import is_closed, set_default_atomspace
-from opencog.type_constructors import ConceptNode, AndLink, EvaluationLink, PredicateNode, NumberNode, VariableNode, SetLink, LambdaLink, QuoteLink, UnquoteLink, MemberLink
+from opencog.type_constructors import (
+    ConceptNode,
+    AndLink,
+    EvaluationLink,
+    PredicateNode,
+    NumberNode,
+    VariableNode,
+    SetLink,
+    LambdaLink,
+    QuoteLink,
+    UnquoteLink,
+    MemberLink,
+)
 
 from rocca.envs.wrappers import Wrapper
 
@@ -43,7 +60,7 @@ class OpencogAgent:
         log_level="debug",
     ):
         # Construct the various atomspaces
-        self.atomspace = atomspace # Working atomspace
+        self.atomspace = atomspace  # Working atomspace
         self.percepta_atomspace = AtomSpace()
         self.cogscms_atomspace = AtomSpace()
         self.working_atomspace = AtomSpace()
@@ -51,7 +68,7 @@ class OpencogAgent:
 
         self.env = env
         self.observation, _, _ = self.env.restart()
-        self.step_count = 0
+        self.cycle_count = 0
         self.accumulated_reward = 0
         self.percepta_record_cpt = ConceptNode("Percepta Record")
         # The percepta_record is a list of sets of timestamped
@@ -185,7 +202,7 @@ class OpencogAgent:
 
         return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
-    def pln_load_rules(self, rules: list[str]=[]):
+    def pln_load_rules(self, rules: list[str] = []):
         """Load PLN rules.
 
         Take a list of rule scheme symbols (but without the single
@@ -199,13 +216,15 @@ class OpencogAgent:
         for rule in rules:
             scheme_eval(self.atomspace, "(pln-load-rule '" + rule + ")")
 
-    def pln_fc(self,
-               atomspace: AtomSpace,
-               source: Atom,
-               vardecl=None,
-               maximum_iterations: int=10,
-               full_rule_application: bool=False,
-               rules: list[str]=[]) -> set[Atom]:
+    def pln_fc(
+        self,
+        atomspace: AtomSpace,
+        source: Atom,
+        vardecl=None,
+        maximum_iterations: int = 10,
+        full_rule_application: bool = False,
+        rules: list[str] = [],
+    ) -> set[Atom]:
         """Call PLN forward chainer with the given source and parameters.
 
         The parameters are
@@ -219,12 +238,14 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={})".format(
-            atomspace,
-            source,
-            maximum_iterations,
-            full_rule_application,
-        ))
+        agent_log.fine(
+            "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={})".format(
+                atomspace,
+                source,
+                maximum_iterations,
+                full_rule_application,
+            )
+        )
 
         # Add rules (should be previously loaded)
         if rules:
@@ -233,6 +254,9 @@ class OpencogAgent:
                 er = scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
                 # agent_log.fine("(pln-add-rule '" + rule + ")")
                 # agent_log.fine("er = " + str(er))
+
+        # Supreme debugging (uncomment to enable)
+        # agent_log.fine("atomspace [count={}]:\n{}".format(len(atomspace), atomspace))
 
         # Generate and run query
         command = "(pln-fc "
@@ -243,12 +267,14 @@ class OpencogAgent:
         command += ")"
         return set(scheme_eval_h(atomspace, command).out)
 
-    def pln_bc(self,
-               atomspace: AtomSpace,
-               target: Atom,
-               vardecl=None,
-               maximum_iterations: int=10,
-               rules: list[str]=[]) -> set[Atom]:
+    def pln_bc(
+        self,
+        atomspace: AtomSpace,
+        target: Atom,
+        vardecl=None,
+        maximum_iterations: int = 10,
+        rules: list[str] = [],
+    ) -> set[Atom]:
         """Call PLN backward chainer with the given target and parameters.
 
         The parameters are
@@ -260,11 +286,11 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("pln_bc(atomspace={}, target={}, maximum_iterations={})".format(
-            atomspace,
-            target,
-            maximum_iterations
-        ))
+        agent_log.fine(
+            "pln_bc(atomspace={}, target={}, maximum_iterations={})".format(
+                atomspace, target, maximum_iterations
+            )
+        )
 
         # Add rules (should be previously loaded)
         if rules:
@@ -273,6 +299,9 @@ class OpencogAgent:
                 er = scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
                 # agent_log.fine("(pln-add-rule '" + rule + ")")
                 # agent_log.fine("er = " + str(er))
+
+        # Supreme debugging (uncomment to enable)
+        # agent_log.fine("atomspace [count={}]:\n{}".format(len(atomspace), atomspace))
 
         # Generate and run query
         command = "(pln-bc "
@@ -364,28 +393,25 @@ class OpencogAgent:
         agent_log.fine("directly_evaluate(atom={})".format(atom))
 
         # Exit now to avoid division by zero
-        if self.step_count == 0:
+        if self.cycle_count == 0:
             return
 
         # Exit if the confidence will not increase
-        conf = count_to_confidence(self.step_count)
+        conf = count_to_confidence(self.cycle_count)
         if conf <= atom.tv.confidence:
             return
 
-        # Count the positive occurrences of atom across time
+        # Count the positive occurrences of atom across time (percepta
+        # are assumed to be absolutely true).
         pos_count = 0
         for timed_events in self.percepta_record:
-            # agent_log.fine("timed_events = {}".format(timed_events))
             events = set(get_events(timed_events))
-            # agent_log.fine("events = {}".format(events))
             conjuncts = set(atom.out) if is_and(atom) else {atom}
-            # For now only absolutely true percepta are considered
-            all_true_tv = all(has_true_tv(cjn) for cjn in conjuncts)
-            if conjuncts <= events and all_true_tv:
+            if conjuncts <= events:
                 pos_count += 1
 
         # Update the TV of atom
-        mean = float(pos_count) / float(self.step_count)
+        mean = float(pos_count) / float(self.cycle_count)
         atom.truth_value(mean, conf)
 
     def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace):
@@ -425,22 +451,17 @@ class OpencogAgent:
         T = VariableNode("$T")
         P = VariableNode("$P")
         Q = VariableNode("$Q")
-        source = \
-            QuoteLink(
-                BackPredictiveImplicationScopeLink(
-                    UnquoteLink(V),
-                    UnquoteLink(T),
-                    UnquoteLink(P),
-                    UnquoteLink(Q)))
+        source = QuoteLink(
+            BackPredictiveImplicationScopeLink(
+                UnquoteLink(V), UnquoteLink(T), UnquoteLink(P), UnquoteLink(Q)
+            )
+        )
         mi = 1
         rules = [
             "back-predictive-implication-scope-conditional-conjunction-introduction",
         ]
         cogscms = self.pln_fc(
-            self.cogscms_atomspace,
-            source,
-            maximum_iterations=mi,
-            rules=rules
+            self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
         )
 
         # 2. Infer conjunctions TVs
@@ -450,6 +471,12 @@ class OpencogAgent:
 
         # 3. Infer temporal deductions
 
+        agent_log.fine(
+            "cogscms_atomspace before temporal deduction [count={}] = {}".format(
+                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
+            )
+        )
+
         # TODO: apply all rules for now (till the unifier gets fixed)
         source = SetLink()
         mi = 1
@@ -457,17 +484,15 @@ class OpencogAgent:
             "back-predictive-implication-scope-deduction-cogscm",
         ]
         inferred_cogscms = self.pln_fc(
-            self.cogscms_atomspace,
-            source,
-            maximum_iterations=mi,
-            rules=rules
+            self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
         )
         cogscms.update(inferred_cogscms)
 
-        agent_log.fine("Inferred cognitive schematics [count={}] = {}".format(
-            len(cogscms),
-            cogscms
-        ))
+        agent_log.fine(
+            "Inferred cognitive schematics [count={}] = {}".format(
+                len(cogscms), cogscms
+            )
+        )
 
         return cogscms
 
@@ -750,7 +775,10 @@ class OpencogAgent:
         # Calculate the truth value of the predictive implication
         mi = 2
         rules = ["back-predictive-implication-scope-direct-evaluation"]
-        return self.pln_bc(self.atomspace, preimp, maximum_iterations=mi, rules=rules).pop()
+        # TODO: use working_atomspace
+        return self.pln_bc(
+            self.atomspace, preimp, maximum_iterations=mi, rules=rules
+        ).pop()
 
     def is_desirable(self, cogscm: Atom) -> bool:
         """Return True iff the cognitive schematic is desirable.
@@ -771,11 +799,11 @@ class OpencogAgent:
             and has_non_null_confidence(cogscm)
             and is_closed(get_t0_execution(cogscm))
             and has_all_variables_in_antecedent(cogscm)
-            and (not(self.true_cogscm) or has_one_mean(cogscm))
-            and (not(self.empty_vardecl_cogscm) or has_empty_vardecl(cogscm))
+            and (not self.true_cogscm or has_one_mean(cogscm))
+            and (not self.empty_vardecl_cogscm or has_empty_vardecl(cogscm))
         )
 
-    def surprises_to_predictive_implications(self, srps : Atom) -> list[Atom]:
+    def surprises_to_predictive_implications(self, srps: Atom) -> list[Atom]:
         """Like to_predictive_implication but takes surprises."""
 
         agent_log.fine("surprises_to_predictive_implications(srps={})".format(srps))
@@ -790,9 +818,9 @@ class OpencogAgent:
 
         return cogscms
 
-    def to_timed_clauses(self,
-                         las: tuple[int, Any, Any],
-                         T: Atom) -> tuple[list[Atom], int]:
+    def to_timed_clauses(
+        self, las: tuple[int, Any, Any], T: Atom
+    ) -> tuple[list[Atom], int]:
         """Turn nested lagged, antecedents, succedents to AtTime clauses.
 
         For instance the input is
@@ -840,9 +868,9 @@ class OpencogAgent:
         timed_clauses += [AtTimeLink(succ, lagnat) for succ in succedents]
         return timed_clauses, lag
 
-    def mine_temporal_patterns(self, atomspace: AtomSpace,
-                               las: tuple[int, Any, Any],
-                               vardecl: Atom=None) -> list[Atom]:
+    def mine_temporal_patterns(
+        self, atomspace: AtomSpace, las: tuple[int, Any, Any], vardecl: Atom = None
+    ) -> list[Atom]:
         """Given nested lagged, antecedents, succedents, mine temporal patterns.
 
         More precisely it takes
@@ -1009,7 +1037,6 @@ class OpencogAgent:
 
         # Base cases (atom is a node)
         return {atom}
-
 
     # TODO: move to its own class (MixtureModel or something)
     def complexity(self, atom: Atom) -> int:
@@ -1180,7 +1207,7 @@ class OpencogAgent:
         # result, as they allegedly exert an unknown influence (via
         # their invalid parts).
         ctx_tv = lambda cogscm: get_context_actual_truth(
-            self.atomspace, cogscm, self.step_count
+            self.atomspace, cogscm, self.cycle_count
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
         agent_log.fine("valid_cogscms = {}".format(valid_cogscms))
@@ -1227,19 +1254,27 @@ class OpencogAgent:
         # Return the action (we don't need the probability for now)
         return (action, pblty)
 
-    # TODO: replace step by a better method name
-    def step(self) -> bool:
-        """Run one step of observation, decision and env update
+    def control_cycle(self) -> bool:
+        """Run one cycle of
 
-        1. Timestamp current observations in percepta record
-        2. Select the goal for that iteration
-        3. Find plans for that goal
-        4. Deduce a distribution of actions
-        5. Select the next action
-        6. Timestamp that action
-        7. Run that action
-        8. Collect the resulting observations and reward
-        9. Timestamp the reward
+        1. Observe
+        2. Plan
+        3. Act
+
+        More precisely
+
+        1. Observe
+        1.1. Timestamp current observations in percepta record
+        2. Plan
+        2.1. Select the goal for that iteration
+        2.2. Find plans for that goal
+        2.3. Deduce a distribution of actions
+        2.4. Select the next action
+        3. Act
+        3.1. Timestamp that action
+        3.2. Run that action (update the environment)
+        3.3. save the resulting observations and reward
+        3.4. Timestamp the reward
 
         Return whether we're done for that session (as determined by
         the environment).
@@ -1248,7 +1283,7 @@ class OpencogAgent:
 
         agent_log.debug("atomese_obs = {}".format(self.observation))
         obs_record = [
-            self.record(o, self.step_count, tv=TRUE_TV) for o in self.observation
+            self.record(o, self.cycle_count, tv=TRUE_TV) for o in self.observation
         ]
         agent_log.debug("obs_record = {}".format(obs_record))
 
@@ -1274,7 +1309,7 @@ class OpencogAgent:
         )
 
         # Timestamp the action that is about to be executed
-        action_record = self.record(action, self.step_count, tv=TRUE_TV)
+        action_record = self.record(action, self.cycle_count, tv=TRUE_TV)
         agent_log.debug("action_record = {}".format(action_record))
         agent_log.debug("action = {}".format(action))
 
@@ -1283,7 +1318,7 @@ class OpencogAgent:
         agent_log.debug("action_counter = {}".format(self.action_counter))
 
         # Increase the step count and run the next step of the environment
-        self.step_count += 1
+        self.cycle_count += 1
         # TODO gather environment info.
         self.observation, reward, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
@@ -1291,7 +1326,7 @@ class OpencogAgent:
         agent_log.debug("reward = {}".format(reward))
         agent_log.debug("accumulated reward = {}".format(self.accumulated_reward))
 
-        reward_record = self.record(reward, self.step_count, tv=TRUE_TV)
+        reward_record = self.record(reward, self.cycle_count, tv=TRUE_TV)
         agent_log.debug("reward_record = {}".format(reward_record))
 
         return done

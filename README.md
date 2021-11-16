@@ -13,7 +13,7 @@
 
 Rational OpenCog Controlled Agent, or ROCCA, is a project aiming at
 creating an opencog agent that acts rationally in OpenAI Gym
-environments (including Minecraft via minerl).
+environments (including Minecraft via MineRL and Malmo).
 
 At its core it relies on PLN (Probabilistic Logic Networks) for both
 learning and planning.  In practice most of the learning is however
@@ -26,21 +26,22 @@ vs exploration tradeoff).
 
 ## Status
 
-For now learning is only able to abstract temporal patterns based on
-directly observable events.  That is the agent is able to notice that
-particular action sequences in certain contexts tend to be followed by
-rewards, however it is not, as of right now, able to reason about
-action sequences that it has never observed.  This requires Temporal
-Deduction, currently under development.
+For now learning is able to
 
-Once Temporal Deduction is complete we still have a lot of things to
-add such as
+1. Discover temporal patterns based on directly observable events via
+   the pattern miner.
+2. Turn these temporal patterns into plans (cognitive schematics).
+3. Combine these plans to form new plans, possibly composed of new
+   action sequences, via temporal deduction.
 
-1. More sophisticated temporal and then spatial inference rules.
-2. ECAN, for Attention Allocation, to dynamically restrict the
-   atomspace to subsets of items to process/pay-attention-to.
+The next steps are
+
+1. Add more sophisticated temporal (including dealing with longs lags
+   between cause and effect) and then spatial inference rules.
+2. Integrate ECAN, for Attention Allocation, to dynamically restrict
+   the atomspace to subsets of items to process/pay-attention-to.
 3. Record attention spreading to learn/improve Hebbian links.
-4. Concept creation and schematization (crystallized attention
+4. Carry concept creation and schematization (crystallized attention
    allocation).
 5. Record internal processes, not just attention spreading, as
    percepta to enable deeper forms of instrospective reasoning.
@@ -51,7 +52,7 @@ add such as
 OpenCog tools
 
 - cogutil
-- atomspace
+- atomspace (revision b15826224, others have a bug in the pattern matcher)
 - ure
 - spacetime
 - pln
@@ -68,6 +69,7 @@ Third party tools
 - OpenAI Gym https://gym.openai.com/
 - MineRL https://minerl.io
 - nbdev https://nbdev.fast.ai
+- black https://pypi.org/project/black/
 
 ## Install
 

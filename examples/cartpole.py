@@ -56,10 +56,10 @@ def main():
     cpa.delta = 1.0e-16
 
     # Run control loop
-    while not cpa.step():
+    while not cpa.control_cycle():
         wrapped_env.render()
         time.sleep(0.1)
-        log.info("step_count = {}".format(cpa.step_count))
+        log.info("cycle_count = {}".format(cpa.cycle_count))
 
     log_msg(agent_log, f"The final reward is {cpa.accumulated_reward}.")
 

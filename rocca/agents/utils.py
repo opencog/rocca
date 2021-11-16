@@ -14,13 +14,28 @@ import scipy.special as sp
 import scipy.stats as st
 
 # OpenCog
-from opencog.atomspace import Atom, AtomSpace, TruthValue, get_type, is_a, types, createTruthValue
+from opencog.atomspace import (
+    Atom,
+    AtomSpace,
+    TruthValue,
+    get_type,
+    is_a,
+    types,
+    createTruthValue,
+)
 from opencog.execute import execute_atom
 from opencog.logger import create_logger
 from opencog.pln import ZLink, SLink
 from opencog.scheme import scheme_eval
 from opencog.spacetime import AtTimeLink, TimeNode
-from opencog.type_constructors import VariableSet, AndLink, PresentLink, IsClosedLink, IsTrueLink, SatisfactionLink
+from opencog.type_constructors import (
+    VariableSet,
+    AndLink,
+    PresentLink,
+    IsClosedLink,
+    IsTrueLink,
+    SatisfactionLink,
+)
 from opencog.utilities import get_free_variables
 
 #############
@@ -68,8 +83,8 @@ def has_one_mean(atom: Atom) -> bool:
     return 1 <= atom.tv.mean
 
 
-def has_true_tv(atom: Atom) -> bool:
-    """Return True iff the given has a tv TRUE_TV."""
+def is_true(atom: Atom) -> bool:
+    """Return True iff the given has a tv equal to TRUE_TV."""
 
     return atom.tv == TRUE_TV
 
@@ -290,8 +305,9 @@ def has_empty_vardecl(cogscm: Atom) -> bool:
     """Return True iff the cognitive schematic has an empty vardecl."""
 
     vardecl = get_vardecl(cogscm)
-    return (is_variable_list(vardecl) or is_variable_set(vardecl)) \
-        and is_empty_link(vardecl)
+    return (is_variable_list(vardecl) or is_variable_set(vardecl)) and is_empty_link(
+        vardecl
+    )
 
 
 def get_vardecl(cogscm: Atom) -> Atom:
@@ -466,7 +482,7 @@ def maybe_and(clauses) -> Atom:
     return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
 
 
-def get_antecedent(atom: Atom): # TODO: requires Python 3.10 -> (Atom | None):
+def get_antecedent(atom: Atom):  # TODO: requires Python 3.10 -> (Atom | None):
     """Return the antecedent of a temporal atom.
 
     For instance is the cognitive schematics is represented by

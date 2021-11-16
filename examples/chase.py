@@ -11,7 +11,14 @@ import time
 import gym
 
 # OpenCog
-from opencog.type_constructors import ExecutionLink, SchemaNode, EvaluationLink, PredicateNode, NumberNode, ConceptNode
+from opencog.type_constructors import (
+    ExecutionLink,
+    SchemaNode,
+    EvaluationLink,
+    PredicateNode,
+    NumberNode,
+    ConceptNode,
+)
 from opencog.utilities import set_default_atomspace
 from opencog.pln import *
 from opencog.ure import ure_logger
@@ -90,9 +97,7 @@ class ChaseAgent(OpencogAgent):
 
         # Create Action Space. The set of allowed actions an agent can take.
         # TODO take care of action parameters.
-        # TODO: temporary disable Stay to speed up learning
-        # action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_names}
-        action_space = {ExecutionLink(SchemaNode(a)) for a in ["Go Left", "Go Right", "Eat"]}
+        action_space = {ExecutionLink(SchemaNode(a)) for a in env.action_names}
 
         # Create Goal
         pgoal = EvaluationLink(PredicateNode("Reward"), NumberNode("1"))
@@ -144,10 +149,10 @@ if __name__ == "__main__":
         # Run agent to accumulate percepta
         agent_log.info("Start training ({}/{})".format(i + 1, lt_iterations))
         for j in range(lt_period):
-            ca.step()
+            ca.control_cycle()
             wrapped_env.render()
             time.sleep(0.1)
-            log.info("step_count = {}".format(ca.step_count))
+            log.info("cycle_count = {}".format(ca.cycle_count))
         nar = ca.accumulated_reward - par
         agent_log.info(
             "Accumulated reward during {}th iteration = {}".format(i + 1, nar)
