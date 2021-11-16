@@ -6,8 +6,10 @@ jobs:
     container:
       image: synthillect/opencog-minerl
     steps:
-      - name: Make the workspace accessible
-        run: sudo chown -R $(whoami) $GITHUB_WORKSPACE
+      - name: Make the workspace and GITHUB_PATH accessible
+        run: |
+          sudo chown -R $(whoami) $GITHUB_WORKSPACE
+          sudo chown -R $(whoami) $GITHUB_PATH
       - name: Add .local/bin to PATH
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
       - uses: actions/checkout@v2
