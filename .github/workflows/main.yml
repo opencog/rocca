@@ -1,10 +1,12 @@
 name: CI
 on: [push, pull_request]
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     container:
       image: synthillect/opencog-minerl
+    env:
+      PATH: ${{ env.HOME }}/.local/bin:${{ env.PATH }}
     steps:
       - name: Make the workspace accessible
         run: sudo chown -R $(whoami) $GITHUB_WORKSPACE
