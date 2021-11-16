@@ -899,6 +899,15 @@ def atomspace_to_str(atomspace: AtomSpace) -> str:
     return str(scheme_eval(atomspace, "(cog-get-all-roots)").decode("utf-8"))
 
 
+def agent_log_atomspace(atomspace: AtomSpace, level: str = "fine"):
+    """Takes an atomspace and log its content (with size and address)"""
+    agent_log.fine(
+        "atomspace [address={}, size={}]:\n{}".format(
+            atomspace, len(atomspace), atomspace_to_str(atomspace)
+        )
+    )
+
+
 class MinerLogger:
     """Quick and dirty miner logger Python bindings"""
 
