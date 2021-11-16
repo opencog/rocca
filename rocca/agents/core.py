@@ -255,8 +255,8 @@ class OpencogAgent:
                 # agent_log.fine("(pln-add-rule '" + rule + ")")
                 # agent_log.fine("er = " + str(er))
 
-        # Supreme debugging (uncomment to enable)
-        # agent_log.fine("atomspace [count={}]:\n{}".format(len(atomspace), atomspace))
+        # Log the entire atomspace (fine level), uncomment to enable.
+        # agent_log_atomspace(atomspace)
 
         # Generate and run query
         command = "(pln-fc "
@@ -300,8 +300,8 @@ class OpencogAgent:
                 # agent_log.fine("(pln-add-rule '" + rule + ")")
                 # agent_log.fine("er = " + str(er))
 
-        # Supreme debugging (uncomment to enable)
-        # agent_log.fine("atomspace [count={}]:\n{}".format(len(atomspace), atomspace))
+        # Log the entire atomspace (fine level), uncomment to enable.
+        # agent_log_atomspace(atomspace)
 
         # Generate and run query
         command = "(pln-bc "
