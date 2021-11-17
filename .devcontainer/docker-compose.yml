@@ -15,4 +15,5 @@ services:
             - CCACHE_DIR=/home/opencog/.ccache
             - TZ=$TZ # set this to your timezone
         working_dir: /workspace
-        command: jupyter lab --ip="0.0.0.0" --no-browser --ServerApp.token='' --ServerApp.password=''
+        # for some reason the entrypoint doesn't see the full PATH even though it's run by the appropriate user and even sources their .bashrc
+        command: /home/opencog/.local/bin/jupyter lab --ip="0.0.0.0" --no-browser --ServerApp.token='' --ServerApp.password=''

@@ -1,22 +1,26 @@
 name: CI
 on: [push, pull_request]
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     container:
       image: synthillect/opencog-minerl
       options: --user root
     steps:
+      - name: Add .local/bin to PATH
+        run: |
+          echo "/home/opencog/.local/bin" >> $GITHUB_PATH
+          echo "/github/home/.local/bin" >> $GITHUB_PATH
+      - name: Add .local Python library dir to sys.path
+        run: |
+          export PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
+          echo "PYTHONPATH=/home/opencog/.local/lib/python$PYTHON_VERSION/site-packages" >> $GITHUB_ENV
       - uses: actions/checkout@v2
-      # - uses: actions/setup-python@v2
-      #   with:
-      #     python-version: "3.9"
-      #     architecture: "x64"
       - name: Install the library
         run: |
-          python3 -m pip install --upgrade pip wheel setuptools
-          pip install -r requirements-dev.txt
-          pip install -e .
+          python3 -m pip install --user --upgrade pip wheel setuptools
+          python3 -m pip install --user -r requirements-dev.txt
+          python3 -m pip install --user -e .
       - name: Read all notebooks
         run: |
           nbdev_read_nbs
