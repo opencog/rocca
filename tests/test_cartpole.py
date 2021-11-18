@@ -32,5 +32,5 @@ def test_cartpole():
     cpa.delta = 1.0e-16
 
     # Run control loop
-    while not cpa.step():
+    while not cpa.control_cycle():
         time.sleep(0.1)
