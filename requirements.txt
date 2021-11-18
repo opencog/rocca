@@ -5,3 +5,4 @@ fastcore>=1.3.25
 tensorboard>=2.5.0
 tensorboardX>=2.2
 icecream>=2.1.0
+scipy>=1.7.2
