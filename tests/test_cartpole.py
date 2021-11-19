@@ -3,17 +3,12 @@ import time
 import gym
 
 from opencog.atomspace import AtomSpace
-from opencog.logger import log
-from opencog.pln import *
-from opencog.spacetime import *
-from opencog.type_constructors import *
-from opencog.ure import ure_logger
 from opencog.utilities import set_default_atomspace
 
-from rocca.agents.cartpole import FixedCartPoleAgent
+from rocca.utils import *
 from rocca.agents.utils import *
 from rocca.envs.wrappers import CartPoleWrapper
-from rocca.utils import *
+from rocca.agents.cartpole import FixedCartPoleAgent
 
 
 # Test if a simple CartPole run works

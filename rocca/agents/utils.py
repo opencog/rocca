@@ -17,7 +17,6 @@ import scipy.stats as st
 from opencog.atomspace import (
     Atom,
     AtomSpace,
-    TruthValue,
     get_type,
     is_a,
     types,
@@ -35,6 +34,7 @@ from opencog.type_constructors import (
     IsClosedLink,
     IsTrueLink,
     SatisfactionLink,
+    TruthValue,
 )
 from opencog.utilities import get_free_variables
 
