@@ -63,13 +63,22 @@ OpenCog tools
 
 Third party tools
 
-- Python 3
+- Python 3.9 (or Python 3.8 see below)
 - python-orderedmultidict https://pypi.org/project/orderedmultidict/
 - fastcore https://fastcore.fast.ai
 - OpenAI Gym https://gym.openai.com/
 - MineRL https://minerl.io
 - nbdev https://nbdev.fast.ai
 - black https://pypi.org/project/black/
+
+### Python 3.9 vs 3.8
+
+Python 3.9 offers a better out-of-the-box type annotation system than
+Python 3.8 and is thus the default required version.  However you may
+still use Python 3.8 by checking out the
+[python-3.8-compatible](https://github.com/opencog/rocca/tree/python-3.8-compatible)
+branch.  Beware that such Python 3.8 branch may not be as well
+maintained as the master.
 
 ## Install
 
