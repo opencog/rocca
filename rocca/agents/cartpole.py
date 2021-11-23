@@ -4,14 +4,7 @@ __all__ = ["FixedCartPoleAgent", "LearningCartPoleAgent"]
 
 # Cell
 
-import gym
-import time
-import logging
-
-from typing import List
-
 # OpenCog
-from opencog.logger import log
 from opencog.pln import *
 from opencog.type_constructors import *
 from opencog.utilities import set_default_atomspace
@@ -22,7 +15,6 @@ from . import OpencogAgent
 from .utils import *
 
 from ..utils import *
-from .core import logger as ac_logger
 
 # Cell
 
@@ -42,7 +34,7 @@ class FixedCartPoleAgent(OpencogAgent):
         # Call super ctor
         super().__init__(env, atomspace, action_space, pgoal, ngoal)
 
-    def plan(self, goal, expiry) -> List:
+    def plan(self, goal, expiry) -> list:
         """Plan the next actions given a goal and its expiry time offset
 
         Return a python list of cognitive schematics.  Whole cognitive
