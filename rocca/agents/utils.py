@@ -6,8 +6,7 @@
 
 # Python
 import random
-from typing import Any
-
+from typing import List, Set, Tuple, Any
 from orderedmultidict import omdict
 
 # SciPy
@@ -18,6 +17,7 @@ import scipy.stats as st
 from opencog.atomspace import (
     Atom,
     AtomSpace,
+    TruthValue,
     get_type,
     is_a,
     types,
@@ -35,7 +35,6 @@ from opencog.type_constructors import (
     IsClosedLink,
     IsTrueLink,
     SatisfactionLink,
-    TruthValue,
 )
 from opencog.utilities import get_free_variables
 
@@ -65,7 +64,7 @@ def add_to_atomspace(atoms: list[Atom], atomspace: AtomSpace) -> None:
         atomspace.add_atom(atom)
 
 
-def fetch_cogscms(atomspace: AtomSpace) -> set[Atom]:
+def fetch_cogscms(atomspace: AtomSpace) -> Set[Atom]:
     """Fetch all cognitive schematics from an given atomspace."""
 
     pit = get_type("BackPredictiveImplicationScopeLink")
@@ -366,7 +365,7 @@ def is_virtual(clause: Atom) -> bool:
     return is_a(clause.type, types.VirtualLink)
 
 
-def get_context(cogscm: Atom) -> tuple[Atom, Atom]:
+def get_context(cogscm: Atom) -> Tuple[Atom, Atom]:
     """Extract the context of a cognitive schematic.
 
     For instance given a cognitive schematic of that format
@@ -591,7 +590,7 @@ def get_lag(atom: Atom) -> int:
     return 0
 
 
-def get_t0_clauses(antecedent: Atom) -> list[Atom]:
+def get_t0_clauses(antecedent: Atom) -> List[Atom]:
     """Return the list of clauses occuring at initial time.
 
     For instance if the cognitive schematics has the following format
@@ -640,13 +639,13 @@ def has_all_variables_in_antecedent(cogscm: Atom) -> bool:
         return True
 
 
-def get_free_variables_of_atoms(atoms: Atom) -> set[Atom]:
+def get_free_variables_of_atoms(atoms: Atom) -> Set[Atom]:
     """Get the set of all free variables in all atoms."""
 
     return set().union(*(set(get_free_variables(atom)) for atom in atoms))
 
 
-def get_times(timed_atoms: list[Atom]) -> set[Atom]:
+def get_times(timed_atoms: List[Atom]) -> Set[Atom]:
     """Given a list of timestamped clauses, return a set of all times."""
 
     if timed_atoms == []:
@@ -654,13 +653,13 @@ def get_times(timed_atoms: list[Atom]) -> set[Atom]:
     return set.union(set([get_time(timed_atoms[0])]), get_times(timed_atoms[1:]))
 
 
-def get_events(timed_atoms: list[Atom]) -> list[Atom]:
+def get_events(timed_atoms: List[Atom]) -> List[Atom]:
     """Given a container of timestamped clauses, return a list of all events."""
 
     return [get_event(ta) for ta in timed_atoms]
 
 
-def get_latest_time(timed_clauses: list[Atom]) -> Atom:
+def get_latest_time(timed_clauses: List[Atom]) -> Atom:
     """Given a list of timestamped clauses, return the latest timestamp."""
 
     if timed_clauses == []:
@@ -668,7 +667,7 @@ def get_latest_time(timed_clauses: list[Atom]) -> Atom:
     return nat_max(get_time(timed_clauses[0]), get_latest_time(timed_clauses[1:]))
 
 
-def get_latest_clauses(timed_clauses: list[Atom]) -> list[Atom]:
+def get_latest_clauses(timed_clauses: List[Atom]) -> List[Atom]:
     """Given a list of timestamped clauses, return the latest clauses.
 
     For instance if the timestamped clauses are
@@ -685,7 +684,7 @@ def get_latest_clauses(timed_clauses: list[Atom]) -> list[Atom]:
     return [tc for tc in timed_clauses if get_time(tc) == lt]
 
 
-def get_early_clauses(timed_clauses: list[Atom]) -> list[Atom]:
+def get_early_clauses(timed_clauses: List[Atom]) -> List[Atom]:
     """Return all clauses that are not the latest."""
 
     lcs = set(get_latest_clauses(timed_clauses))

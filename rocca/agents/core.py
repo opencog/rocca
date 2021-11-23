@@ -9,7 +9,7 @@ import logging
 import math
 import multiprocessing
 from collections import Counter
-from typing import Any
+from typing import Any, List, Set, Tuple
 
 # OpenCog
 from opencog.atomspace import Atom, AtomSpace
@@ -206,7 +206,7 @@ class OpencogAgent:
 
         return EvaluationLink(PredicateNode("Reward"), NumberNode(str(1)))
 
-    def pln_load_rules(self, rules: list[str] = []):
+    def pln_load_rules(self, rules: List[str] = []):
         """Load PLN rules.
 
         Take a list of rule scheme symbols (but without the single
@@ -227,8 +227,8 @@ class OpencogAgent:
         vardecl=None,
         maximum_iterations: int = 10,
         full_rule_application: bool = False,
-        rules: list[str] = [],
-    ) -> set[Atom]:
+        rules: List[str] = [],
+    ) -> Set[Atom]:
         """Call PLN forward chainer with the given source and parameters.
 
         The parameters are
@@ -277,8 +277,8 @@ class OpencogAgent:
         target: Atom,
         vardecl=None,
         maximum_iterations: int = 10,
-        rules: list[str] = [],
-    ) -> set[Atom]:
+        rules: List[str] = [],
+    ) -> Set[Atom]:
         """Call PLN backward chainer with the given target and parameters.
 
         The parameters are
@@ -315,7 +315,7 @@ class OpencogAgent:
         command += ")"
         return set(scheme_eval_h(atomspace, command).out)
 
-    def mine_cogscms(self) -> set[Atom]:
+    def mine_cogscms(self) -> Set[Atom]:
         """Discover cognitive schematics via pattern mining.
 
         Return the set of mined cognitive schematics.
@@ -428,7 +428,7 @@ class OpencogAgent:
             self.directly_evaluate(get_antecedent(atom))
             self.directly_evaluate(get_succedent(atom))
 
-    def infer_cogscms(self) -> set[Atom]:
+    def infer_cogscms(self) -> Set[Atom]:
         """Discover cognitive schematics via reasoning.
 
         For now only temporal deduction is implemented and the
@@ -445,7 +445,7 @@ class OpencogAgent:
         agent_log.fine("infer_cogscms()")
 
         # All resulting cognitive schematics
-        cogscms: set[Atom] = set()
+        cogscms: Set[Atom] = set()
 
         # 1. Infer conditional conjunctions
 
@@ -500,7 +500,7 @@ class OpencogAgent:
 
         return cogscms
 
-    def update_cognitive_schematics(self, new_cogscms: set[Atom]):
+    def update_cognitive_schematics(self, new_cogscms: Set[Atom]):
         """Insert the new cognitive schematics into the proper container."""
 
         add_to_atomspace(new_cogscms, self.cogscms_atomspace)
@@ -576,7 +576,7 @@ class OpencogAgent:
 
         return pattern.out[1].out
 
-    def get_pattern_antecedent_events(self, pattern: Atom) -> list[Atom]:
+    def get_pattern_antecedent_events(self, pattern: Atom) -> List[Atom]:
         """Return the antecedent events of a temporal pattern.
 
         That is all propositions not taking place at the latest time.
@@ -596,7 +596,7 @@ class OpencogAgent:
         tclauses = get_latest_clauses(self.get_pattern_timed_clauses(pattern))
         return get_events(tclauses)
 
-    def get_typed_variables(self, vardecl: Atom) -> list[Atom]:
+    def get_typed_variables(self, vardecl: Atom) -> List[Atom]:
         """Get the list of possibly typed variables in vardecl."""
 
         vt = vardecl.type
@@ -613,7 +613,7 @@ class OpencogAgent:
         nt_tvars = [tvar for tvar in tvars if not self.is_temporally_typed(tvar)]
         return VariableSet(*nt_tvars)
 
-    def to_sequential_and(self, timed_clauses: list[Atom]) -> Atom:
+    def to_sequential_and(self, timed_clauses: List[Atom]) -> Atom:
         times = get_times(timed_clauses)
         if len(times) == 2:
             # Partition events in first and second time. For now lags
@@ -807,7 +807,7 @@ class OpencogAgent:
             and has_variables_leq(cogscm, self.cogscm_max_variables)
         )
 
-    def surprises_to_predictive_implications(self, srps: list[Atom]) -> list[Atom]:
+    def surprises_to_predictive_implications(self, srps: List[Atom]) -> List[Atom]:
         """Like to_predictive_implication but takes surprises."""
 
         agent_log.fine("surprises_to_predictive_implications(srps={})".format(srps))
@@ -823,8 +823,8 @@ class OpencogAgent:
         return cogscms
 
     def to_timed_clauses(
-        self, las: tuple[int, Any, Any], T: Atom
-    ) -> tuple[list[Atom], int]:
+        self, las: Tuple[int, Any, Any], T: Atom
+    ) -> Tuple[List[Atom], int]:
         """Turn nested lagged, antecedents, succedents to AtTime clauses.
 
         For instance the input is
@@ -873,8 +873,8 @@ class OpencogAgent:
         return timed_clauses, lag
 
     def mine_temporal_patterns(
-        self, atomspace: AtomSpace, las: tuple[int, Any, Any], vardecl: Atom = None
-    ) -> list[Atom]:
+        self, atomspace: AtomSpace, las: Tuple[int, Any, Any], vardecl: Atom = None
+    ) -> List[Atom]:
         """Given nested lagged, antecedents, succedents, mine temporal patterns.
 
         More precisely it takes
@@ -974,7 +974,7 @@ class OpencogAgent:
 
         return surprises.out
 
-    def plan(self, goal: Atom, expiry: int) -> list[Atom]:
+    def plan(self, goal: Atom, expiry: int) -> List[Atom]:
         """Plan the next actions given a goal and its expiry time offset
 
         Return a python list of cognivite schematics meeting the
@@ -1029,7 +1029,7 @@ class OpencogAgent:
         return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
 
     # TODO: move to its own class (MixtureModel or something)
-    def get_all_uniq_atoms(self, atom: Atom) -> set[Atom]:
+    def get_all_uniq_atoms(self, atom: Atom) -> Set[Atom]:
         """Return the set of all unique atoms in atom."""
 
         # Recursive cases
@@ -1126,7 +1126,7 @@ class OpencogAgent:
         return self.prior_estimate(cogscm) * self.beta_factor(cogscm)
 
     # TODO: move to its own class (MixtureModel or something)
-    def infer_data_set_size(self, cogscms: list[Atom]) -> float:
+    def infer_data_set_size(self, cogscms: List[Atom]) -> float:
         """Infer the data set size by taking the max count of all models
 
         (it works assuming that one of them is complete).
@@ -1138,7 +1138,7 @@ class OpencogAgent:
         else:
             return 0.0
 
-    def deduce(self, cogscms: list[Atom]) -> omdict:
+    def deduce(self, cogscms: List[Atom]) -> omdict:
         """Return an action distribution given a list cognitive schematics.
 
         The action distribution is actually a second order
@@ -1239,7 +1239,7 @@ class OpencogAgent:
 
         return mxmdl
 
-    def decide(self, mxmdl: omdict) -> tuple[Atom, float]:
+    def decide(self, mxmdl: omdict) -> Tuple[Atom, float]:
         """Select the next action to enact from a mixture model of cogscms.
 
         The action is selected from the action distribution, a list of
