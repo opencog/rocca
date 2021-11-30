@@ -54,6 +54,7 @@ print("simple_lua_result = {}".format(simple_lua_result))
 # Additionally here is a list of potentially useful methods from
 # https://minetest.org/modbook/lua_api.html
 #
+# minetest.player_exists(name)
 # minetest.get_player_by_name(name)
 # minetest.get_objects_inside_radius(pos, radius)
 # minetest.find_node_near(pos, radius, nodenames)
@@ -63,8 +64,19 @@ print("simple_lua_result = {}".format(simple_lua_result))
 # minetest.line_of_sight(pos1, pos2, stepsize)
 # minetest.find_path(pos1,pos2,searchdistance,max_jump,max_drop,algorithm)
 # minetest.get_inventory(location)
+# minetest.dir_to_yaw(dir)
+# minetest.yaw_to_dir(yaw)
+# minetest.item_drop(itemstack, dropper, pos)
+# minetest.item_eat(hp_change, replace_with_item)
+# minetest.node_punch(pos, node, puncher, pointed_thing)
+# minetest.node_dig(pos, node, digger)
 #
-# NEXT: Search "minetest." from Item handling Section
+# ObjectRef methods:
+# - move_to(pos, continuous=false)
+# - punch(puncher, time_from_last_punch, tool_capabilities, direction)
+# - get_player_name()
+# - set_look_vertical(radians)
+# - set_look_horizontal(radians)
 
 # Starts mining
 player = "singleplayer"
