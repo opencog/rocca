@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Experiment to communicate with Minetest via Miney.
 #
 # Requirements:
@@ -78,16 +80,42 @@ print("simple_lua_result = {}".format(simple_lua_result))
 # - set_look_vertical(radians)
 # - set_look_horizontal(radians)
 
-# Starts mining
-player = "singleplayer"
-lua_mine = """
-local npc = npcf:get_luaentity(\"""" + player + """\")
-local move_obj = npcf.movement.getControl(npc)
-move_obj:mine()
-return true
+# Chat
+chat = """
+return minetest.chat_send_all(\"Hello Minetest\")
 """
-mine_result = lua.run(lua_mine)
-print("mine_result = {}".format(mine_result))
+chat_result = lua.run(chat)
+print("chat_result = {}".format(chat_result))
+
+# Testing player
+player_name = "singleplayer"
+
+# Check that the player exists
+player_exists = """
+return minetest.player_exists(\"{}\")
+""".format(player_name)
+player_exists_result = lua.run(player_exists)
+print("player_exists = {}".format(player_exists_result))
+
+# Retrieve the name of the player (given its name, hehe)
+player_retrieve_name = """
+local player = minetest.get_player_by_name(\"{}\")
+local player_name = player:get_player_name()
+return player_name
+""".format(player_name)
+player_retrieve_name_result = lua.run(player_retrieve_name)
+print("player_retrieve_name_result = {}".format(player_retrieve_name_result))
+
+# # Starts mining
+# player = "singleplayer"
+# lua_mine = """
+# local npc = npcf:get_luaentity(\"""" + player + """\")
+# local move_obj = npcf.movement.getControl(npc)
+# move_obj:mine()
+# return true
+# """
+# mine_result = lua.run(lua_mine)
+# print("mine_result = {}".format(mine_result))
 
 # # Stop mining
 # lua_stop = """
