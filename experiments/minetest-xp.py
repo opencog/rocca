@@ -106,6 +106,24 @@ return player_name
 player_retrieve_name_result = lua.run(player_retrieve_name)
 print("player_retrieve_name_result = {}".format(player_retrieve_name_result))
 
+# Get player position
+get_player_pos = """
+local player = minetest.get_player_by_name(\"{}\")
+return player:get_pos()
+""".format(player_name)
+get_player_pos_result = lua.run(get_player_pos)
+print("get_player_pos_result = {}".format(get_player_pos_result))
+
+# Move player to new position
+# NEXT
+move_player_to = """
+local player = minetest.get_player_by_name(\"{}\")
+return player:move_to({})
+""".format(player_name, lua.dumps(get_player_pos_result))
+print("move_player_to = {}".format(move_player_to))
+move_player_to_result = lua.run(move_player_to)
+print("get_player_to_result = {}".format(move_player_to_result))
+
 # # Starts mining
 # player = "singleplayer"
 # lua_mine = """
