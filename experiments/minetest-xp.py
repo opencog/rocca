@@ -18,6 +18,7 @@
 # A lot of understanding (especially the end of the script) comes from
 # studying https://github.com/MaikePaetzel/minetest-agent
 
+import copy
 import miney
 
 # Connect Minetest
@@ -114,15 +115,27 @@ return player:get_pos()
 get_player_pos_result = lua.run(get_player_pos)
 print("get_player_pos_result = {}".format(get_player_pos_result))
 
-# Move player to new position
-# NEXT
+# Move player to a shifted position
+player_shifted_pos = copy.copy(get_player_pos_result)
+player_shifted_pos['x'] += 10
+print("player_shifted_pos = {}".format(player_shifted_pos))
 move_player_to = """
 local player = minetest.get_player_by_name(\"{}\")
 return player:move_to({})
-""".format(player_name, lua.dumps(get_player_pos_result))
+""".format(player_name, lua.dumps(player_shifted_pos))
 print("move_player_to = {}".format(move_player_to))
 move_player_to_result = lua.run(move_player_to)
 print("get_player_to_result = {}".format(move_player_to_result))
+
+# # Move player to the coordonates of a tree
+# tree_pos = {'y': 14.5, 'x': -302.1969909668, 'z': -200.82400512695}
+# move_player_to_tree = """
+# local player = minetest.get_player_by_name(\"{}\")
+# return player:move_to({}, true)
+# """.format(player_name, lua.dumps(tree_pos))
+# print("move_player_to_tree = {}".format(move_player_to_tree))
+# move_player_to_tree_result = lua.run(move_player_to_tree)
+# print("get_player_to_tree_result = {}".format(move_player_to_tree_result))
 
 # # Starts mining
 # player = "singleplayer"
