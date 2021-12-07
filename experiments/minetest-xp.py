@@ -80,6 +80,19 @@ print("simple_lua_result = {}".format(simple_lua_result))
 # - get_player_name()
 # - set_look_vertical(radians)
 # - set_look_horizontal(radians)
+# - get_velocity(): returns {x=num, y=num, z=num}
+# - add_velocity(vel)
+# - set_acceleration({x=num, y=num, z=num})
+# - get_acceleration(): returns {x=num, y=num, z=num}
+# - set_yaw(radians)
+# - get_yaw(): returns number in radians
+# - set_attach(parent[, bone, position, rotation, forced_visible])
+# - get_attach()
+# - get_player_control()
+#
+# In minetest source code:
+# - void LocalPlayer::applyControl(float dtime, Environment *env) (look for "control.jump")
+# - int LuaLocalPlayer::l_get_control(lua_State *L) (would be nice if we had set_control)
 
 # Chat
 chat = """
@@ -115,7 +128,9 @@ return player:get_pos()
 get_player_pos_result = lua.run(get_player_pos)
 print("get_player_pos_result = {}".format(get_player_pos_result))
 
-# Move player to a shifted position
+# Move player to a shifted position.  Setting the continuous argument
+# of move_to to true does not work for players (as explained in
+# https://github.com/minetest/minetest/blob/master/doc/lua_api.txt).
 player_shifted_pos = copy.copy(get_player_pos_result)
 player_shifted_pos['x'] += 10
 print("player_shifted_pos = {}".format(player_shifted_pos))
@@ -126,6 +141,8 @@ return player:move_to({})
 print("move_player_to = {}".format(move_player_to))
 move_player_to_result = lua.run(move_player_to)
 print("get_player_to_result = {}".format(move_player_to_result))
+
+# NEXT: smooth move with add_velocity
 
 # # Move player to the coordonates of a tree
 # tree_pos = {'y': 14.5, 'x': -302.1969909668, 'z': -200.82400512695}
