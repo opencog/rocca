@@ -24,7 +24,7 @@ import miney
 
 # Delay between each test (in second)
 test_delay = 1.0
-def log_and_wait(msg : str):
+def log_and_wait(msg: str):
     print("============ {} ============".format(msg))
     time.sleep(test_delay)
 
@@ -68,7 +68,7 @@ print("simple_lua_result = {}".format(simple_lua_result))
 # minetest-agent/agent/Rob/atomic_actions.py
 #
 # Additionally here is a list of potentially useful methods from
-# https://minetest.org/modbook/lua_api.html
+# https://github.com/minetest/minetest/blob/master/doc/lua_api.txt
 #
 # minetest.player_exists(name)
 # minetest.get_player_by_name(name)
@@ -126,28 +126,30 @@ return minetest.player_exists(\"{}\")
 player_exists_result = lua.run(player_exists)
 print("player_exists = {}".format(player_exists_result))
 
-# Retrieve the name of the player (given its name, hehe)
-log_and_wait("Retrieve player name")
-player_retrieve_name = """
-local player = minetest.get_player_by_name(\"{}\")
-return player:get_player_name()
-""".format(player_name)
-player_retrieve_name_result = lua.run(player_retrieve_name)
-print("player_retrieve_name_result = {}".format(player_retrieve_name_result))
-
-# Create lua runner helper using signleplayer
-def player_lua_run(code : str, player : str = "singleplayer"):
+# Create lua runner helper to run player methods
+def player_lua_run(code: str, player: str = "singleplayer"):
     get_player_code = "local player = minetest.get_player_by_name(\"{}\")".format(player)
     full_code = get_player_code + "\n" + code
     print("Run lua code:\n\"\"\"\n{}\n\"\"\"".format(full_code))
     return lua.run(full_code)
+
+# Retrieve the name of the player (given its name, hehe)
+log_and_wait("Retrieve player name")
+player_retrieve_name_result = player_lua_run("return player:get_player_name()")
+print("player_retrieve_name_result = {}".format(player_retrieve_name_result))
 
 # Get player position
 log_and_wait("Retrieve player position")
 get_player_pos_result = player_lua_run("return player:get_pos()")
 print("get_player_pos_result = {}".format(get_player_pos_result))
 
-# Move player to a shifted position.  Setting the continuous argument
+# Get player's surrounding
+# NEXT: Study ModApiEnvMod::l_get_objects_inside_radius(lua_State *L)
+log_and_wait("Retrieve surrounding blocks")
+surrounding_blocks_result = player_lua_run("return minetest.get_objects_inside_radius(player:get_pos(), 1)")
+print("surrounding_blocks_result = {}".format(surrounding_blocks_result))
+
+# Move abruptly player to a position.  Setting the continuous argument
 # of move_to to true does not work for players (as explained in
 # https://github.com/minetest/minetest/blob/master/doc/lua_api.txt).
 log_and_wait("Move abruptly player to new position")
