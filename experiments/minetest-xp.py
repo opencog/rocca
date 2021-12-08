@@ -4,8 +4,8 @@
 #
 # Requirements:
 #
-# - Minetest and Miney, see
-#   https://miney.readthedocs.io/en/latest/index.html
+# - Minetest, version 5.5.0
+# - Miney, see https://miney.readthedocs.io/en/latest/index.html
 #
 # Usage:
 #
