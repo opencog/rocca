@@ -6,3 +6,4 @@ tensorboard>=2.5.0
 tensorboardX>=2.2
 icecream>=2.1.0
 scipy>=1.7.2
+pyglet>=1.5.21
