@@ -227,7 +227,7 @@ def act_w8d_cogscms_to_str(
     return s
 
 
-def mxmdl_to_str(mxmdl, indent: str = "") -> str:
+def mxmdl_to_str(mxmdl: omdict, indent: str = "") -> str:
     """Pretty print the given mixture model of cogscms"""
 
     s = ""
@@ -240,7 +240,7 @@ def mxmdl_to_str(mxmdl, indent: str = "") -> str:
 
 
 def thompson_sample(
-    mxmdl, prior_a: float = 1, prior_b: float = 1
+    mxmdl: omdict, prior_a: float = 1, prior_b: float = 1
 ) -> tuple[Atom, float]:
     """Perform Thompson sampling over the mixture model.
 
