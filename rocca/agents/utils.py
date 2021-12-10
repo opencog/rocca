@@ -140,7 +140,7 @@ def tv_rv(tv: TruthValue, prior_a: float = 1, prior_b: float = 1) -> float:
 
     """Return a first order probability variate of a truth value.
 
-    Return a first order probability variate of the beta-distribution
+    Return a first order probability variate of the beta-distribution,
     representing the second order distribution of tv.
 
     rv stands for Random Variate.
@@ -194,14 +194,10 @@ def act_pblt_to_str(act_pblt: tuple[Atom, float], indent: str = "") -> str:
     return indent + "({}, {})".format(action_to_str(action), pblt)
 
 
-# TODO: use join to optimize
 def act_pblts_to_str(act_pblts: tuple[Atom, float], indent: str = "") -> str:
     """Pretty print a list of pairs (action, probability)."""
 
-    s = ""
-    for act_pblt in act_pblts:
-        s += indent + act_pblt_to_str(act_pblt) + "\n"
-    return s
+    return "\n".join([indent + act_pblt_to_str(act_pblt) for act_pblt in act_pblts])
 
 
 def act_w8d_cogscm_to_str(
@@ -215,16 +211,17 @@ def act_w8d_cogscm_to_str(
     return s
 
 
-# TODO: use join to optimize
 def act_w8d_cogscms_to_str(
     act_w8d_cogscms: list[tuple[Atom, tuple[float, Atom]]], indent: str = ""
 ) -> str:
     """Pretty print a list of pairs (action, (weight, cogscm))."""
 
-    s = ""
-    for act_w8d_cogscm in act_w8d_cogscms:
-        s += indent + act_w8d_cogscm_to_str(act_w8d_cogscm) + "\n"
-    return s
+    return "\n".join(
+        [
+            indent + act_w8d_cogscm_to_str(act_w8d_cogscm)
+            for act_w8d_cogscm in act_w8d_cogscms
+        ]
+    )
 
 
 def mxmdl_to_str(mxmdl: omdict, indent: str = "") -> str:
@@ -639,14 +636,10 @@ def has_all_variables_in_antecedent(cogscm: Atom) -> bool:
         return True
 
 
-# TODO: optimize using comprehension
 def get_free_variables_of_atoms(atoms: Atom) -> set[Atom]:
     """Get the set of all free variables in all atoms."""
 
-    variables = set()
-    for atom in atoms:
-        variables.update(set(get_free_variables(atom)))
-    return variables
+    return set().union(*(set(get_free_variables(atom)) for atom in atoms))
 
 
 def get_times(timed_atoms: list[Atom]) -> set[Atom]:
