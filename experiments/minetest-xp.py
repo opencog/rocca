@@ -200,10 +200,12 @@ log_and_wait("Retrieve player position")
 get_player_pos_result = player_lua_run("return player:get_pos()")
 print("get_player_pos_result = {}".format(get_player_pos_result))
 
-# Get player's surrounding
-# NEXT: Try to use inspect
+# Get player's surrounding.
+#
+# NEXT: inspect(player_obs) outputs "{ <userdata 1> }", we need to
+# understand how to get more info.
 log_and_wait("Retrieve surrounding blocks")
-surrounding_blocks_result = player_lua_run("player_obs = minetest.get_objects_inside_radius(player:get_pos(), 10.0)")
+surrounding_blocks_result = player_lua_run("player_obs = minetest.get_objects_inside_radius(player:get_pos(), 10.0); return inspect(player_obs), #player_obs, inspect(player_obs[1])")
 print("surrounding_blocks_result = {}".format(surrounding_blocks_result))
 
 # Move abruptly player to a position.  Setting the continuous argument
