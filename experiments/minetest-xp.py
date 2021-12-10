@@ -5,12 +5,24 @@
 # Requirements:
 #
 # - Minetest, version 5.5.0
-# - Miney, see https://miney.readthedocs.io/en/latest/index.html
+# - Miney https://miney.readthedocs.io/en/latest/index.html
+# - luacmd https://github.com/prestidigitator/minetest-mod-luacmd
+# - inspect https://github.com/kikito/inspect.lua
+#
+# Before launching minetest you might need to add
+#
+#      secure.trusted_mods = mineysocket, luacmd
+#
+# as well as
+#
+#      secure.enable_security = false
+#
+#    in your minetest.conf
 #
 # Usage:
 #
 # 1. Run minetest
-# 2. Create game with mineysocket enabled
+# 2. Create game with mineysocket and optionally luacmd enabled
 # 3. Run that script
 #
 # Acknowledgment:
@@ -28,6 +40,10 @@ def log_and_wait(msg: str):
     print("============ {} ============".format(msg))
     time.sleep(test_delay)
 
+####################
+# Miney API Basics #
+####################
+
 # Connect Minetest
 log_and_wait("Connect to minetest")
 mt = miney.Minetest()
@@ -39,10 +55,14 @@ print("mt.time_of_day = {}".format(mt.time_of_day))
 mt.time_of_day = 0.5
 print("mt.time_of_day = {}".format(mt.time_of_day))
 
-# Set Lua interpreter
+# Get Lua interpreter
 log_and_wait("Get lua interpreter")
 lua = miney.Lua(mt)
 print("lua = {}".format(lua))
+
+##########################
+# Lua Interpreter Basics #
+##########################
 
 # Convert Python data into lua string.
 #
@@ -63,6 +83,51 @@ log_and_wait("Invoke minetest lua interpreter to calculate 1+2")
 simple_lua_code = "return 1 + 2"
 simple_lua_result = lua.run(simple_lua_code)
 print("simple_lua_result = {}".format(simple_lua_result))
+
+# Persistance
+log_and_wait("Check persistance of lua interpreter")
+lua.run("alpha = 10")
+alpha = lua.run("return alpha")
+print("alpha = {}".format(alpha))
+
+# Check if luacmd amd miney are pointing to the same interpreter.  You must enter
+#
+# /lua beta = 20
+#
+# in minetest before testing this.  If it return 20, then it should
+# mean that luacmd points to the same lua interpreter as miney.
+#
+# Actually it does not!!! What is that supposed to mean?
+log_and_wait("Check luacmd and miney points to same lua interpreter")
+beta = lua.run("return beta")
+print("beta = {}".format(beta))
+
+# # Include library (better use request_insecure_environment below)
+# log_and_wait("Include lua library")
+# inspect = lua.run("inspect = require 'inspect'")
+# print("inspect = {}".format(inspect))
+
+# Include library by requesting insecure environment
+log_and_wait("Include lua library (requesting insecure environment)")
+test_inspect = """
+ie = minetest.request_insecure_environment()
+inspect = ie.require("inspect")
+return inspect({1, 2, 3, 4})
+"""
+inspect_result = lua.run(test_inspect)
+print("inspect_result = {}".format(inspect_result))
+
+# Chat
+log_and_wait("Send chat to minetest")
+chat = """
+return minetest.chat_send_all(\"Hello Minetest\")
+"""
+chat_result = lua.run(chat)
+print("chat_result = {}".format(chat_result))
+
+###################################
+# Player Action/Perception Basics #
+###################################
 
 # Run lua code to trigger play action, inspired from
 # minetest-agent/agent/Rob/atomic_actions.py
@@ -107,14 +172,6 @@ print("simple_lua_result = {}".format(simple_lua_result))
 # - void LocalPlayer::applyControl(float dtime, Environment *env) (look for "control.jump")
 # - int LuaLocalPlayer::l_get_control(lua_State *L) (would be nice if we had set_control)
 
-# Chat
-log_and_wait("Send chat to minetest")
-chat = """
-return minetest.chat_send_all(\"Hello Minetest\")
-"""
-chat_result = lua.run(chat)
-print("chat_result = {}".format(chat_result))
-
 # Testing player
 player_name = "singleplayer"
 
@@ -144,9 +201,9 @@ get_player_pos_result = player_lua_run("return player:get_pos()")
 print("get_player_pos_result = {}".format(get_player_pos_result))
 
 # Get player's surrounding
-# NEXT: Study ModApiEnvMod::l_get_objects_inside_radius(lua_State *L)
+# NEXT: Try to use inspect
 log_and_wait("Retrieve surrounding blocks")
-surrounding_blocks_result = player_lua_run("return minetest.get_objects_inside_radius(player:get_pos(), 1)")
+surrounding_blocks_result = player_lua_run("player_obs = minetest.get_objects_inside_radius(player:get_pos(), 10.0)")
 print("surrounding_blocks_result = {}".format(surrounding_blocks_result))
 
 # Move abruptly player to a position.  Setting the continuous argument
