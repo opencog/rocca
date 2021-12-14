@@ -164,4 +164,5 @@ There is no ROCCA paper per se yet.  In the meantime here is a list of related r
 + [Partial Operator Induction with Beta Distributions, Nil Geisweiller](https://raw.githubusercontent.com/ngeiswei/papers/master/PartialBetaOperatorInduction/PartialBetaOperatorInduction.pdf)
 + [Thompson Sampling is Asymptotically Optimal in General Environments, Jan Leike et al](http://auai.org/uai2016/proceedings/papers/20.pdf)
 + [Draft about temporal reasoning in PLN, Nil Geisweiller](https://github.com/opencog/pln/blob/master/opencog/pln/rules/temporal/temporal-reasoning.md)
++ [Presentation and Demo of Temporal and Procedural Reasoning with OpenCog, AGI-21, Nil Geisweiller et Hedra Yusuf](https://odysee.com/@ngeiswei:d/AGI-21-Temporal-Procedural-Reasoning-Nil-Geisweiller-Hedra-Yusuf:6)
 + [References about OpenCog including PLN](https://wiki.opencog.org/w/Background_Publications)
