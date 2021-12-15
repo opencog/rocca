@@ -2,13 +2,16 @@ from numbers import Number
 from typing import *
 
 import numpy as np
+
 from fastcore.basics import listify
+from gym import Env
+
 from opencog.atomspace import Atom, is_a, TruthValue
 from opencog.atomspace import types as AT
 from opencog.type_constructors import *
 
 
-def mk_action(name, value) -> Atom:
+def mk_action(name: str, value) -> Atom:  # with Python 3.10 value: np.ndarray | Any
     if isinstance(value, np.ndarray):
         value = listify(value.tolist())
         return ExecutionLink(SchemaNode(name), mk_list(*value))
@@ -16,7 +19,7 @@ def mk_action(name, value) -> Atom:
     return ExecutionLink(SchemaNode(name), mk_node(value))
 
 
-def mk_node(name) -> Atom:
+def mk_node(name: str) -> Atom:
     if isinstance(name, Number):
         return NumberNode(str(name))
     if isinstance(name, str):
@@ -24,8 +27,8 @@ def mk_node(name) -> Atom:
     raise RuntimeError("Error: Unknown type.")
 
 
-def mk_evaluation(predicate, *args) -> Atom:
-    pred = PredicateNode(predicate)
+def mk_evaluation(predicate_name: str, *args) -> Atom:
+    pred = PredicateNode(predicate_name)
     if len(args) == 1:
         if not isinstance(args[-1], bool):
             return EvaluationLink(pred, mk_node(args[-1]))
@@ -48,7 +51,7 @@ def mk_list(*args) -> Atom:
     return ListLink(*processed_items)
 
 
-def mk_minerl_single_action(env, name: str, value: Any):
+def mk_minerl_single_action(env: Env, name: str, value: Any) -> list[Atom]:
     """Fill in information about one action into a no-op"""
 
     noop = env.action_space.noop()
@@ -58,7 +61,7 @@ def mk_minerl_single_action(env, name: str, value: Any):
     return actions
 
 
-def to_python(atom: Atom):
+def to_python(atom: Atom):  # with Python 3.10 -> np.ndarray | float | Any
     """Return a Pythonic data representation of an atom"""
 
     if is_a(atom.type, AT.ListLink):

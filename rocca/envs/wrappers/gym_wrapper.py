@@ -1,5 +1,4 @@
 from functools import wraps
-from typing import *
 
 import numpy as np
 from fastcore.basics import listify
@@ -14,7 +13,7 @@ from .wrapper import Wrapper
 
 
 class GymWrapper(Wrapper):
-    def __init__(self, env: Env, atomspace: AtomSpace, action_names: List[str] = []):
+    def __init__(self, env: Env, atomspace: AtomSpace, action_names: list[str] = []):
         super().__init__()
 
         self.atomspace = atomspace
@@ -24,12 +23,12 @@ class GymWrapper(Wrapper):
         self.observation_space = env.observation_space
         self.action_names = action_names
 
-    def transform_percept(self, label: str, *args) -> List[Atom]:
+    def transform_percept(self, label: str, *args) -> list[Atom]:
         """A function to apply custom transforms on observations"""
 
         return [mk_evaluation(label, *args)]
 
-    def labeled_observation(self, space: Space, obs, sbs="") -> List[Atom]:
+    def labeled_observation(self, space: Space, obs, sbs="") -> list[Atom]:
         """The main processing block from Gym observations to Atomese
 
         Uses Gym's `Space` types to determine what kind of data structure is passed
