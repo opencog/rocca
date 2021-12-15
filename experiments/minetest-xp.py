@@ -68,15 +68,20 @@ print("lua = {}".format(lua))
 #
 # List of supported Python constructs (so far):
 # - list
+# - dict
 #
 # List of unsupported Python constructs (so far):
 # - set
 # - tuple
 log_and_wait("Convert python data to lua")
-data = ["123", "abc"]
-data_dumps = lua.dumps(data)
-print("python data = {}".format(data))
-print("lua data_dumps = {}".format(data_dumps))
+data_list = ["123", "abc"]
+data_list_dumps = lua.dumps(data_list)
+print("python list = {}".format(data_list))
+print("lua list dumps = {}".format(data_list_dumps))
+data_dict = {"123" : 123, "abc" : 234}
+data_dict_dumps = lua.dumps(data_dict)
+print("python dict = {}".format(data_dict))
+print("lua dict dumps = {}".format(data_dict_dumps))
 
 # Run simple lua code
 log_and_wait("Invoke minetest lua interpreter to calculate 1+2")
@@ -137,6 +142,12 @@ return minetest.chat_send_all(\"Hello Minetest\")
 """
 chat_result = lua.run(chat)
 print("chat_result = {}".format(chat_result))
+
+# Retrieve registered nodes.  Miney cannot serialize minetest player,
+# thus we return its string representation.
+log_and_wait("Retrieve registered nodes")
+registered_nodes = lua.run("return inspect(minetest.registered_nodes)")
+print("registered_nodes = {}".format(registered_nodes))
 
 ###################################
 # Player Action/Perception Basics #
@@ -203,34 +214,75 @@ def player_lua_run(code: str, player: str = "singleplayer"):
     print("Run lua code:\n\"\"\"\n{}\n\"\"\"".format(full_code))
     return lua.run(full_code)
 
+# Retrieve the main player.  Miney cannot serialize minetest player,
+# thus we return its string representation.
+log_and_wait("Retrieve player")
+player_result = player_lua_run("return inspect(player)")
+print("player_result = {}".format(player_result))
+
 # Retrieve the name of the player (given its name, hehe)
 log_and_wait("Retrieve player name")
 player_retrieve_name_result = player_lua_run("return player:get_player_name()")
 print("player_retrieve_name_result = {}".format(player_retrieve_name_result))
+
+# Retrieve player's inventory.  TODO: seems to return the player
+# object!!!.  TODO: move this after a command to have something in the
+# inventory).  Miney cannot serialize minetest inventory, thus we
+# return its string representation.
+log_and_wait("Retrieve player's inventory")
+player_inventory_result = player_lua_run("return inspect(player:get_inventory())")
+print("player_inventory_result = {}".format(player_inventory_result))
 
 # Get player position
 log_and_wait("Retrieve player position")
 get_player_pos_result = player_lua_run("return player:get_pos()")
 print("get_player_pos_result = {}".format(get_player_pos_result))
 
-# Get player's surrounding objects (likely only itself).
+# Get player's surrounding objects (likely only itself).  Miney cannot
+# serialize minetest objects, thus we return their string
+# representation.
 log_and_wait("Retrieve surrounding objects")
 surrounding_objects_result = player_lua_run("return inspect(minetest.get_objects_inside_radius(player:get_pos(), 1.0))")
 print("surrounding_objects_result = {}".format(surrounding_objects_result))
 
-# # Get player's surrounding.
-# #
-# # Relevant notions:
-# #   Mapblocks
+# Get the block (called node in minetest) at player's position
+log_and_wait("Retrieve node at player's position")
+player_node_result = player_lua_run("return minetest.get_node(player:get_pos())")
+print("player_node_result = {}".format(player_node_result))
+
+# Get metadata of node at player's position.  TODO: seems to return
+# the player object!!!
+log_and_wait("Retrieve node metadata at player's position")
+player_meta_result = player_lua_run("return inspect(minetest.get_meta(player:get_pos()))")
+print("player_meta_result = {}".format(player_meta_result))
+
+# Get player's nearest node of type air.
+log_and_wait("Get player's nearest node of type air")
+player_near_air_node_result = player_lua_run("return minetest.find_node_near(player:get_pos(), 1.0, 'air')")
+print("player_near_air_node_result = {}".format(player_near_air_node_result))
+
+# Get player's nearest node of type dry dirt.
+log_and_wait("Get player's nearest node of type dry dirt")
+player_near_dry_dirt_node_result = player_lua_run("return minetest.find_node_near(player:get_pos(), 10.0, 'default:dry_dirt')")
+print("player_near_dry_dirt_node_result = {}".format(player_near_dry_dirt_node_result))
+
+# Get player's nearest node of type desert sand.
+log_and_wait("Get player's nearest node of type desert sand")
+player_near_desert_sand_node_result = player_lua_run("return minetest.find_node_near(player:get_pos(), 10.0, 'default:desert_sand')")
+print("player_near_desert_sand_node_result = {}".format(player_near_desert_sand_node_result))
+
+# # Get player's nearest nodes under air.
 # #
 # # NEXT: read from Node paramtypes Section.  One may use the following
-# # - minetest.get_node(pos)
-# # - minetest.find_nodes_with_meta(pos1, pos2)
-# # - minetest.find_node_near(pos, radius, nodenames)
 # # - minetest.find_nodes_in_area_under_air(minp, maxp, nodenames)
-# log_and_wait("Retrieve surrounding objects (likely only player)")
-# surrounding_blocks_result = player_lua_run("msg = ''; obs = minetest.get_objects_inside_radius(player:get_pos(), 1000.0); for i, o in pairs(obs) do msg = msg .. inspect(o) .. ':' .. inspect(minetest.is_player(o)) .. ':' .. o:get_player_name() .. ', 'end; return msg")
-# print("surrounding_blocks_result = {}".format(surrounding_blocks_result))
+# log_and_wait("Retrieve player's surrounding nodes")
+# player_pos = {'y': 13.5, 'x': -201.31999206543, 'z': 382.10601806641}
+# player_lower_pos = {'y': 10.5, 'x': -210.5, 'z': 370.5}
+# player_upper_pos = {'y': 20.5, 'x': -200.5, 'z': 390.5}
+# lp = lua.dumps(player_lower_pos)
+# up = lua.dumps(player_upper_pos)
+# player_surrounding_nodes_result = player_lua_run("return inspect(minetest.find_nodes_with_meta({}, {}))".format(lp, up))
+# print("player_surrounding_nodes_result = {}".format(player_surrounding_nodes_result))
 
 # Move abruptly player to a position.  Setting the continuous argument
 # of move_to to true does not work for players (as explained in
@@ -247,6 +299,8 @@ print("move_player_to_result = {}".format(move_player_to_result))
 log_and_wait("Move smoothly player to back to previous position")
 player_move_back_result = player_lua_run("return player:add_velocity({x=-6.5, y=0, z=0})")
 print("player_move_back_result = {}".format(player_move_back_result))
+
+# TODO: rotate
 
 # Jump
 log_and_wait("Jump")
