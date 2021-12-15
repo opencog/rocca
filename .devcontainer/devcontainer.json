@@ -25,7 +25,6 @@
 		"ms-vscode.cmake-tools",
 		"sjhuangx.vscode-scheme",
 		"clptn.code-paredit",
-		"2gua.rainbow-brackets",
 	],
 	// Uncomment the next line if you want start specific services in your Docker Compose config.
 	// "runServices": [],
