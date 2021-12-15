@@ -137,11 +137,11 @@ def tv_to_beta_param(
 
 
 def tv_rv(tv: TruthValue, prior_a: float = 1, prior_b: float = 1) -> float:
-
     """Return a first order probability variate of a truth value.
 
-    Return a first order probability variate of the beta-distribution,
-    representing the second order distribution of tv.
+    Return a random variate of the beta distribution
+    representing the second order distribution of the truth value,
+    which represents a first order probability.
 
     rv stands for Random Variate.
 
