@@ -108,7 +108,7 @@ print("beta = {}".format(beta))
 # print("inspect = {}".format(inspect))
 
 # Include library by requesting insecure environment
-log_and_wait("Include lua library (requesting insecure environment)")
+log_and_wait("Include and test lua library (requesting insecure environment)")
 test_inspect = """
 ie = minetest.request_insecure_environment()
 inspect = ie.require("inspect")
@@ -116,6 +116,19 @@ return inspect({1, 2, 3, 4})
 """
 inspect_result = lua.run(test_inspect)
 print("inspect_result = {}".format(inspect_result))
+
+# More inspect combined with loop and string concatenation.
+log_and_wait("Inspect combined with loop and string concatenation")
+test_inspect_comb = """
+local t = {1, 2, 3, 4}
+local msg = ''
+for i, o in pairs(t) do
+   msg = msg .. inspect(i) .. ':' .. inspect(o) .. ';'
+end
+return msg
+"""
+inspect_comb_result = lua.run(test_inspect_comb)
+print("inspect_comb_result = {}".format(inspect_comb_result))
 
 # Chat
 log_and_wait("Send chat to minetest")
@@ -200,13 +213,24 @@ log_and_wait("Retrieve player position")
 get_player_pos_result = player_lua_run("return player:get_pos()")
 print("get_player_pos_result = {}".format(get_player_pos_result))
 
-# Get player's surrounding.
-#
-# NEXT: inspect(player_obs) outputs "{ <userdata 1> }", we need to
-# understand how to get more info.
-log_and_wait("Retrieve surrounding blocks")
-surrounding_blocks_result = player_lua_run("player_obs = minetest.get_objects_inside_radius(player:get_pos(), 10.0); return inspect(player_obs), #player_obs, inspect(player_obs[1])")
-print("surrounding_blocks_result = {}".format(surrounding_blocks_result))
+# Get player's surrounding objects (likely only itself).
+log_and_wait("Retrieve surrounding objects")
+surrounding_objects_result = player_lua_run("return inspect(minetest.get_objects_inside_radius(player:get_pos(), 1.0))")
+print("surrounding_objects_result = {}".format(surrounding_objects_result))
+
+# # Get player's surrounding.
+# #
+# # Relevant notions:
+# #   Mapblocks
+# #
+# # NEXT: read from Node paramtypes Section.  One may use the following
+# # - minetest.get_node(pos)
+# # - minetest.find_nodes_with_meta(pos1, pos2)
+# # - minetest.find_node_near(pos, radius, nodenames)
+# # - minetest.find_nodes_in_area_under_air(minp, maxp, nodenames)
+# log_and_wait("Retrieve surrounding objects (likely only player)")
+# surrounding_blocks_result = player_lua_run("msg = ''; obs = minetest.get_objects_inside_radius(player:get_pos(), 1000.0); for i, o in pairs(obs) do msg = msg .. inspect(o) .. ':' .. inspect(minetest.is_player(o)) .. ':' .. o:get_player_name() .. ', 'end; return msg")
+# print("surrounding_blocks_result = {}".format(surrounding_blocks_result))
 
 # Move abruptly player to a position.  Setting the continuous argument
 # of move_to to true does not work for players (as explained in
