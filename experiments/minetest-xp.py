@@ -159,10 +159,6 @@ print("registered_nodes = {}".format(registered_nodes))
 # Additionally here is a list of potentially useful methods from
 # https://github.com/minetest/minetest/blob/master/doc/lua_api.txt
 #
-# minetest.player_exists(name)
-# minetest.get_player_by_name(name)
-# minetest.get_objects_inside_radius(pos, radius)
-# minetest.find_node_near(pos, radius, nodenames)
 # minetest.find_nodes_in_area_under_air(minp, maxp, nodenames)
 # minetest.emerge_area(pos1, pos2, [callback], [param])
 # minetest.delete_area(pos1, pos2)
@@ -177,17 +173,9 @@ print("registered_nodes = {}".format(registered_nodes))
 # minetest.node_dig(pos, node, digger)
 #
 # ObjectRef methods:
-# - move_to(pos, continuous=false)
 # - punch(puncher, time_from_last_punch, tool_capabilities, direction)
-# - get_player_name()
 # - set_look_vertical(radians)
 # - set_look_horizontal(radians)
-# - get_velocity(): returns {x=num, y=num, z=num}
-# - add_velocity(vel)
-# - set_acceleration({x=num, y=num, z=num})
-# - get_acceleration(): returns {x=num, y=num, z=num}
-# - set_yaw(radians)
-# - get_yaw(): returns number in radians
 # - set_attach(parent[, bone, position, rotation, forced_visible])
 # - get_attach()
 # - get_player_control()
@@ -232,6 +220,12 @@ print("player_retrieve_name_result = {}".format(player_retrieve_name_result))
 log_and_wait("Retrieve player's inventory")
 player_inventory_result = player_lua_run("return inspect(player:get_inventory())")
 print("player_inventory_result = {}".format(player_inventory_result))
+
+# Retrieve player's properties.  Miney cannot serialize minetest
+# inventory, thus we return its string representation.
+log_and_wait("Get player properties")
+player_properties_result = player_lua_run("return inspect(player:get_properties())")
+print("player_properties_result = {}".format(player_properties_result))
 
 # Get player position
 log_and_wait("Retrieve player position")
@@ -300,11 +294,52 @@ log_and_wait("Move smoothly player to back to previous position")
 player_move_back_result = player_lua_run("return player:add_velocity({x=-6.5, y=0, z=0})")
 print("player_move_back_result = {}".format(player_move_back_result))
 
-# TODO: rotate
+# Go slowly to the previous position
+log_and_wait("Move smoothly player to back to previous position")
+player_move_back_result = player_lua_run("return player:add_velocity({x=1.0, y=0, z=0})")
+print("player_move_back_result = {}".format(player_move_back_result))
+
+# Go very fast in the same direction
+log_and_wait("Move smoothly player to back to previous position")
+player_move_back_result = player_lua_run("return player:add_velocity({x=20.0, y=0, z=0})")
+print("player_move_back_result = {}".format(player_move_back_result))
+
+# Go to another direction
+log_and_wait("Move smoothly player to back to previous position")
+player_move_back_result = player_lua_run("return player:add_velocity({x=0, y=0, z=6.5})")
+print("player_move_back_result = {}".format(player_move_back_result))
+
+# Get player horizontal look angle
+log_and_wait("Get player look horizontal angle")
+player_look_horizontal_angle = player_lua_run("return player:get_look_horizontal()")
+print("player_look_horizontal_angle = {}".format(player_look_horizontal_angle))
+
+# Set player horizontal look angle (turn, though not smoothly)
+log_and_wait("Set player look horizontal angle (+0.1)")
+new_player_look_horizontal_angle = player_look_horizontal_angle + 0.1
+set_player_look_horizontal_result = player_lua_run("return player:set_look_horizontal({})".format(new_player_look_horizontal_angle))
+print("set_player_look_horizontal_result = {}".format(set_player_look_horizontal_result))
+
+# NEXT: carefully read Player only (no-op for other objects) Section
+# in lua_api.txt, from get_breath()
+
+# NEXT
+# * `minetest.place_node(pos, node)`
+#     * Place node with the same effects that a player would cause
+# * `minetest.dig_node(pos)`
+#     * Dig node with the same effects that a player would cause
+#     * Returns `true` if successful, `false` on failure (e.g. protected location)
+# * `minetest.punch_node(pos)`
+#     * Punch node with the same effects that a player would cause
 
 # Jump
 log_and_wait("Jump")
 player_jump_result = player_lua_run("return player:add_velocity({x=0, y=6.5, z=0})")
+print("player_jump_result = {}".format(player_jump_result))
+
+# Jump higher (to its death)
+log_and_wait("Jump higher (to its death)")
+player_jump_result = player_lua_run("return player:add_velocity({x=0, y=100, z=0})")
 print("player_jump_result = {}".format(player_jump_result))
 
 # # Move player to the coordonates of a tree
