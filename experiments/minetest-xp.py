@@ -177,13 +177,10 @@ print("registered_nodes = {}".format(registered_nodes))
 #
 # ObjectRef methods:
 # - punch(puncher, time_from_last_punch, tool_capabilities, direction)
-# - set_look_vertical(radians)
-# - set_look_horizontal(radians)
 # - set_attach(parent[, bone, position, rotation, forced_visible])
 # - get_attach()
-# - get_player_control()
-#
-# In minetest source code:
+
+# NEXT: study in minetest source code to understand if we could create a set_player_control method:
 # - void LocalPlayer::applyControl(float dtime, Environment *env) (look for "control.jump")
 # - int LuaLocalPlayer::l_get_control(lua_State *L) (would be nice if we had set_control)
 
@@ -219,6 +216,11 @@ print("player_retrieve_name_result = {}".format(player_retrieve_name_result))
 log_and_wait("Retrieve player's inventory")
 player_inventory_result = player_lua_prt_run("return inspect(player:get_inventory())")
 print("player_inventory_result = {}".format(player_inventory_result))
+
+# Another attempt at retrieving player's inventory
+log_and_wait("Get inventory formspec")
+player_inventory_formspec_result = player_lua_prt_run("return player:get_inventory_formspec()")
+print("player_inventory_formspec_result = {}".format(player_inventory_formspec_result))
 
 # Retrieve player's properties.  Miney cannot serialize minetest
 # inventory, thus we return its string representation.
@@ -268,6 +270,11 @@ print("player_near_desert_sand_node_result = {}".format(player_near_desert_sand_
 log_and_wait("Get player's nearest node of type desert sand")
 player_near_node_result = player_lua_prt_run("return minetest.find_node_near(player:get_pos(), 10.0, {'default:dry_dirt', 'default:desert_sand'})")
 print("player_near_node_result = {}".format(player_near_node_result))
+
+# Get node drops
+log_and_wait("Get node drops")
+node_drops_result = lua_prt_run("minetest.get_node_drops('default:desert_sand', nil)")
+print("node_drops_result = {}".format(node_drops_result))
 
 # Dig
 log_and_wait("Dig")
@@ -329,9 +336,6 @@ new_player_look_horizontal_angle = player_look_horizontal_angle + 0.1
 set_player_look_horizontal_result = player_lua_prt_run("return player:set_look_horizontal({})".format(new_player_look_horizontal_angle))
 print("set_player_look_horizontal_result = {}".format(set_player_look_horizontal_result))
 
-# NEXT: carefully read Player only (no-op for other objects) Section
-# in lua_api.txt, from get_breath()
-
 # NEXT
 # * `minetest.place_node(pos, node)`
 #     * Place node with the same effects that a player would cause
@@ -347,6 +351,10 @@ print("player_jump_result = {}".format(player_jump_result))
 log_and_wait("Jump higher")
 player_jump_result = player_lua_prt_run("return player:add_velocity({x=0, y=13, z=0})")
 print("player_jump_result = {}".format(player_jump_result))
+
+log_and_wait("Get player control")
+player_control_result = player_lua_prt_run("return player:get_player_control()")
+print("player_control_result = {}".format(player_control_result))
 
 # # Starts mining
 # player = "singleplayer"
