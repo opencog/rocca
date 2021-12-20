@@ -5,9 +5,27 @@ from rocca.envs.wrappers.malmo_wrapper import MalmoWrapper
 from rocca.envs.wrappers.utils import *
 from builtins import range
 import json
-import random
 import math
+import signal
+from contextlib import contextmanager
 
+@contextmanager
+def timeout(time):
+    # Register a function to raise a TimeoutError on the signal.
+    signal.signal(signal.SIGALRM, raise_timeout)
+    # Schedule the signal to be sent after ``time``.
+    signal.alarm(time)
+    try:
+        yield
+    except TimeoutError:
+        pass
+    finally:
+        # Unregister the signal so it won't be triggered
+        # if the timeout is not reached.
+        signal.signal(signal.SIGALRM, signal.SIG_IGN)
+
+def raise_timeout(signum, frame):
+    raise TimeoutError
 
 def drawBlock(x, y, z, type):
     return """<DrawBlock x='{0}' y='{1}' z='{2}' type='{3}'/>""".format(x, y, z, type)
@@ -31,12 +49,16 @@ def build_house(x, y, z, width, length, height, blocktype):
       x_cur = x
       for j in range(width):
         genstring = genstring + drawBlock(x_front, y_cur, z_cur, "glass") + "\n"
-        genstring = genstring + drawBlock(x_back, y_cur, z_cur, blocktype) + "\n"
+        genstring = genstring + drawBlock(x_back, y_cur, z_cur, "diamond_block") + "\n"
         z_cur = z_cur + 1 if z_cur >= 0 else z_cur-1
 
       for k in range(length):
-        genstring = genstring + drawBlock(x_cur, y_cur, z_left, blocktype) + "\n"
-        genstring = genstring + drawBlock(x_cur, y_cur, z_right, blocktype) + "\n"
+        if k % 2 == 0:
+          genstring = genstring + drawBlock(x_cur, y_cur, z_left, "air") + "\n"
+          genstring = genstring + drawBlock(x_cur, y_cur, z_right, "air") + "\n"
+        else:
+          genstring = genstring + drawBlock(x_cur, y_cur, z_left, blocktype) + "\n"
+          genstring = genstring + drawBlock(x_cur, y_cur, z_right, blocktype) + "\n"
         x_cur = x_cur + 1 if x_cur >= 0 else x_cur-1
 
       y_cur = y_cur + 1 if y_cur >= 0 else y_cur-1
@@ -48,10 +70,105 @@ def build_house(x, y, z, width, length, height, blocktype):
     
     return genstring
 
+# Initialize the location coordinates 
 agent_x, agent_y, agent_z, agent_yaw = 19, 230, -2, 90
 key_x, key_y, key_z = 7, 228, -10
 door_x, door_y, door_z = -4, 228, -3
-diamond_x, diamond_y, diamond_z = -8, 228, -3 
+diamond_x, diamond_y, diamond_z = -18, 228, -3
+start_x, start_y, start_z, width, length, height = -4, 226, -1,6,15,5
+
+# relocates the agent to the starting point 
+def relocate_agent(agent):
+  agent.sendCommand("tp {} {} {}".format(agent_x, agent_y, agent_z))
+  agent.sendCommand("setYaw {}".format(agent_yaw))
+
+# stop the agent 
+def stop_condition(agent, blocktype, sec=5):
+  print("Moving to the {}".format(blocktype))
+  def stop(agent, blocktype):
+    done = False
+    world_state = agent.peekWorldState()
+    while not done:
+      world_state = agent.peekWorldState()
+      if world_state.number_of_observations_since_last_state > 0:
+        ob = json.loads(world_state.observations[-1].text)
+        if blocktype in ob["BlocksInFront"]:
+          print("reached at {}".format(blocktype))
+          agent.sendCommand("move 0")
+          done = True
+  try:
+    with timeout(sec):
+      stop(agent, blocktype)
+      return True
+  except TimeoutError:
+    print("Time out")
+    agent.sendCommand("move 0")
+    relocate_agent(agent)
+    return False
+
+# Get realtime location coordinates 
+def get_curr_loc(agent):
+  world_state = agent.peekWorldState()
+  while world_state.is_mission_running:
+    world_state = agent.peekWorldState()
+    if world_state.number_of_observations_since_last_state > 0:
+      ob = json.loads(world_state.observations[-1].text)
+      return (int(ob[u'XPos']), int(ob[u'YPos']), int(ob[u'ZPos']))
+    else:
+      return (agent_x, agent_y, agent_z)
+
+# Turns the agent towards the location given 
+def turn_to(agent, x1, y1, z1, x2, y2, z2):
+  def get_angle(x1, y1, z1, x2, y2, z2):
+    x_dist = abs(x1 - x2)
+    z_dist = abs(z1 - z2)
+    h = math.sqrt(x_dist**2 + z_dist**2)
+    return math.degrees(z_dist/h) if h != 0 else 0
+
+  angle = get_angle(x1, y1, z1, x2, y2, z2)
+  yaw = 90 if x1 > x2 else -90
+  if yaw > 0:
+      angle = yaw - angle if z1 < z2 else yaw + angle
+  else:
+      angle = yaw + angle if z1 < z2 else yaw - angle
+  agent.sendCommand("setYaw {}".format(angle))
+
+# Move the agent towards the key
+# reward=0 
+def go_to_the_key(agent):
+  curr_x, curr_y, curr_z = get_curr_loc(agent)
+  turn_to(agent,curr_x, curr_y, curr_z, key_x, key_y, key_z)
+  time.sleep(0.2)
+  agent.sendCommand("move 1")
+  if stop_condition(agent, 'tripwire_hook'):
+    # agent.sendCommand("tp {} {} {}".format(key_x, key_y, key_z))
+    agent.sendCommand("hotbar.2 1")
+  else:
+    relocate_agent(agent)
+
+# Move the agent towards the house and enter the house.
+# reward = 0
+def go_to_the_house(agent):
+  curr_x, curr_y, curr_z = get_curr_loc(agent)
+  turn_to(agent, curr_x, curr_y, curr_z, door_x, door_y, door_z)
+  time.sleep(0.2)
+  agent.sendCommand("move 1")
+  if stop_condition(agent, 'dark_oak_door'):
+    agent.sendCommand("tp {} {} {}".format(door_x, door_y, door_z))
+  else:
+    relocate_agent(agent)
+
+# Move the agent towards the diamond and collect it.
+# reward = 1
+def go_to_the_diamonds(agent):
+  curr_x, curr_y, curr_z = get_curr_loc(agent)
+  turn_to(agent,curr_x, curr_y, curr_z, diamond_x, diamond_y, diamond_z)
+  time.sleep(0.2)
+  agent.sendCommand("move 1")
+  if stop_condition(agent, 'diamond_block'):
+    agent.sendCommand("tp {} {} {}".format(diamond_x, diamond_y, diamond_z))
+    time.sleep(0.2)
+  relocate_agent(agent)
 
 missionXML = '''
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
@@ -74,7 +191,7 @@ missionXML = '''
     <ServerHandlers>
       <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;1;biome_1"/>
         <DrawingDecorator>
-          '''+build_house(-4, 226, -1,6,6,5,"planks")+'''
+          '''+build_house(start_x, start_y, start_z, width, length, height,"planks")+'''
           '''+drawBlock(diamond_x, diamond_y, diamond_z, "diamond_block")+'''
           '''+drawLine(door_x, door_y-1, door_z, door_x, door_y, door_z, "dark_oak_door", "EAST")+'''
           '''+drawBlock(key_x, key_y-1, key_z, "command_block")+'''
@@ -96,6 +213,7 @@ missionXML = '''
         </Inventory>
     </AgentStart>
     <AgentHandlers>
+      <ObservationFromFullStats/>
       <ObservationFromGrid>
         <Grid name="BlocksInFront">
           <min x="-1" y="1" z="-1"/>
@@ -107,96 +225,14 @@ missionXML = '''
       <AbsoluteMovementCommands />
       <InventoryCommands/>
       <RewardForTouchingBlockType>
-        <Block type="diamond_block" reward="1" />
+        <Block type="diamond_block" reward="1.0"/>
       </RewardForTouchingBlockType>
-      <RewardForCollectingItem>
-          <Item reward="1" type="diamond_block" />
-      </RewardForCollectingItem>
     </AgentHandlers>
   </AgentSection>
 
 </Mission>
 
 '''
-def get_angle(x1, y1, z1, x2, y2, z2):
-  x_dist = abs(x1 - x2)
-  z_dist = abs(z1 - z2)
-  h = math.sqrt(x_dist**2 + z_dist**2)
-  return math.degrees(z_dist/h) if h != 0 else 0
- 
-# Turn the agent towards the location given 
-def turn_to(agent, x1, y1, z1, yaw, x2, y2, z2):
-  angle = get_angle(x1, y1, z1, x2, y2, z2)
-  yaw = 90 if x1 > x2 else -90
-  if yaw > 0:
-      angle = yaw - angle if z1 < z2 else yaw + angle
-  else:
-      angle = yaw + angle if z1 < z2 else yaw - angle
-  agent.sendCommand("setYaw {}".format(angle))
-
-# Agent goes to the key
-# reward=0 
-def go_to_the_key(agent):
-  global agent_x, agent_y, agent_z
-  turn_to(agent,agent_x, agent_y, agent_z, agent_yaw, key_x, key_y, key_z)
-  time.sleep(0.2)
-  agent.sendCommand("move 1")
-  stop_condition(agent, 'tripwire_hook')
-  agent_x, agent_y, agent_z = key_x, key_y, key_z
-
-# Agent stops and grab the key
-# observations: agent holds the key and reward=0 
-def get_the_key(agent):
-  agent.sendCommand("move 0")
-  agent.sendCommand("hotbar.2 1")
-
-# Agent goes to the house. The agent should have the key
-# observations:
-# - Agent is next to closed door
-# - Agent holds the key
-# - reward = 0
-def go_to_the_house(agent):
-  global agent_x, agent_y, agent_z
-  turn_to(agent,agent_x, agent_y, agent_z, agent_yaw, door_x, door_y, door_z)
-  time.sleep(0.2)
-  agent.sendCommand("move 1")
-  stop_condition(agent, 'dark_oak_door')
-  agent_x, agent_y, agent_z = door_x, door_y, door_z
-
-# Agent opens the house.
-# observations:
-# - Agent next to opened door
-# - reward = 0
-def open_the_door(agent):
-  agent.sendCommand("move 0")
-  agent.sendCommand("attack 1")
-
-# Agent goes to the diamond inside the house.
-# reward = 0
-def go_to_the_diamonds(agent):
-  global agent_x, agent_y, agent_z
-  turn_to(agent,agent_x, agent_y, agent_z, agent_yaw, diamond_x, diamond_y, diamond_z)
-  time.sleep(0.2)
-  agent.sendCommand("move 1")
-  stop_condition(agent, "diamond_block")
-  agent_x, agent_y, agent_z = diamond_x, diamond_y, diamond_z
-
-def stop_condition(agent, block_type):
-  done = False
-  while not done:
-    world_state = agent.getWorldState()
-    if world_state.number_of_observations_since_last_state > 0:
-      ob = world_state.observations[-1].text
-      if block_type in ob:
-        agent.sendCommand("move 0")
-        done = True
-
-# Agent collects the diamond inside the house
-# reward = 1
-def collect_diamonds(agent):
-  agent.sendCommand("hotbar.1 1")
-  agent.sendCommand("attack 1")
-
 
 if __name__ == "__main__":
     """
@@ -210,32 +246,20 @@ if __name__ == "__main__":
 
     malmoWrapper = MalmoWrapper(missionXML=missionXML, validate=True)
 
-    def stp_callback(action, ws):
-        pass  # you can do something here.
-
     rw, ob, done = malmoWrapper.restart()
     total_reward = 0
-    # main loop:
-    time.sleep(0.5)
-    malmoWrapper.step(mk_action("hotbar.1", 0))
-    malmoWrapper.step(mk_action("hotbar.2", 0))
-
     agent = malmoWrapper.agent_host
-
     go_to_the_key(agent)
 
-    while not done:
-        print(".", end="")
-        time.sleep(0.5)
-        world_state = malmoWrapper.agent_host.getWorldState()
-
-        if world_state.number_of_observations_since_last_state > 0:
-          ob = world_state.observations[-1].text
-          go_to_the_house(agent)
-          get_the_key(agent)
-          open_the_door(agent)
-          collect_diamonds(agent)
-          malmoWrapper.step(mk_action("tp", "{} {} {}".format(19, 230, -2)))
-          done = True
+    world_state = agent.getWorldState()
+    while world_state.is_mission_running:
+      world_state = agent.getWorldState()
+      if world_state.number_of_rewards_since_last_state > 0:
+        total_reward += world_state.rewards[-1].getValue()
+        print("total reward = {}".format(total_reward))
+      go_to_the_key(agent)
+      go_to_the_house(agent)
+      go_to_the_diamonds(agent)
+      time.sleep(2)
     print()
     print("Mission ended")

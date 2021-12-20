@@ -23,8 +23,6 @@ class AbstractMalmoWrapper(MalmoWrapper):
     def step_decorator(step):
         @wraps(step)
         def wrapper(ref, action, update_callback=None):
-            # name, value = action.out[0], action.out[1]
-            # ws = step(ref, name.name + " " + value.name, update_callback)
             name = action.out[0]
             ws = step(ref, name, update_callback)
 
@@ -49,8 +47,6 @@ class AbstractMalmoWrapper(MalmoWrapper):
             print("Error sending command:", e)
         return self.world_state
 
-    
-
 if __name__ == "__main__":
     atomspace = AtomSpace()
     set_default_atomspace(atomspace)
@@ -73,11 +69,8 @@ if __name__ == "__main__":
     # TODO take care of action parameters.
     action_space = {
         ExecutionLink(SchemaNode("go_to_the_key")), 
-        ExecutionLink(SchemaNode("get_the_key")),
         ExecutionLink(SchemaNode("go_to_the_house")),
-        ExecutionLink(SchemaNode("open_the_door")),
         ExecutionLink(SchemaNode("go_to_the_diamonds")),
-        ExecutionLink(SchemaNode("collect_diamonds"))
     }
 
     cog_agent = OpencogAgent(wrapped_env, atomspace, action_space, pgoal, ngoal)
@@ -85,7 +78,7 @@ if __name__ == "__main__":
 
     # Training/learning loop
     lt_iterations = 3  # Number of learning-training iterations
-    lt_period = 200  # Duration of a learning-training iteration
+    lt_period = 10  # Duration of a learning-training iteration
     for i in range(lt_iterations):
         cog_agent.reset_action_counter()
         par = cog_agent.accumulated_reward  # Keep track of the reward before
