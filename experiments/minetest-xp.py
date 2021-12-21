@@ -96,6 +96,11 @@ log_and_wait("Invoke minetest lua interpreter to calculate 1+2")
 simple_lua_result = lua_prt_run("return 1 + 2")
 print("simple_lua_result = {}".format(simple_lua_result))
 
+# Return nil (should get None in Python)
+log_and_wait("Return nil")
+nil_result = lua_prt_run("return nil")
+print("nil_result = {}".format(nil_result))
+
 # Persistance
 log_and_wait("Check persistance of lua interpreter")
 lua.run("alpha = 10")
@@ -128,6 +133,11 @@ return inspect({1, 2, 3, 4})
 """
 inspect_result = lua_prt_run(test_inspect)
 print("inspect_result = {}".format(inspect_result))
+
+# Inspect nil
+log_and_wait("Inspect nil")
+inspect_nil_result = lua_prt_run("return inspect(nil)")
+print("inspect_nil_result = {}".format(inspect_nil_result))
 
 # More inspect combined with loop and string concatenation.
 log_and_wait("Inspect combined with loop and string concatenation")
@@ -209,13 +219,27 @@ log_and_wait("Retrieve player name")
 player_retrieve_name_result = player_lua_prt_run("return player:get_player_name()")
 print("player_retrieve_name_result = {}".format(player_retrieve_name_result))
 
-# Retrieve player's inventory.  TODO: seems to return the player
-# object!!!.  TODO: move this after a command to have something in the
-# inventory).  Miney cannot serialize minetest inventory, thus we
-# return its string representation.
-log_and_wait("Retrieve player's inventory")
-player_inventory_result = player_lua_prt_run("return inspect(player:get_inventory())")
+# Get player's inventory.  TODO: move this after a command to get
+# something in the inventory.  Miney cannot serialize minetest
+# inventory, thus we return its string representation.
+log_and_wait("Get player's inventory")
+player_inventory_result = player_lua_prt_run("return inspect(player:get_inventory():get_lists())")
 print("player_inventory_result = {}".format(player_inventory_result))
+
+# Get player's main inventory.  TODO: move this after a command to get
+# something in the inventory.  Miney cannot serialize minetest
+# inventory, thus we return its string representation.
+log_and_wait("Get player's main inventory")
+player_main_inventory_result = player_lua_prt_run("return inspect(player:get_inventory():get_list('main'))")
+print("player_main_inventory_result = {}".format(player_main_inventory_result))
+
+# Get player's first itemstack of its main inventory.  TODO: move this
+# after a command to get something in the inventory.  Miney cannot
+# serialize minetest inventory, thus we return its string
+# representation.
+log_and_wait("Get player's first itemstack of main inventory")
+player_first_itemstack_main_inventory_result = player_lua_prt_run("return inspect(player:get_inventory():get_list('main')[1])")
+print("player_first_itemstack_main_inventory_result = {}".format(player_first_itemstack_main_inventory_result))
 
 # Another attempt at retrieving player's inventory
 log_and_wait("Get inventory formspec")
@@ -271,16 +295,6 @@ log_and_wait("Get player's nearest node of type desert sand")
 player_near_node_result = player_lua_prt_run("return minetest.find_node_near(player:get_pos(), 10.0, {'default:dry_dirt', 'default:desert_sand'})")
 print("player_near_node_result = {}".format(player_near_node_result))
 
-# Get node drops
-log_and_wait("Get node drops")
-node_drops_result = lua_prt_run("minetest.get_node_drops('default:desert_sand', nil)")
-print("node_drops_result = {}".format(node_drops_result))
-
-# Dig
-log_and_wait("Dig")
-player_dig_result = lua_prt_run("return minetest.dig_node({})".format(lua.dumps(player_near_node_result)))
-print("player_dig_result = {}".format(player_dig_result))
-
 # Get player's nearest nodes under air.
 log_and_wait("Retrieve player's surrounding nodes")
 player_lower_pos = {k:v-5.0 for k, v in player_pos.items()}
@@ -290,6 +304,44 @@ up = lua.dumps(player_upper_pos)
 nn = "{'default:dry_dirt', 'default:desert_sand'}"
 player_surrounding_nodes_result = player_lua_prt_run("return minetest.find_nodes_in_area_under_air({}, {}, {})".format(lp, up, nn))
 print("player_surrounding_nodes_result = {}".format(player_surrounding_nodes_result))
+
+# Get node drops.  Returns list of itemstrings that are dropped by
+# `node` when dug with the item `toolname` (not limited to tools)
+log_and_wait("Get node drops")
+node_drops_result = lua_prt_run("minetest.get_node_drops('default:desert_sand', nil)")
+print("node_drops_result = {}".format(node_drops_result))
+
+# Dig.  NEXT: how to have it go to player inventory? Maybe see
+# `minetest.handle_node_drops(pos, drops, digger)`
+log_and_wait("Dig")
+player_dig_result = lua_prt_run("return minetest.dig_node({})".format(lua.dumps(player_near_node_result)))
+print("player_dig_result = {}".format(player_dig_result))
+
+# Get inventory of the dug node
+# NEXT: understand why it does not work
+#
+# AFCM
+#  — 
+# Today at 3:41 PM
+# item dropping/pickup is handled by minetest.handle_node_drops()
+# ~api minetest.handle_node_drops
+# MinetestBotBOT
+#  — 
+# Today at 3:41 PM
+# Minetest Lua API
+# Results for minetest.handle_node_drops:
+# Line 5320:
+#
+# * `minetest.handle_node_drops(pos, drops, digger)`
+#
+# Page 1 / 1 | lua_api
+log_and_wait("Dig inventory")
+dig_inventory_result = lua_prt_run("return inspect(minetest.get_inventory({{type=\"node\", pos={}}}))".format(lua.dumps(player_near_node_result)))
+print("dig_inventory_result = {}".format(dig_inventory_result))
+
+# # Drop item from player inventory
+# log_and_wait("Drop from inventory")
+# NEXT: minetest.item_drop(itemstack, player, player_pos)
 
 # Move abruptly player to a position.  Setting the continuous argument
 # of move_to to true does not work for players (as explained in
@@ -302,7 +354,8 @@ move_player_to = "return player:move_to({})".format(lua.dumps(player_shifted_pos
 move_player_to_result = player_lua_prt_run(move_player_to)
 print("move_player_to_result = {}".format(move_player_to_result))
 
-# Come back smoothly to its original position
+# Come back smoothly to its original position.  NEXT: use player_api
+# to simulate walking.
 log_and_wait("Move smoothly player to back to previous position")
 player_move_back_result = player_lua_prt_run("return player:add_velocity({x=-6.5, y=0, z=0})")
 print("player_move_back_result = {}".format(player_move_back_result))
