@@ -281,18 +281,15 @@ log_and_wait("Dig")
 player_dig_result = lua_prt_run("return minetest.dig_node({})".format(lua.dumps(player_near_node_result)))
 print("player_dig_result = {}".format(player_dig_result))
 
-# # Get player's nearest nodes under air.
-# #
-# # NEXT: read from Node paramtypes Section.  One may use the following
-# # - minetest.find_nodes_in_area_under_air(minp, maxp, nodenames)
-# log_and_wait("Retrieve player's surrounding nodes")
-# player_pos = {'y': 13.5, 'x': -201.31999206543, 'z': 382.10601806641}
-# player_lower_pos = {'y': 10.5, 'x': -210.5, 'z': 370.5}
-# player_upper_pos = {'y': 20.5, 'x': -200.5, 'z': 390.5}
-# lp = lua.dumps(player_lower_pos)
-# up = lua.dumps(player_upper_pos)
-# player_surrounding_nodes_result = player_lua_prt_run("return inspect(minetest.find_nodes_with_meta({}, {}))".format(lp, up))
-# print("player_surrounding_nodes_result = {}".format(player_surrounding_nodes_result))
+# Get player's nearest nodes under air.
+log_and_wait("Retrieve player's surrounding nodes")
+player_lower_pos = {k:v-5.0 for k, v in player_pos.items()}
+player_upper_pos = {k:v+5.0 for k, v in player_pos.items()}
+lp = lua.dumps(player_lower_pos)
+up = lua.dumps(player_upper_pos)
+nn = "{'default:dry_dirt', 'default:desert_sand'}"
+player_surrounding_nodes_result = player_lua_prt_run("return minetest.find_nodes_in_area_under_air({}, {}, {})".format(lp, up, nn))
+print("player_surrounding_nodes_result = {}".format(player_surrounding_nodes_result))
 
 # Move abruptly player to a position.  Setting the continuous argument
 # of move_to to true does not work for players (as explained in
