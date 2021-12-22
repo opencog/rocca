@@ -24,11 +24,6 @@
 # 1. Run minetest
 # 2. Create game with mineysocket and optionally luacmd enabled
 # 3. Run that script
-#
-# Acknowledgment:
-#
-# A lot of understanding (especially the end of the script) comes from
-# studying https://github.com/MaikePaetzel/minetest-agent
 
 import copy
 import time
@@ -157,9 +152,9 @@ log_and_wait("Send chat to minetest")
 chat_result = lua_prt_run("return minetest.chat_send_all(\"Hello Minetest\")")
 print("chat_result = {}".format(chat_result))
 
-# Retrieve registered nodes.  Miney cannot serialize minetest player,
-# thus we return its string representation.
-log_and_wait("Retrieve registered nodes")
+# Get registered nodes.  Miney cannot serialize minetest player, thus
+# we return its string representation.
+log_and_wait("Get registered nodes")
 registered_nodes = lua_prt_run("return inspect(minetest.registered_nodes)")
 print("registered_nodes = {}".format(registered_nodes))
 
@@ -181,43 +176,43 @@ def player_lua_prt_run(code: str, player: str = "singleplayer"):
     full_code = get_player_code + "\n" + code
     return lua_prt_run(full_code)
 
-# Retrieve the main player.  Miney cannot serialize minetest player,
-# thus we return its string representation.
-log_and_wait("Retrieve player")
+# Get the main player.  Miney cannot serialize minetest player, thus
+# we return its string representation.
+log_and_wait("Get player")
 player_result = player_lua_prt_run("return inspect(player)")
 print("player_result = {}".format(player_result))
 
-# Retrieve the name of the player (given its name, hehe)
-log_and_wait("Retrieve player name")
-player_retrieve_name_result = player_lua_prt_run("return player:get_player_name()")
-print("player_retrieve_name_result = {}".format(player_retrieve_name_result))
+# Get the name of the player (given its name, hehe)
+log_and_wait("Get player name")
+player_get_name_result = player_lua_prt_run("return player:get_player_name()")
+print("player_get_name_result = {}".format(player_get_name_result))
 
-# Retrieve player's properties.  Miney cannot serialize minetest
-# inventory, thus we return its string representation.
+# Get player's properties.  Miney cannot serialize minetest inventory,
+# thus we return its string representation.
 log_and_wait("Get player properties")
 player_properties_result = player_lua_prt_run("return inspect(player:get_properties())")
 print("player_properties_result = {}".format(player_properties_result))
 
 # Get player position
-log_and_wait("Retrieve player position")
+log_and_wait("Get player position")
 player_pos = player_lua_prt_run("return player:get_pos()")
 print("player_pos = {}".format(player_pos))
 
 # Get player's surrounding objects (likely only itself).  Miney cannot
 # serialize minetest objects, thus we return their string
 # representation.
-log_and_wait("Retrieve surrounding objects")
+log_and_wait("Get surrounding objects")
 surrounding_objects_result = player_lua_prt_run("return inspect(minetest.get_objects_inside_radius(player:get_pos(), 1.0))")
 print("surrounding_objects_result = {}".format(surrounding_objects_result))
 
 # Get the block (called node in minetest) at player's position
-log_and_wait("Retrieve node at player's position")
+log_and_wait("Get node at player's position")
 player_node_result = player_lua_prt_run("return minetest.get_node(player:get_pos())")
 print("player_node_result = {}".format(player_node_result))
 
 # Get metadata of node at player's position.  TODO: seems to return
 # the player object!!!
-log_and_wait("Retrieve node metadata at player's position")
+log_and_wait("Get node metadata at player's position")
 player_meta_result = player_lua_prt_run("return inspect(minetest.get_meta(player:get_pos()))")
 print("player_meta_result = {}".format(player_meta_result))
 
@@ -243,7 +238,7 @@ player_near_node_result = player_lua_prt_run("return minetest.find_node_near(pla
 print("player_near_node_result = {}".format(player_near_node_result))
 
 # Get player's nearest nodes under air.
-log_and_wait("Retrieve player's surrounding nodes")
+log_and_wait("Get player's surrounding nodes")
 player_lower_pos = {k:v-5.0 for k, v in player_pos.items()}
 player_upper_pos = {k:v+5.0 for k, v in player_pos.items()}
 lp = lua.dumps(player_lower_pos)
@@ -267,22 +262,19 @@ log_and_wait("Dig")
 player_dig_result = player_lua_prt_run("return minetest.node_dig({}, {}, player)".format(lua.dumps(player_near_node_result), lua.dumps(associated_node)))
 print("player_dig_result = {}".format(player_dig_result))
 
-# Get player's inventory.  TODO: move this after a command to get
-# something in the inventory.  Miney cannot serialize minetest
-# inventory, thus we return its string representation.
+# Get player's inventory.  Miney cannot serialize minetest inventory,
+# thus we return its string representation.
 log_and_wait("Get player's inventory")
 player_inventory_result = player_lua_prt_run("return inspect(player:get_inventory():get_lists())")
 print("player_inventory_result = {}".format(player_inventory_result))
 
-# Get player's main inventory.  TODO: move this after a command to get
-# something in the inventory.  Miney cannot serialize minetest
+# Get player's main inventory.  Miney cannot serialize minetest
 # inventory, thus we return its string representation.
 log_and_wait("Get player's main inventory")
 player_main_inventory_result = player_lua_prt_run("return inspect(player:get_inventory():get_list('main'))")
 print("player_main_inventory_result = {}".format(player_main_inventory_result))
 
-# Get player's first itemstack of its main inventory.  TODO: move this
-# after a command to get something in the inventory.  Miney cannot
+# Get player's first itemstack of its main inventory.  Miney cannot
 # serialize minetest inventory, thus we return its string
 # representation.
 log_and_wait("Get player's first itemstack of main inventory")
@@ -317,7 +309,7 @@ print("player_move_back_result = {}".format(player_move_back_result))
 
 # Go slowly to the previous position
 log_and_wait("Move smoothly player to back to previous position")
-player_move_back_result = player_lua_prt_run("return player:add_velocity({x=1.0, y=0, z=0})")
+player_move_back_result = player_lua_prt_run("return player:add_velocity({x=3.0, y=0, z=0})")
 print("player_move_back_result = {}".format(player_move_back_result))
 
 # Go very fast in the same direction
