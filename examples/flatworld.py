@@ -11,7 +11,7 @@ from rocca.agents.utils import agent_log
 from rocca.envs.malmo_demo.flatworld_env import *
 from rocca.envs.wrappers import MalmoWrapper
 from opencog.ure import ure_logger
-from rocca.envs.wrappers.utils import mk_action
+from rocca.envs.wrappers.utils import mk_evaluation
 from functools import wraps
 
 
@@ -24,28 +24,27 @@ class AbstractMalmoWrapper(MalmoWrapper):
         @wraps(step)
         def wrapper(ref, action, update_callback=None):
             name = action.out[0]
-            ws = step(ref, name, update_callback)
-
-            return MalmoWrapper.parse_world_state(ws)
+            return step(ref, name, update_callback)
 
         return wrapper
 
     @step_decorator.__func__
-    def step(self, action, update_callback=None):
+    def step(self, abstract_action, update_callback=None):
         try:
-            func = globals()[action.name]
-            func(self.agent_host)
+            func = globals()[abstract_action.name]
+            observations, reward, done = func(self.agent_host)
             time.sleep(0.2)
-            self.world_state = self.agent_host.getWorldState()
-
-            for error in self.world_state.errors:
-                print("Error: ", error.text)
-
-            if update_callback is not None:
-                update_callback(action, self.world_state)
+            obs_list = []
+            if observations:
+                for k in observations:
+                    if isinstance(observations[k], list):
+                        for i in observations[k]:
+                            obs_list.append(mk_evaluation(i, k))
+                    else:
+                        obs_list.append(mk_evaluation(k, observations[k]))
         except RuntimeError as e:
             print("Error sending command:", e)
-        return self.world_state
+        return obs_list, mk_evaluation("Reward", reward), done
 
 if __name__ == "__main__":
     atomspace = AtomSpace()
@@ -56,7 +55,7 @@ if __name__ == "__main__":
     # log.set_sync(True)
     agent_log.set_level("debug")
     # agent_log.set_sync(True)
-    ure_logger().set_level("debug")
+    ure_logger().set_level("info")
 
     # 
     wrapped_env = AbstractMalmoWrapper(missionXML=missionXML, validate=True)
@@ -78,7 +77,7 @@ if __name__ == "__main__":
 
     # Training/learning loop
     lt_iterations = 3  # Number of learning-training iterations
-    lt_period = 10  # Duration of a learning-training iteration
+    lt_period = 50  # Duration of a learning-training iteration
     for i in range(lt_iterations):
         cog_agent.reset_action_counter()
         par = cog_agent.accumulated_reward  # Keep track of the reward before
