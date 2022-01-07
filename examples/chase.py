@@ -160,3 +160,9 @@ if __name__ == "__main__":
         agent_log.info(
             "Action counter during {}th iteration:\n{}".format(i + 1, ca.action_counter)
         )
+
+    # Log all agent's atomspaces at the end (at fine level)
+    agent_log_atomspace(ca.atomspace, "fine", "ca.atomspace")
+    agent_log_atomspace(ca.percepta_atomspace, "fine", "ca.percepta_atomspace")
+    agent_log_atomspace(ca.cogscms_atomspace, "fine", "ca.cogscms_atomspace")
+    agent_log_atomspace(ca.working_atomspace, "fine", "ca.working_atomspace")
