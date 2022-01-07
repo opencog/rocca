@@ -6,6 +6,7 @@
 
 # Python
 import random
+from typing import Any
 
 from orderedmultidict import omdict
 
@@ -57,7 +58,7 @@ agent_log.set_component("Agent")
 #############
 
 
-def add_to_atomspace(atoms, atomspace: AtomSpace):
+def add_to_atomspace(atoms: list[Atom], atomspace: AtomSpace) -> None:
     """Add all atoms to the atomspace."""
 
     for atom in atoms:
@@ -89,14 +90,16 @@ def is_true(atom: Atom) -> bool:
     return atom.tv == TRUE_TV
 
 
-def count_to_confidence(count) -> float:
+def count_to_confidence(count: int) -> float:
     """Convert TV count to confidence."""
 
     K = 800.0
     return float(count) / (float(count) + K)
 
 
-def tv_to_beta(tv: TruthValue, prior_a=1.0, prior_b=1.0):
+def tv_to_beta(
+    tv: TruthValue, prior_a: float = 1.0, prior_b: float = 1.0
+) -> st.rv_continuous:
     """Convert a truth value to a beta distribution.
 
     Given a truth value, return the beta distribution that best fits
@@ -113,7 +116,9 @@ def tv_to_beta(tv: TruthValue, prior_a=1.0, prior_b=1.0):
     return st.beta(a, b)
 
 
-def tv_to_alpha_param(tv: TruthValue, prior_a=1.0, prior_b=1.0) -> float:
+def tv_to_alpha_param(
+    tv: TruthValue, prior_a: float = 1.0, prior_b: float = 1.0
+) -> float:
     """Return the alpha parameter of a TV's beta-distribution."""
 
     count = tv.count
@@ -121,7 +126,9 @@ def tv_to_alpha_param(tv: TruthValue, prior_a=1.0, prior_b=1.0) -> float:
     return prior_a + pos_count
 
 
-def tv_to_beta_param(tv: TruthValue, prior_a=1.0, prior_b=1.0) -> float:
+def tv_to_beta_param(
+    tv: TruthValue, prior_a: float = 1.0, prior_b: float = 1.0
+) -> float:
     """Return the beta parameter of a TV's beta-distribution."""
 
     count = tv.count
@@ -129,12 +136,12 @@ def tv_to_beta_param(tv: TruthValue, prior_a=1.0, prior_b=1.0) -> float:
     return prior_b + count - pos_count
 
 
-def tv_rv(tv: TruthValue, prior_a=1, prior_b=1) -> float:
-
+def tv_rv(tv: TruthValue, prior_a: float = 1, prior_b: float = 1) -> float:
     """Return a first order probability variate of a truth value.
 
-    Return a first order probability variate of the beta-distribution
-    representing the second order distribution of tv.
+    Return a random variate of the beta distribution
+    representing the second order distribution of the truth value,
+    which represents a first order probability.
 
     rv stands for Random Variate.
 
@@ -148,7 +155,7 @@ def atom_to_idstr(atom: Atom) -> str:
     return atom.id_string() if atom else "None"
 
 
-def w8d_cogscm_to_str(w8d_cogscm, indent="") -> str:
+def w8d_cogscm_to_str(w8d_cogscm: tuple[float, Atom], indent: str = "") -> str:
     """Pretty print a pair (weight, cogscm)."""
 
     weight = w8d_cogscm[0]
@@ -159,7 +166,7 @@ def w8d_cogscm_to_str(w8d_cogscm, indent="") -> str:
     return s
 
 
-def w8d_cogscms_to_str(w8d_cogscms, indent="") -> str:
+def w8d_cogscms_to_str(w8d_cogscms: list[tuple[float, Atom]], indent: str = "") -> str:
     """Pretty print the given list of weighted cogscms"""
 
     w8d_cogscms_sorted = sorted(w8d_cogscms, key=lambda x: x[0], reverse=True)
@@ -170,7 +177,7 @@ def w8d_cogscms_to_str(w8d_cogscms, indent="") -> str:
     return s
 
 
-def action_to_str(action, indent="") -> str:
+def action_to_str(action: Atom, indent: str = "") -> str:
     """Pretty print an action.
 
     For now it just outputs the schema corresponding to the action
@@ -181,23 +188,21 @@ def action_to_str(action, indent="") -> str:
     return indent + str(action.out[0])
 
 
-def act_pblt_to_str(act_pblt, indent="") -> str:
+def act_pblt_to_str(act_pblt: tuple[Atom, float], indent: str = "") -> str:
     action = act_pblt[0]
     pblt = act_pblt[1]
     return indent + "({}, {})".format(action_to_str(action), pblt)
 
 
-# TODO: use join to optimize
-def act_pblts_to_str(act_pblts, indent="") -> str:
+def act_pblts_to_str(act_pblts: tuple[Atom, float], indent: str = "") -> str:
     """Pretty print a list of pairs (action, probability)."""
 
-    s = ""
-    for act_pblt in act_pblts:
-        s += indent + act_pblt_to_str(act_pblt) + "\n"
-    return s
+    return "\n".join([indent + act_pblt_to_str(act_pblt) for act_pblt in act_pblts])
 
 
-def act_w8d_cogscm_to_str(act_w8d_cogscm, indent="") -> str:
+def act_w8d_cogscm_to_str(
+    act_w8d_cogscm: tuple[Atom, tuple[float, Atom]], indent: str = ""
+) -> str:
     """Pretty print a pair (action, (weight, cogscm))."""
 
     action = act_w8d_cogscm[0]
@@ -206,17 +211,20 @@ def act_w8d_cogscm_to_str(act_w8d_cogscm, indent="") -> str:
     return s
 
 
-# TODO: use join to optimize
-def act_w8d_cogscms_to_str(act_w8d_cogscms, indent="") -> str:
+def act_w8d_cogscms_to_str(
+    act_w8d_cogscms: list[tuple[Atom, tuple[float, Atom]]], indent: str = ""
+) -> str:
     """Pretty print a list of pairs (action, (weight, cogscm))."""
 
-    s = ""
-    for act_w8d_cogscm in act_w8d_cogscms:
-        s += indent + act_w8d_cogscm_to_str(act_w8d_cogscm) + "\n"
-    return s
+    return "\n".join(
+        [
+            indent + act_w8d_cogscm_to_str(act_w8d_cogscm)
+            for act_w8d_cogscm in act_w8d_cogscms
+        ]
+    )
 
 
-def mxmdl_to_str(mxmdl, indent="") -> str:
+def mxmdl_to_str(mxmdl: omdict, indent: str = "") -> str:
     """Pretty print the given mixture model of cogscms"""
 
     s = ""
@@ -228,7 +236,9 @@ def mxmdl_to_str(mxmdl, indent="") -> str:
     return s
 
 
-def thompson_sample(mxmdl, prior_a=1, prior_b=1):
+def thompson_sample(
+    mxmdl: omdict, prior_a: float = 1, prior_b: float = 1
+) -> tuple[Atom, float]:
     """Perform Thompson sampling over the mixture model.
 
     Meaning, for each action
@@ -271,21 +281,21 @@ def thompson_sample(mxmdl, prior_a=1, prior_b=1):
     return max(act_pblts, key=lambda act_pblt: act_pblt[1])
 
 
-def get_cogscm_tv(cogscm) -> TruthValue:
+def get_cogscm_tv(cogscm: Atom) -> TruthValue:
     """Return the Truth Value of a cogscm or the default if it is None"""
 
     return cogscm.tv if cogscm else DEFAULT_TV
 
 
-def weighted_sampling(weighted_list):
+def weighted_sampling(weighted_items: list[tuple[float, Any]]) -> tuple[float, Any]:
     """Given list of pairs (weight, element) weight-randomly select an element.
 
     Return pair (w, e) of the weight associated to the selected element.
 
     """
 
-    w8s = [weight for (weight, _) in weighted_list]
-    return random.choices(weighted_list, weights=w8s)[0]
+    w8s = [weight for (weight, _) in weighted_items]
+    return random.choices(weighted_items, weights=w8s)[0]
 
 
 def weighted_average_tv(weighted_tvs):
@@ -476,7 +486,7 @@ def is_S(atom: Atom) -> bool:
     return atom.type == get_type("SLink")
 
 
-def maybe_and(clauses) -> Atom:
+def maybe_and(clauses: list[Atom]) -> Atom:
     """Wrap an And if multiple clauses, otherwise return the only one."""
 
     return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
@@ -506,7 +516,7 @@ def get_antecedent(atom: Atom):  # TODO: requires Python 3.10 -> (Atom | None):
     return None
 
 
-def get_succedent(atom):
+def get_succedent(atom: Atom):  # Atom | None
     """Return the succedent of a temporal atom.
 
     For instance is the cognitive schematics is represented by
@@ -626,14 +636,10 @@ def has_all_variables_in_antecedent(cogscm: Atom) -> bool:
         return True
 
 
-# TODO: optimize using comprehension
 def get_free_variables_of_atoms(atoms: Atom) -> set[Atom]:
     """Get the set of all free variables in all atoms."""
 
-    variables = set()
-    for atom in atoms:
-        variables.update(set(get_free_variables(atom)))
-    return variables
+    return set().union(*(set(get_free_variables(atom)) for atom in atoms))
 
 
 def get_times(timed_atoms: list[Atom]) -> set[Atom]:
@@ -644,7 +650,7 @@ def get_times(timed_atoms: list[Atom]) -> set[Atom]:
     return set.union(set([get_time(timed_atoms[0])]), get_times(timed_atoms[1:]))
 
 
-def get_events(timed_atoms) -> list[Atom]:
+def get_events(timed_atoms: list[Atom]) -> list[Atom]:
     """Given a container of timestamped clauses, return a list of all events."""
 
     return [get_event(ta) for ta in timed_atoms]
@@ -801,7 +807,7 @@ def get_time(timed_atom: Atom) -> Atom:
     return timed_atom.out[1]
 
 
-def timestamp(atom: Atom, i: int, tv=None, nat=True) -> Atom:
+def timestamp(atom: Atom, i: int, tv: TruthValue = None, nat: bool = True) -> Atom:
     """Timestamp a given atom.  Optionally set its TV
 
     AtTimeLink <tv>               # if tv is provided
@@ -844,7 +850,7 @@ def to_nat(i: int) -> Atom:
     return ret
 
 
-def lag_to_nat(i: int, T: Atom):
+def lag_to_nat(i: int, T: Atom) -> Atom:
     """Given an int i and T, return as many SLinks wrapping around T.
 
     For instance if i=3 and T=VariableNode("$T") return
@@ -884,7 +890,7 @@ def to_int(n: Atom) -> int:
     return ret
 
 
-def to_scheme_str(vs) -> str:
+def to_scheme_str(vs: Any) -> str:
     """Takes a python value and convert it to a scheme value string"""
     if vs == True:
         return "#t"
@@ -899,7 +905,7 @@ def atomspace_to_str(atomspace: AtomSpace) -> str:
     return str(scheme_eval(atomspace, "(cog-get-all-roots)").decode("utf-8"))
 
 
-def agent_log_atomspace(atomspace: AtomSpace, level: str = "fine"):
+def agent_log_atomspace(atomspace: AtomSpace, level: str = "fine") -> None:
     """Takes an atomspace and log its content (with size and address)"""
     agent_log.fine(
         "atomspace [address={}, size={}]:\n{}".format(
@@ -911,7 +917,7 @@ def agent_log_atomspace(atomspace: AtomSpace, level: str = "fine"):
 class MinerLogger:
     """Quick and dirty miner logger Python bindings"""
 
-    def __init__(self, atomspace):
+    def __init__(self, atomspace: AtomSpace):
         self.atomspace = atomspace
         scheme_eval(self.atomspace, "(use-modules (opencog miner))")
 

@@ -54,10 +54,10 @@ class OpencogAgent:
         self,
         env: Wrapper,
         atomspace: AtomSpace,
-        action_space,
-        p_goal,
-        n_goal,
-        log_level="debug",
+        action_space: set[Atom],
+        p_goal: Atom,
+        n_goal: Atom,
+        log_level: str = "debug",
     ):
         # Construct the various atomspaces
         self.atomspace = atomspace  # Working atomspace
