@@ -124,13 +124,17 @@ class OpencogAgent:
         # plans from monoaction plans.
         self.temporal_deduction = True
 
-        # Only consider cognitive schematics with mean of 1 (and non
-        # null confidence)
-        self.true_cogscm = False
+        # Filter out cognitive schematics with strengths below this
+        # threshold
+        #
+        # TODO: anti-predictive cognitive schematics are also
+        # important, maybe we want to have an entropy threshold
+        # instead.
+        self.cogscm_min_strength = 0.9
 
-        # Only consider cognitive schematics without variable (other
-        # than temporal of course)
-        self.empty_vardecl_cogscm = False
+        # Filter out cognitive schematics with numbers of variables
+        # above this threshold
+        self.cogscm_max_variables = 1
 
     def __del__(self):
         self.env.close()
@@ -789,8 +793,8 @@ class OpencogAgent:
         1. its confidence above zero
         2. its action fully grounded
         3. all its variables in the antecedent
-        4. A mean of one, if self.true_cogscm is true
-        5. An empty vardecl, if self.empty_vardecl_cogscm is true
+        4. a mean greater than or equal to cogscm_min_strength
+        5. a number of variables less than or equal to cogscm_max_variables
 
         """
 
@@ -799,8 +803,8 @@ class OpencogAgent:
             and has_non_null_confidence(cogscm)
             and is_closed(get_t0_execution(cogscm))
             and has_all_variables_in_antecedent(cogscm)
-            and (not self.true_cogscm or has_one_mean(cogscm))
-            and (not self.empty_vardecl_cogscm or has_empty_vardecl(cogscm))
+            and has_mean_geq(cogscm, self.cogscm_min_strength)
+            and has_variables_leq(cogscm, self.cogscm_max_variables)
         )
 
     def surprises_to_predictive_implications(self, srps: Atom) -> list[Atom]:
