@@ -160,7 +160,9 @@ if __name__ == "__main__":
             "Accumulated reward during {}th iteration = {}".format(i + 1, nar)
         )
         agent_log.info(
-            "Action counter during {}th iteration:\n{}".format(i + 1, cag.action_counter)
+            "Action counter during {}th iteration:\n{}".format(
+                i + 1, cag.action_counter
+            )
         )
 
     # Log all agent's atomspaces at the end (at fine level)
