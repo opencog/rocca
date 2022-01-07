@@ -173,7 +173,7 @@ print("player_exists = {}".format(player_exists_result))
 # Create lua runner helper to run player methods
 def player_lua_prt_run(code: str, player: str = "singleplayer"):
     get_player_code = "local player = minetest.get_player_by_name(\"{}\")".format(player)
-    full_code = get_player_code + "\n" + code
+    full_code = get_player_code + "\n" + code.strip('\n')
     return lua_prt_run(full_code)
 
 # Get the main player.  Miney cannot serialize minetest player, thus
@@ -274,21 +274,44 @@ log_and_wait("Get player's main inventory")
 player_main_inventory_result = player_lua_prt_run("return inspect(player:get_inventory():get_list('main'))")
 print("player_main_inventory_result = {}".format(player_main_inventory_result))
 
-# Get player's first itemstack of its main inventory.  Miney cannot
-# serialize minetest inventory, thus we return its string
-# representation.
+# Get player's first itemstack of its main inventory.
+stack_index = 1
 log_and_wait("Get player's first itemstack of main inventory")
-player_first_itemstack_main_inventory_result = player_lua_prt_run("return inspect(player:get_inventory():get_list('main')[1])")
+player_first_itemstack_main_inventory_result = player_lua_prt_run("return player:get_inventory():get_stack('main', {}):to_table()".format(stack_index))
 print("player_first_itemstack_main_inventory_result = {}".format(player_first_itemstack_main_inventory_result))
+
+# Get player's first itemstack count of its main inventory.
+log_and_wait("Get player's first itemstack count of main inventory")
+player_first_itemstack_count_main_inventory_result = player_lua_prt_run("return player:get_inventory():get_stack('main', {}):get_count()".format(stack_index))
+print("player_first_itemstack_count_main_inventory_result = {}".format(player_first_itemstack_count_main_inventory_result))
 
 # Another attempt at retrieving player's inventory
 log_and_wait("Get inventory formspec")
 player_inventory_formspec_result = player_lua_prt_run("return player:get_inventory_formspec()")
 print("player_inventory_formspec_result = {}".format(player_inventory_formspec_result))
 
-# # Drop item from player inventory
-# log_and_wait("Drop from inventory")
-# NEXT: minetest.item_drop(itemstack, player, player_pos)
+# Drop item from player inventory
+log_and_wait("Drop first item from inventory")
+itemstack = lua.dumps(player_first_itemstack_main_inventory_result)
+drop_item_lua_code = """
+local pl_inv = player:get_inventory()
+local pl_stack = pl_inv:get_stack('main', {0})
+local pl_stack_count = pl_stack:get_count()
+local pl_leftover_stack = minetest.item_drop(pl_stack, player, {1})
+pl_inv:set_stack('main', {0}, pl_leftover_stack)
+return pl_leftover_stack:to_table()
+-- NEXT: minetest.item_drop actually drops the entire stack.
+-- Below is a (failed to far) attempt to only drop one item of the stack.
+--
+-- local is_pl_stack_cleared = pl_stack:set_count(pl_stack_count - 1)
+-- pl_inv:set_stack('main', {1}, pl_stack)
+-- pl_inv:set_stack('main', {1}, pl_stack)
+-- return pl_stack:to_table()
+""".format(stack_index, lua.dumps(player_pos))
+leftover_itemstack = player_lua_prt_run(drop_item_lua_code)
+print("leftover_itemstack = {}".format(leftover_itemstack))
+
+# NEXT: minetest.item_eat, maybe
 
 # Move abruptly player to a position.  Setting the continuous argument
 # of move_to to true does not work for players (as explained in
