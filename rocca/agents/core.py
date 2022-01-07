@@ -807,7 +807,7 @@ class OpencogAgent:
             and has_variables_leq(cogscm, self.cogscm_max_variables)
         )
 
-    def surprises_to_predictive_implications(self, srps: Atom) -> list[Atom]:
+    def surprises_to_predictive_implications(self, srps: list[Atom]) -> list[Atom]:
         """Like to_predictive_implication but takes surprises."""
 
         agent_log.fine("surprises_to_predictive_implications(srps={})".format(srps))
