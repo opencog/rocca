@@ -909,11 +909,14 @@ def atomspace_to_str(atomspace: AtomSpace) -> str:
     return str(scheme_eval(atomspace, "(cog-get-all-roots)").decode("utf-8"))
 
 
-def agent_log_atomspace(atomspace: AtomSpace, level: str = "fine") -> None:
+def agent_log_atomspace(
+    atomspace: AtomSpace, level: str = "fine", msg_prefix: str = "atomspace"
+) -> None:
     """Takes an atomspace and log its content (with size and address)"""
+
     agent_log.fine(
-        "atomspace [address={}, size={}]:\n{}".format(
-            atomspace, len(atomspace), atomspace_to_str(atomspace)
+        "{} [address={}, size={}]:\n{}".format(
+            msg_prefix, atomspace, len(atomspace), atomspace_to_str(atomspace)
         )
     )
 
