@@ -50,12 +50,13 @@ def build_house(x, y, z, width, length, height, blocktype):
       for j in range(width):
         genstring = genstring + drawBlock(x_front, y_cur, z_cur, "glass") + "\n"
         genstring = genstring + drawBlock(x_back, y_cur, z_cur, "diamond_block") + "\n"
+        genstring = genstring + drawBlock(x_back-1, y_cur, z_cur, blocktype) + "\n"
         z_cur = z_cur + 1 if z_cur >= 0 else z_cur-1
 
       for k in range(length):
         if k % 2 == 0:
-          genstring = genstring + drawBlock(x_cur, y_cur, z_left, "air") + "\n"
-          genstring = genstring + drawBlock(x_cur, y_cur, z_right, "air") + "\n"
+          genstring = genstring + drawBlock(x_cur, y_cur, z_left, "glass") + "\n"
+          genstring = genstring + drawBlock(x_cur, y_cur, z_right, "glass") + "\n"
         else:
           genstring = genstring + drawBlock(x_cur, y_cur, z_left, blocktype) + "\n"
           genstring = genstring + drawBlock(x_cur, y_cur, z_right, blocktype) + "\n"
@@ -153,7 +154,7 @@ def go_to_the_key(agent):
   action_complete = stop_condition(agent, 'tripwire_hook')
   if action_complete:
     agent.sendCommand("hotbar.2 1")
-    observation = {"agent_status":["agent_holds_the_key"]}
+    observation = {"observation":["holds_key"]}
     holds_key = True
   else:
     observation = []
@@ -169,13 +170,13 @@ def go_to_the_house(agent):
   agent.sendCommand("move 1")
   action_complete = stop_condition(agent, 'dark_oak_door')
   if action_complete:
-    observation = {"agent_status":[]}
+    observation = {"observation":[]}
     if holds_key:
       agent.sendCommand("tp {} {} {}".format(door_x, door_y, door_z))
-      observation["agent_status"].append("agent_inside_the_house")
-      observation["agent_status"].append("agent_holds_the_key")
+      observation["observation"].append("inside_the_house")
+      observation["observation"].append("holds_key")
     else:
-      observation["agent_status"].append("agent_nextto_closed_door")
+      observation["observation"].append("nextto_closed_door")
 
   else:
     observation = []
@@ -218,7 +219,6 @@ missionXML = '''
       <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;1;biome_1"/>
         <DrawingDecorator>
           '''+build_house(start_x, start_y, start_z, width, length, height,"planks")+'''
-          '''+drawBlock(diamond_x, diamond_y, diamond_z, "diamond_block")+'''
           '''+drawLine(door_x, door_y-1, door_z, door_x, door_y, door_z, "dark_oak_door", "EAST")+'''
           '''+drawBlock(key_x, key_y-1, key_z, "command_block")+'''
           '''+drawBlock(key_x, key_y, key_z, "tripwire_hook")+'''
