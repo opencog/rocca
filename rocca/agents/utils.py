@@ -57,7 +57,10 @@ agent_log.set_component("Agent")
 # Functions #
 #############
 
-
+# TODO: replace list[Atom] by set[Atom] | list[Atom] once we have
+# completely moved to Python 3.10.  Indeed for instance
+# OpencogAgent.update_cognitive_schematics uses set[Atom], not
+# list[Atom].
 def add_to_atomspace(atoms: list[Atom], atomspace: AtomSpace) -> None:
     """Add all atoms to the atomspace."""
 

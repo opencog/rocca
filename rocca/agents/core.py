@@ -449,6 +449,12 @@ class OpencogAgent:
 
         # 1. Infer conditional conjunctions
 
+        agent_log.fine(
+            "cogscms_atomspace before inferring conditional conjunctions [count={}]:\n{}".format(
+                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
+            )
+        )
+
         # Call PLN to infer new cognitive schematics by combining
         # existing ones
         V = VariableNode("$V")
@@ -470,13 +476,19 @@ class OpencogAgent:
 
         # 2. Infer conjunctions TVs
 
+        agent_log.fine(
+            "cogscms_atomspace before inferring outgoings TVs [count={}]:\n{}".format(
+                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
+            )
+        )
+
         # Infer antecedents and consequents TVs of cognitive schematics
         self.directly_evaluate_cogscms_ante_succ(self.cogscms_atomspace)
 
         # 3. Infer temporal deductions
 
         agent_log.fine(
-            "cogscms_atomspace before temporal deduction [count={}] = {}".format(
+            "cogscms_atomspace before temporal deduction [count={}]:\n{}".format(
                 len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
             )
         )
@@ -493,7 +505,7 @@ class OpencogAgent:
         cogscms.update(inferred_cogscms)
 
         agent_log.fine(
-            "Inferred cognitive schematics [count={}] = {}".format(
+            "Inferred cognitive schematics [count={}]:\n{}".format(
                 len(cogscms), cogscms
             )
         )
@@ -988,7 +1000,7 @@ class OpencogAgent:
 
         See https://wiki.opencog.org/w/Cognitive_Schematic for more
         information.  The supported format for cognitive schematics
-        are as follows
+        is as follows
 
         BackPredictiveImplicationScope <tv>
           <vardecl>
@@ -1013,7 +1025,9 @@ class OpencogAgent:
 
         agent_log.fine("plan(goal={}, expiry={})".format(goal, expiry))
         agent_log.fine(
-            "self.cognitive_schematics = {}".format(self.cognitive_schematics)
+            "self.cognitive_schematics [count={}]:\n{}".format(
+                len(self.cognitive_schematics), self.cognitive_schematics
+            )
         )
 
         # Retrieve all cognitive schematics meeting the constrains which are
