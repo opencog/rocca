@@ -110,8 +110,8 @@ class ChaseAgent(OpencogAgent):
         self.polyaction_mining = False
         self.monoaction_general_succeedent_mining = True
         self.temporal_deduction = True
-        self.true_cogscm = True
-        self.empty_vardecl_cogscm = True
+        self.cogscm_min_strength = 0.99
+        self.cogscm_max_variables = 0
 
 
 if __name__ == "__main__":
@@ -134,29 +134,39 @@ if __name__ == "__main__":
     wrapped_env = ChaseWrapper(env, atomspace)
 
     # ChaseAgent
-    ca = ChaseAgent(wrapped_env, atomspace)
+    cag = ChaseAgent(wrapped_env, atomspace)
 
     # Training/learning loop
     lt_iterations = 2  # Number of learning-training iterations
     lt_period = 200  # Duration of a learning-training iteration
     for i in range(lt_iterations):
         wrapped_env.restart()
-        ca.reset_action_counter()
-        par = ca.accumulated_reward  # Keep track of the reward before
+        cag.reset_action_counter()
+        par = cag.accumulated_reward  # Keep track of the reward before
+
         # Discover patterns to make more informed decisions
         agent_log.info("Start learning ({}/{})".format(i + 1, lt_iterations))
-        ca.learn()
+        cag.learn()
+
         # Run agent to accumulate percepta
         agent_log.info("Start training ({}/{})".format(i + 1, lt_iterations))
         for j in range(lt_period):
-            ca.control_cycle()
+            cag.control_cycle()
             wrapped_env.render()
             time.sleep(0.1)
-            log.info("cycle_count = {}".format(ca.cycle_count))
-        nar = ca.accumulated_reward - par
+            log.info("cycle_count = {}".format(cag.cycle_count))
+        nar = cag.accumulated_reward - par
         agent_log.info(
             "Accumulated reward during {}th iteration = {}".format(i + 1, nar)
         )
         agent_log.info(
-            "Action counter during {}th iteration:\n{}".format(i + 1, ca.action_counter)
+            "Action counter during {}th iteration:\n{}".format(
+                i + 1, cag.action_counter
+            )
         )
+
+    # Log all agent's atomspaces at the end (at fine level)
+    agent_log_atomspace(cag.atomspace, "fine", "cag.atomspace")
+    agent_log_atomspace(cag.percepta_atomspace, "fine", "cag.percepta_atomspace")
+    agent_log_atomspace(cag.cogscms_atomspace, "fine", "cag.cogscms_atomspace")
+    agent_log_atomspace(cag.working_atomspace, "fine", "cag.working_atomspace")

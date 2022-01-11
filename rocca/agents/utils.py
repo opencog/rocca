@@ -78,10 +78,10 @@ def has_non_null_confidence(atom: Atom) -> bool:
     return 0 < atom.tv.confidence
 
 
-def has_one_mean(atom: Atom) -> bool:
-    """Return True iff the given atom has a mean of 1."""
+def has_mean_geq(atom: Atom, mean: float) -> bool:
+    """Return True iff `atom` has a mean greater than or equal to `mean`."""
 
-    return 1 <= atom.tv.mean
+    return mean <= atom.tv.mean
 
 
 def is_true(atom: Atom) -> bool:
@@ -311,15 +311,6 @@ def weighted_average_tv(weighted_tvs):
     return None
 
 
-def has_empty_vardecl(cogscm: Atom) -> bool:
-    """Return True iff the cognitive schematic has an empty vardecl."""
-
-    vardecl = get_vardecl(cogscm)
-    return (is_variable_list(vardecl) or is_variable_set(vardecl)) and is_empty_link(
-        vardecl
-    )
-
-
 def get_vardecl(cogscm: Atom) -> Atom:
     """Extract the vardecl of a cognitive schematic.
 
@@ -344,6 +335,19 @@ def get_vardecl(cogscm: Atom) -> Atom:
     """
 
     return cogscm.out[0] if is_scope(cogscm) else VariableSet()
+
+
+def vardecl_size(vardecl: Atom) -> int:
+    """Return the number of variables in a variable declaration."""
+
+    is_variable_collection = is_variable_list(vardecl) or is_variable_set(vardecl)
+    return vardecl.arity if is_variable_collection else 1
+
+
+def has_variables_leq(cogscm: Atom, vc: int) -> bool:
+    """Return True iff `cogscm` has a number of variables less than or equal to `vc`."""
+
+    return vardecl_size(get_vardecl(cogscm)) <= vc
 
 
 def is_virtual(clause: Atom) -> bool:
@@ -905,11 +909,14 @@ def atomspace_to_str(atomspace: AtomSpace) -> str:
     return str(scheme_eval(atomspace, "(cog-get-all-roots)").decode("utf-8"))
 
 
-def agent_log_atomspace(atomspace: AtomSpace, level: str = "fine") -> None:
+def agent_log_atomspace(
+    atomspace: AtomSpace, level: str = "fine", msg_prefix: str = "atomspace"
+) -> None:
     """Takes an atomspace and log its content (with size and address)"""
+
     agent_log.fine(
-        "atomspace [address={}, size={}]:\n{}".format(
-            atomspace, len(atomspace), atomspace_to_str(atomspace)
+        "{} [address={}, size={}]:\n{}".format(
+            msg_prefix, atomspace, len(atomspace), atomspace_to_str(atomspace)
         )
     )
 
