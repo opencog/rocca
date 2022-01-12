@@ -46,6 +46,7 @@ class AbstractMalmoWrapper(MalmoWrapper):
             print("Error sending command:", e)
         return obs_list, mk_evaluation("Reward", reward), done
 
+
 class FlatworldAgent(OpencogAgent):
     def __init__(self, env, atomspace):
         set_default_atomspace(atomspace)
@@ -53,7 +54,7 @@ class FlatworldAgent(OpencogAgent):
         # Create Action Space. The set of allowed actions an agent can take.
         # TODO take care of action parameters.
         action_space = {
-            ExecutionLink(SchemaNode("go_to_the_key")), 
+            ExecutionLink(SchemaNode("go_to_the_key")),
             ExecutionLink(SchemaNode("go_to_the_house")),
             ExecutionLink(SchemaNode("go_to_the_diamonds")),
         }
@@ -73,6 +74,7 @@ class FlatworldAgent(OpencogAgent):
         # Todo: restart the environment to get an initial reward
         self.initial_reward = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
 
+
 if __name__ == "__main__":
     atomspace = AtomSpace()
     set_default_atomspace(atomspace)
@@ -84,7 +86,7 @@ if __name__ == "__main__":
     # agent_log.set_sync(True)
     ure_logger().set_level("info")
 
-    # 
+    #
     wrapped_env = AbstractMalmoWrapper(missionXML=missionXML, validate=True)
 
     cog_agent = FlatworldAgent(wrapped_env, atomspace)
@@ -111,5 +113,7 @@ if __name__ == "__main__":
             "Accumulated reward during {}th iteration = {}".format(i + 1, nar)
         )
         agent_log.info(
-            "Action counter during {}th iteration:\n{}".format(i + 1, cog_agent.action_counter)
+            "Action counter during {}th iteration:\n{}".format(
+                i + 1, cog_agent.action_counter
+            )
         )
