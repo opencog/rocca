@@ -89,12 +89,13 @@ def build_house(x, y, z, width, length, height, blocktype):
         x_cur = x
         for j in range(width):
             genstring = genstring + drawBlock(x_front, y_cur, z_cur, "glass") + "\n"
-            genstring = (
-                genstring + drawBlock(x_back, y_cur, z_cur, "diamond_block") + "\n"
-            )
-            genstring = (
-                genstring + drawBlock(x_back - 1, y_cur, z_cur, blocktype) + "\n"
-            )
+            genstring = genstring + drawBlock(x_back, y_cur, z_cur, blocktype) + "\n"
+            if j > 0 and j < width - 1:
+                genstring = (
+                    genstring
+                    + drawBlock(x_back + 1, y_cur, z_cur, "diamond_block")
+                    + "\n"
+                )
             z_cur = z_cur + 1 if z_cur >= 0 else z_cur - 1
 
         for k in range(length):
@@ -164,7 +165,6 @@ def stop_condition(agent, blocktype, sec=10):
             if world_state.number_of_observations_since_last_state > 0:
                 ob = json.loads(world_state.observations[-1].text)
                 if blocktype in ob["BlocksInFront"]:
-                    print("reached at {}".format(blocktype))
                     agent.sendCommand("move 0")
                     done = True
 
@@ -218,6 +218,10 @@ def is_mission_running(agent):
 # reward=0
 def go_to_the_key(agent):
     global holds_key
+    reward = 0
+    observation = {"holds": ["self", "key"]}
+    if holds_key:
+        return observation, reward, is_mission_running
     curr_x, curr_y, curr_z = get_curr_loc(agent)
     turn_to(agent, curr_x, curr_y, curr_z, key_x, key_y, key_z)
     time.sleep(0.2)
@@ -225,30 +229,36 @@ def go_to_the_key(agent):
     action_complete = stop_condition(agent, "tripwire_hook")
     if action_complete:
         agent.sendCommand("hotbar.2 1")
-        observation = {"observation": ["holds_key"]}
         holds_key = True
     else:
         observation = []
-    reward = 0
     return observation, reward, is_mission_running
 
 
 # Move the agent towards the house and enter the house.
 # reward = 0
 def go_to_the_house(agent):
+    global holds_key
+    reward = 0
+    observation = {}
     curr_x, curr_y, curr_z = get_curr_loc(agent)
+    if curr_x == door_x and curr_z == door_z:
+        observation["inside"] = ["self", "house"]
+        return observation, reward, is_mission_running
+
     turn_to(agent, curr_x, curr_y, curr_z, door_x, door_y, door_z)
     time.sleep(0.2)
     agent.sendCommand("move 1")
     action_complete = stop_condition(agent, "dark_oak_door")
     if action_complete:
-        observation = {"observation": []}
         if holds_key:
+            observation["holds"] = ["self", "key"]
             agent.sendCommand("tp {} {} {}".format(door_x, door_y, door_z))
-            observation["observation"].append("inside_the_house")
-            observation["observation"].append("holds_key")
+            observation["inside"] = ["self", "house"]
+            agent.sendCommand("hotbar.1 1")
+            holds_key = False
         else:
-            observation["observation"].append("nextto_closed_door")
+            observation["nextto"] = ["self", "closed_door"]
 
     else:
         observation = []
@@ -266,6 +276,7 @@ def go_to_the_diamonds(agent):
     action_complete = stop_condition(agent, "diamond_block")
     if action_complete:
         reward = 1
+        relocate_agent(agent)
     else:
         reward = 0
     return [], reward, is_mission_running
@@ -285,7 +296,7 @@ missionXML = (
     <ServerInitialConditions>
             <Time>
                 <StartTime>1000</StartTime>
-                <AllowPassageOfTime>true</AllowPassageOfTime>
+                <AllowPassageOfTime>false</AllowPassageOfTime>
             </Time>
             <Weather>clear</Weather>
             <AllowSpawning>true</AllowSpawning>
@@ -309,7 +320,7 @@ missionXML = (
     + """
 
         </DrawingDecorator>
-      <ServerQuitFromTimeUp description="" timeLimitMs="1000000"/>
+      <ServerQuitFromTimeUp description="" timeLimitMs="10000000"/>
       <ServerQuitWhenAnyAgentFinishes/>
     </ServerHandlers>
   </ServerSection>
@@ -365,22 +376,23 @@ if __name__ == "__main__":
     rw, ob, done = malmoWrapper.restart()
     total_reward = 0
     agent = malmoWrapper.agent_host
-    _, rw, _ = go_to_the_key(agent)
-    print(ob)
-    total_reward += rw
     world_state = agent.getWorldState()
+    relocate_agent(agent)
     while world_state.is_mission_running:
         world_state = agent.getWorldState()
         if world_state.number_of_rewards_since_last_state > 0:
             total_reward += world_state.rewards[-1].getValue()
             print("total reward minecraft = {}".format(total_reward))
+        ob, rw, _ = go_to_the_key(agent)
+        print("Observation: {}, reward: {}".format(ob, rw))
+        total_reward += rw
 
         ob, rw, _ = go_to_the_house(agent)
-        print(ob)
+        print("Observation: {}, reward: {}".format(ob, rw))
         total_reward += rw
 
         ob, rw, _ = go_to_the_diamonds(agent)
-        print(ob)
+        print("Observation: {}, reward: {}".format(ob, rw))
         total_reward += rw
 
         time.sleep(2)

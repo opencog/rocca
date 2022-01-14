@@ -38,8 +38,7 @@ class AbstractMalmoWrapper(MalmoWrapper):
             if observations:
                 for k in observations:
                     if isinstance(observations[k], list):
-                        for i in observations[k]:
-                            obs_list.append(mk_evaluation(i, k))
+                        obs_list.append(mk_evaluation(k, *observations[k]))
                     else:
                         obs_list.append(mk_evaluation(k, observations[k]))
         except RuntimeError as e:
@@ -69,8 +68,8 @@ class FlatworldAgent(OpencogAgent):
         self.polyaction_mining = False
         self.monoaction_general_succeedent_mining = True
         self.temporal_deduction = True
-        self.true_cogscm = True
-        self.empty_vardecl_cogscm = True
+        self.cogscm_min_strength = 0.99
+        self.cogscm_max_variables = 0
         # Todo: restart the environment to get an initial reward
         self.initial_reward = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
 
