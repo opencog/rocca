@@ -917,11 +917,10 @@ def agent_log_atomspace(
 ) -> None:
     """Takes an atomspace and log its content (with size and address)"""
 
-    agent_log.fine(
-        "{} [address={}, size={}]:\n{}".format(
-            msg_prefix, atomspace, len(atomspace), atomspace_to_str(atomspace)
-        )
+    msg = "{} [address={}, size={}]:\n{}".format(
+        msg_prefix, atomspace, len(atomspace), atomspace_to_str(atomspace)
     )
+    agent_log.log(level, msg)
 
 
 class MinerLogger:
