@@ -319,7 +319,7 @@ class OpencogAgent:
 
         The parameters are
 
-        atomspace: the atomspace over which to do the reasoning. # NEXT: find out if it really does that
+        atomspace: the atomspace over which to do the reasoning. # TODO: find out if it really does that
         source: the atom source to start from.
         maximum_iterations: the maximum number of iterations.
         rules: optional list of rule symbols.  If empty keep current rule set.
@@ -425,7 +425,7 @@ class OpencogAgent:
             # Mine positive succedent goals
             postctxs = [self.positive_goal]
             las = (lag, prectxs, postctxs)
-            # NEXT: use percepta_atomspace
+            # TODO: use percepta_atomspace
             pos_srps = self.mine_temporal_patterns(self.atomspace, las)
             pos_prdi = self.surprises_to_predictive_implications(pos_srps)
             agent_log.fine("pos_prdi = {}".format(pos_prdi))
@@ -434,7 +434,7 @@ class OpencogAgent:
             # Mine negative succedent goals
             postctxs = [self.negative_goal]
             las = (lag, prectxs, postctxs)
-            # NEXT: use percepta_atomspace
+            # TODO: use percepta_atomspace
             neg_srps = self.mine_temporal_patterns(self.atomspace, las)
             neg_prdi = self.surprises_to_predictive_implications(neg_srps)
             agent_log.fine("neg_prdi = {}".format(neg_prdi))
@@ -444,7 +444,7 @@ class OpencogAgent:
             if self.monoaction_general_succedent_mining:
                 postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
                 las = (lag, prectxs, postctxs)
-                # NEXT: use percepta_atomspace
+                # TODO: use percepta_atomspace
                 gen_srps = self.mine_temporal_patterns(self.atomspace, las)
                 gen_prdi = self.surprises_to_predictive_implications(gen_srps)
                 agent_log.fine("gen_prdi = {}".format(gen_prdi))
@@ -459,7 +459,7 @@ class OpencogAgent:
                     )
                     ma_prectxs = (lag, prectxs, [snd_action])
                     compo_las = (lag, ma_prectxs, postctxs)
-                    # NEXT: use percepta_atomspace
+                    # TODO: use percepta_atomspace
                     pos_multi_srps = self.mine_temporal_patterns(
                         self.atomspace, compo_las
                     )
@@ -846,7 +846,9 @@ class OpencogAgent:
         agent_log.fine("pt = {}".format(pt))
         agent_log.fine("pd = {}".format(pd))
 
-        # HACK: big hack, pd is turned into positive goal
+        # HACK: big hack, pd is turned into positive goal to create a
+        # predictive implication of such positive goal with low
+        # strength.
         if pd == self.negative_goal:
             pd = self.positive_goal
 
@@ -987,7 +989,7 @@ class OpencogAgent:
 
         More precisely it takes
 
-        1. an atomspace to mine (NEXT: should it be the atomspace to
+        1. an atomspace to mine (TODO: should it be the atomspace to
         mine (which would bedetermined by Percepta Record anyway)?  Or
         the atomspace to dump the result into?)
 
