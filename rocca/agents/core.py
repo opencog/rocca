@@ -124,17 +124,60 @@ class OpencogAgent:
         # plans from monoaction plans.
         self.temporal_deduction = True
 
-        # Filter out cognitive schematics with strengths below this
-        # threshold
+        # Filter out cognitive schematics with a Shannon entropy equal
+        # to or lower than this parameter.  The Shannon entropy is
+        # calculated based on the mean of the corresponding beta
+        # distribution of the cognitive schematics truth value.  The
+        # parameter ranges from 0 (strongest filter, only absolutely
+        # true or absolutely false cognitive schematics passes
+        # through) to 1 (all cognitive schematics passes through).
         #
-        # TODO: anti-predictive cognitive schematics are also
-        # important, maybe we want to have an entropy threshold
-        # instead.
-        self.cogscm_min_strength = 0.9
+        # For example: an atom with truth value (stv 0 0.1) has
+        # Shannon entropy below 0.1, but an atom with truth value (stv
+        # 0 0.01) has Shannon entropy above 0.1, and an atom with
+        # truth value (stv 0 0.001) has a Shannon entropy above 0.9.
+        self.cogscm_maximum_shannon_entropy = 0.9
+
+        # Filter out cognitive schematics with a differential entropy
+        # equal to or lower than this parameter.  The differential
+        # entropy is calculated using the corresponding beta
+        # distribution of the cognitive schematics truth value.  The
+        # parameter ranges from -inf (strongest filter, only
+        # absolutely true or absolutely false cognitive schematics
+        # passes through) to 0 (all cognitive schematics passes
+        # through).  Given a reasonably value, the effect is that only
+        # cognitive schematics with both high or lower strength and
+        # high confidence passes the filter.
+        #
+        # For example a threshold value of -0.1 will let pass through
+        # cognitive schematics with truth value (stv 0.99 1e-3) or
+        # (stv 0.1 1e-3), but not with truth value (stv 0.5 1e-3) or
+        # (stv 0.99 1e-4).
+        #
+        # This parameter is comparable to
+        # cogscm_maximum_shannon_entropy but better accounts for
+        # confidence.  NEXT: test for chase
+        self.cogscm_maximum_differential_entropy = -1e-1
 
         # Filter out cognitive schematics with numbers of variables
         # above this threshold
-        self.cogscm_max_variables = 1
+        self.cogscm_maximum_variables = 1
+
+        # Minimum count support for the pattern miner
+        self.miner_minimum_support = 4
+
+        # Maximum number of iterations for the pattern miner
+        self.miner_maximum_iterations = 1000
+
+        # Maximum number of variables for the pattern miner.  This
+        # should not be confused with cogscm_maximum_variables that
+        # represents the final maximum number of variables, while this
+        # parameter represents the intermediate maximum number of
+        # variables.  This parameter should always be equal to or
+        # greater than cogscm_maximum_variables + 1 (for the temporal
+        # variable that is explicitly represented in temporal
+        # patterns).
+        self.miner_maximum_variables = 8
 
     def __del__(self):
         self.env.close()
@@ -848,8 +891,11 @@ class OpencogAgent:
         1. its confidence above zero
         2. its action fully grounded
         3. all its variables in the antecedent
-        4. a mean greater than or equal to cogscm_min_strength
-        5. a number of variables less than or equal to cogscm_max_variables
+        4. its Shannon entropy must be equal to or lower than
+           cogscm_maximum_shannon_entropy
+        5. its differential entropy must be equal to or lower than
+           cogscm_maximum_differential_entropy
+        6. a number of variables less than or equal to cogscm_maximum_variables
 
         """
 
@@ -858,8 +904,15 @@ class OpencogAgent:
             and has_non_null_confidence(cogscm)
             and is_closed(get_t0_execution(cogscm))
             and has_all_variables_in_antecedent(cogscm)
-            and has_mean_geq(cogscm, self.cogscm_min_strength)
-            and has_variables_leq(cogscm, self.cogscm_max_variables)
+            and (
+                shannon_entropy(cogscm, self.prior_a, self.prior_b)
+                <= self.cogscm_maximum_shannon_entropy
+            )
+            and (
+                differential_entropy(cogscm, self.prior_a, self.prior_b)
+                <= self.cogscm_maximum_differential_entropy
+            )
+            and has_variables_leq(cogscm, self.cogscm_maximum_variables)
         )
 
     def surprises_to_predictive_implications(self, srps: list[Atom]) -> list[Atom]:
