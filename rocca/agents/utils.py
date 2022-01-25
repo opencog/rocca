@@ -6,6 +6,7 @@
 
 # Python
 import random
+import math
 from typing import Any
 
 from orderedmultidict import omdict
@@ -91,6 +92,51 @@ def is_true(atom: Atom) -> bool:
     """Return True iff the given has a tv equal to TRUE_TV."""
 
     return atom.tv == TRUE_TV
+
+
+def shannon_entropy(
+    atom: Atom, prior_a: float = 1.0, prior_b: float = 1.0
+) -> float:
+    """Return the shannon entropy of `atom`.
+
+    The shannon entropy is calculated based on the mean of the beta
+    distribution corresponding to the truth value of `atom`.
+
+    """
+
+    # Avoid division by zero
+    s = atom.tv.mean
+    c = atom.tv.confidence
+    if (math.isclose(s, 0) or math.isclose(s, 1)) and math.isclose(c, 1):
+        return 0
+
+    # Otherwise, calculate the actual Shannon entropy
+    mean = tv_to_beta(atom.tv, prior_a, prior_b).mean()
+    return st.entropy([mean, 1.0 - mean], base=2)
+
+
+def differential_entropy(
+    atom: Atom, prior_a: float = 1.0, prior_b: float = 1.0
+) -> float:
+    """Return the differential entropy of `atom`.
+
+    The differential entropy is calculated based on the beta
+    distribution corresponding to the truth value of `atom`.
+
+    See
+    https://en.wikipedia.org/wiki/Beta_distribution#Quantities_of_information_(entropy)
+    for more information.
+
+    """
+
+    # Avoid division by zero
+    s = atom.tv.mean
+    c = atom.tv.confidence
+    if (math.isclose(s, 0) or math.isclose(s, 1)) and math.isclose(c, 1):
+        return -float("inf")
+
+    # Otherwise, calculate the actual differential entropy
+    return tv_to_beta(atom.tv, prior_a, prior_b).entropy()
 
 
 def count_to_confidence(count: int) -> float:
