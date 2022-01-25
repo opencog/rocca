@@ -1033,12 +1033,12 @@ class OpencogAgent:
         )
 
         # Set miner parameters
-        minsup = 4
-        maximum_iterations = 1000
+        minsup = self.miner_minimum_support
+        maxiter = self.miner_maximum_iterations
+        maxvars = self.miner_maximum_variables
         cnjexp = "#f"
         enfspe = "#t"
         mspc = 6
-        maxvars = 8
         maxcjnts = 6
         surprise = "'nisurp"
         T = VariableNode("$T")
@@ -1065,7 +1065,7 @@ class OpencogAgent:
             + " #:initial-pattern "
             + str(initpat)
             + " #:maximum-iterations "
-            + str(maximum_iterations)
+            + str(maxiter)
             + " #:conjunction-expansion "
             + cnjexp
             + " #:enforce-specialization "
