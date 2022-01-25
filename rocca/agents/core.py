@@ -1201,9 +1201,18 @@ class OpencogAgent:
     def prior_estimate(self, cogscm: Atom) -> float:
         """Calculate the prior probability of cogscm."""
 
+        agent_log.fine("prior_estimate(cogscm={})".format(cogscm.long_string()))
+
         partial_complexity = self.complexity(cogscm)
         remain_data_size = self.data_set_size - cogscm.tv.count
         kestimate = self.kolmogorov_estimate(remain_data_size)
+
+        agent_log.fine(
+            "partial_complexity = {}, remain_data_size = {}, kestimate = {}".format(
+                partial_complexity, remain_data_size, kestimate
+            )
+        )
+
         return self.prior(partial_complexity + kestimate)
 
     # TODO: move to its own class (MixtureModel or something)
