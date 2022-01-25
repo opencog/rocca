@@ -136,6 +136,9 @@ if __name__ == "__main__":
     # ChaseAgent
     cag = ChaseAgent(wrapped_env, atomspace)
 
+    # Log all parameters of cag, useful for debugging
+    cag.log_parameters(level="debug")
+
     # Training/learning loop
     lt_iterations = 2  # Number of learning-training iterations
     lt_period = 200  # Duration of a learning-training iteration
