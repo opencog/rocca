@@ -94,9 +94,7 @@ def is_true(atom: Atom) -> bool:
     return atom.tv == TRUE_TV
 
 
-def shannon_entropy(
-    atom: Atom, prior_a: float = 1.0, prior_b: float = 1.0
-) -> float:
+def shannon_entropy(atom: Atom, prior_a: float = 1.0, prior_b: float = 1.0) -> float:
     """Return the shannon entropy of `atom`.
 
     The shannon entropy is calculated based on the mean of the beta

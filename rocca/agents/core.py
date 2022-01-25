@@ -469,7 +469,9 @@ class OpencogAgent:
                     )
                     cogscms.update(set(pos_multi_prdi))
 
-        agent_log.fine("Mined cognitive schematics = {}".format(cogscms))
+        agent_log.fine(
+            "Mined cognitive schematics [count={}]:\n{}".format(len(cogscms), cogscms)
+        )
         return cogscms
 
     def directly_evaluate(self, atom: Atom):
