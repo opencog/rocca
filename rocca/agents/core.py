@@ -955,19 +955,34 @@ class OpencogAgent:
         # Check that its Shannon entropy is below the maximum threshold
         se = shannon_entropy(cogscm, self.prior_a, self.prior_b)
         if self.cogscm_maximum_shannon_entropy < se:
-            agent_log.fine(msg + "its Shannon entropy {} is greater than {}".format(se, self.cogscm_maximum_shannon_entropy))
+            agent_log.fine(
+                msg
+                + "its Shannon entropy {} is greater than {}".format(
+                    se, self.cogscm_maximum_shannon_entropy
+                )
+            )
             return False
 
         # Check that its differential entropy is below the maximum threshold
         de = differential_entropy(cogscm, self.prior_a, self.prior_b)
         if self.cogscm_maximum_differential_entropy < de:
-            agent_log.fine(msg + "its differential entropy {} is greater than {}".format(se, self.cogscm_maximum_shannon_entropy))
+            agent_log.fine(
+                msg
+                + "its differential entropy {} is greater than {}".format(
+                    se, self.cogscm_maximum_shannon_entropy
+                )
+            )
             return False
 
         # Check that it has no more variables than allowed
         mv = vardecl_size(get_vardecl(cogscm))
         if self.cogscm_maximum_variables < mv:
-            agent_log.fine(msg + "its number of variables {} is greater than {}".format(se, self.cogscm_maximum_shannon_entropy))
+            agent_log.fine(
+                msg
+                + "its number of variables {} is greater than {}".format(
+                    se, self.cogscm_maximum_shannon_entropy
+                )
+            )
             return False
 
         # Everything checks, it is desirable
