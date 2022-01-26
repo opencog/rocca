@@ -904,21 +904,50 @@ class OpencogAgent:
 
         """
 
-        return (
-            cogscm
-            and has_non_null_confidence(cogscm)
-            and is_closed(get_t0_execution(cogscm))
-            and has_all_variables_in_antecedent(cogscm)
-            and (
-                shannon_entropy(cogscm, self.prior_a, self.prior_b)
-                <= self.cogscm_maximum_shannon_entropy
-            )
-            and (
-                differential_entropy(cogscm, self.prior_a, self.prior_b)
-                <= self.cogscm_maximum_differential_entropy
-            )
-            and has_variables_leq(cogscm, self.cogscm_maximum_variables)
-        )
+        # For logging
+        cogscm_str = cogscm.long_string() if cogscm else str(cogscm)
+        msg = "{} is undesirable because ".format(cogscm_str)
+
+        # Check that cogscm is defined
+        if not cogscm:
+            agent_log.fine(msg + "is it undefined")
+            return False
+
+        # Check that it has confidence greater than 0
+        if not has_non_null_confidence(cogscm):
+            agent_log.fine(msg + "it has null confidence")
+            return False
+
+        # Check that it is closed
+        if not is_closed(get_t0_execution(cogscm)):
+            agent_log.fine(msg + "it is not closed")
+            return False
+
+        # Check that all variables are in the antecedent
+        if not has_all_variables_in_antecedent(cogscm):
+            agent_log.fine(msg + "some variables are not in its antecedent")
+            return False
+
+        # Check that its Shannon entropy is below the maximum threshold
+        se = shannon_entropy(cogscm, self.prior_a, self.prior_b)
+        if self.cogscm_maximum_shannon_entropy < se:
+            agent_log.fine(msg + "its Shannon entropy {} is greater than {}".format(se, self.cogscm_maximum_shannon_entropy))
+            return False
+
+        # Check that its differential entropy is below the maximum threshold
+        de = differential_entropy(cogscm, self.prior_a, self.prior_b)
+        if self.cogscm_maximum_differential_entropy < de:
+            agent_log.fine(msg + "its differential entropy {} is greater than {}".format(se, self.cogscm_maximum_shannon_entropy))
+            return False
+
+        # Check that it has no more variables than allowed
+        mv = vardecl_size(get_vardecl(cogscm))
+        if self.cogscm_maximum_variables < mv:
+            agent_log.fine(msg + "its number of variables {} is greater than {}".format(se, self.cogscm_maximum_shannon_entropy))
+            return False
+
+        # Everything checks, it is desirable
+        return True
 
     def surprises_to_predictive_implications(self, srps: list[Atom]) -> list[Atom]:
         """Like to_predictive_implication but takes surprises."""
