@@ -950,7 +950,7 @@ class OpencogAgent:
                 msg
                 + "its strength {} is below {}".format(st, self.cogscm_minimum_strength)
             )
-            return false
+            return False
 
         # Check that its Shannon entropy is below the maximum threshold
         se = shannon_entropy(cogscm, self.prior_a, self.prior_b)
