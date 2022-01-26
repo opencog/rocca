@@ -30,8 +30,15 @@ def raise_timeout(signum, frame):
     raise TimeoutError
 
 
-def drawBlock(x, y, z, type):
-    return """<DrawBlock x='{0}' y='{1}' z='{2}' type='{3}'/>""".format(x, y, z, type)
+def drawBlock(x, y, z, type, variant=False, face=False):
+    if variant:
+        return """<DrawBlock x='{0}' y='{1}' z='{2}' type='{3}' variant='{4}' face='{5}'/>""".format(
+            x, y, z, type, variant, face
+        )
+    else:
+        return """<DrawBlock x='{0}' y='{1}' z='{2}' type='{3}' />""".format(
+            x, y, z, type, variant
+        )
 
 
 def GenCuboid(x1, y1, z1, x2, y2, z2, blocktype):
@@ -183,12 +190,12 @@ def stop_condition(agent, blocktype, sec=10):
 def get_curr_loc(agent):
     loc = (agent_x, agent_y, agent_z)
     world_state = agent.peekWorldState()
-    # while world_state.is_mission_running:
-    #   world_state = agent.peekWorldState()
-    if world_state.number_of_observations_since_last_state > 0:
-        ob = json.loads(world_state.observations[-1].text)
-        loc = (int(ob[u"XPos"]), int(ob[u"YPos"]), int(ob[u"ZPos"]))
-
+    while world_state.is_mission_running:
+        world_state = agent.peekWorldState()
+        if world_state.number_of_observations_since_last_state > 0:
+            ob = json.loads(world_state.observations[-1].text)
+            loc = (int(ob[u"XPos"]), int(ob[u"YPos"]), int(ob[u"ZPos"]))
+            break
     return loc
 
 
@@ -214,20 +221,36 @@ def is_mission_running(agent):
     return world_state.is_mission_running
 
 
+def inside_house(x, z):
+    return (
+        True
+        if (x in range(start_x, start_x - length, -1))
+        and (z in range(start_z, start_z - width, -1))
+        else False
+    )
+
+
 # Move the agent towards the key
 # reward=0
 def go_to_the_key(agent):
     global holds_key
     reward = 0
-    observation = {"holds": ["self", "key"]}
-    if holds_key:
-        return observation, reward, is_mission_running
+    observation = {}
     curr_x, curr_y, curr_z = get_curr_loc(agent)
+    if inside_house(curr_x, curr_z):
+        observation["inside"] = ["self", "house"]
+        return observation, reward, is_mission_running
+    else:
+        observation["outside"] = ["self", "house"]
+    if holds_key:
+        observation["holds"] = ["self", "key"]
+        return observation, reward, is_mission_running
     turn_to(agent, curr_x, curr_y, curr_z, key_x, key_y, key_z)
     time.sleep(0.2)
     agent.sendCommand("move 1")
     action_complete = stop_condition(agent, "tripwire_hook")
     if action_complete:
+        observation["holds"] = ["self", "key"]
         agent.sendCommand("hotbar.2 1")
         holds_key = True
     else:
@@ -242,26 +265,23 @@ def go_to_the_house(agent):
     reward = 0
     observation = {}
     curr_x, curr_y, curr_z = get_curr_loc(agent)
-    if curr_x == door_x and curr_z == door_z:
+    if inside_house(curr_x, curr_z):
         observation["inside"] = ["self", "house"]
         return observation, reward, is_mission_running
-
-    turn_to(agent, curr_x, curr_y, curr_z, door_x, door_y, door_z)
+    turn_to(agent, curr_x, curr_y, curr_z, door_x + 2, door_y, door_z)
     time.sleep(0.2)
     agent.sendCommand("move 1")
     action_complete = stop_condition(agent, "dark_oak_door")
     if action_complete:
         if holds_key:
-            observation["holds"] = ["self", "key"]
             agent.sendCommand("tp {} {} {}".format(door_x, door_y, door_z))
+            time.sleep(0.2)
             observation["inside"] = ["self", "house"]
             agent.sendCommand("hotbar.1 1")
             holds_key = False
         else:
+            observation["outside"] = ["self", "house"]
             observation["nextto"] = ["self", "closed_door"]
-
-    else:
-        observation = []
     reward = 0
     return observation, reward, is_mission_running
 
@@ -279,7 +299,12 @@ def go_to_the_diamonds(agent):
         relocate_agent(agent)
     else:
         reward = 0
-    return [], reward, is_mission_running
+    observation = {}
+    if not inside_house(curr_x, curr_z):
+        observation["outside"] = ["self", "house"]
+    if holds_key:
+        observation["holds"] = ["self", "key"]
+    return observation, reward, is_mission_running
 
 
 missionXML = (
@@ -306,16 +331,11 @@ missionXML = (
         <DrawingDecorator>
           """
     + build_house(start_x, start_y, start_z, width, length, height, "planks")
-    + """
-          """
-    + drawLine(
-        door_x, door_y - 1, door_z, door_x, door_y, door_z, "dark_oak_door", "EAST"
+    + drawBlock(
+        door_x, door_y - 1, door_z, "dark_oak_door", variant="lower", face="WEST"
     )
-    + """
-          """
+    + drawBlock(door_x, door_y, door_z, "dark_oak_door", variant="upper", face="WEST")
     + drawBlock(key_x, key_y - 1, key_z, "command_block")
-    + """
-          """
     + drawBlock(key_x, key_y, key_z, "tripwire_hook")
     + """
 
