@@ -1112,7 +1112,7 @@ class OpencogAgent:
         mine_query = (
             "(cog-mine "
             + str(self.percepta_record_cpt)
-            + " #:ignore "
+            + " #:ignore-variables "
             + str(ignore)
             + " #:minimum-support "
             + str(minsup)
