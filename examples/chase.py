@@ -110,7 +110,8 @@ class ChaseAgent(OpencogAgent):
         self.polyaction_mining = False
         self.monoaction_general_succeedent_mining = True
         self.temporal_deduction = True
-        self.cogscm_maximum_shannon_entropy = 0.9
+        self.cogscm_minimum_strength = 0.9
+        self.cogscm_maximum_shannon_entropy = 1
         self.cogscm_maximum_differential_entropy = 0
         self.cogscm_maximum_variables = 0
 
