@@ -125,19 +125,120 @@ class OpencogAgent:
         self.temporal_deduction = True
 
         # Filter out cognitive schematics with strengths below this
-        # threshold
+        # threshold.
         #
-        # TODO: anti-predictive cognitive schematics are also
-        # important, maybe we want to have an entropy threshold
-        # instead.
-        self.cogscm_min_strength = 0.9
+        # Beware that setting this parameter above zero makes ROCCA
+        # blind to negative predictions (i.e. a given context and
+        # action imply that a goal or subgoal is unlikely to be
+        # reached) which are also important to make sound decisions.
+        # Such parameter can however be useful for debugging or other
+        # exceptional situations.
+        self.cogscm_minimum_strength = 0.0
+
+        # Filter out cognitive schematics with a Shannon entropy equal
+        # to or lower than this parameter.  The Shannon entropy is
+        # calculated based on the mean of the corresponding beta
+        # distribution of the cognitive schematics truth value.  The
+        # parameter ranges from 0 (strongest filter, only absolutely
+        # true or absolutely false cognitive schematics passes
+        # through) to 1 (all cognitive schematics passes through).
+        #
+        # For example: an atom with truth value (stv 0 0.1) has
+        # Shannon entropy below 0.1, but an atom with truth value (stv
+        # 0 0.01) has Shannon entropy above 0.1, and an atom with
+        # truth value (stv 0 0.001) has a Shannon entropy above 0.9.
+        self.cogscm_maximum_shannon_entropy = 0.9
+
+        # Filter out cognitive schematics with a differential entropy
+        # equal to or lower than this parameter.  The differential
+        # entropy is calculated using the corresponding beta
+        # distribution of the cognitive schematics truth value.  The
+        # parameter ranges from -inf (strongest filter, only
+        # absolutely true or absolutely false cognitive schematics
+        # passes through) to 0 (all cognitive schematics passes
+        # through).  Given a reasonably value, the effect is that only
+        # cognitive schematics with both high or lower strength and
+        # high confidence passes the filter.
+        #
+        # For example a threshold value of -0.1 will let pass through
+        # cognitive schematics with truth value (stv 0.99 1e-3) or
+        # (stv 0.1 1e-3), but not with truth value (stv 0.5 1e-3) or
+        # (stv 0.99 1e-4).
+        #
+        # This parameter is comparable to
+        # cogscm_maximum_shannon_entropy but better accounts for
+        # confidence.  NEXT: test for chase
+        self.cogscm_maximum_differential_entropy = -1e-1
 
         # Filter out cognitive schematics with numbers of variables
         # above this threshold
-        self.cogscm_max_variables = 1
+        self.cogscm_maximum_variables = 1
+
+        # Minimum count support for the pattern miner
+        self.miner_minimum_support = 4
+
+        # Maximum number of iterations for the pattern miner
+        self.miner_maximum_iterations = 1000
+
+        # Maximum number of variables for the pattern miner.  This
+        # should not be confused with cogscm_maximum_variables that
+        # represents the final maximum number of variables, while this
+        # parameter represents the intermediate maximum number of
+        # variables.  This parameter should always be equal to or
+        # greater than cogscm_maximum_variables + 1 (for the temporal
+        # variable that is explicitly represented in temporal
+        # patterns).
+        self.miner_maximum_variables = 8
 
     def __del__(self):
         self.env.close()
+
+    def log_parameters(self, level: str = "debug"):
+        """Log all user parameters at the given log level."""
+
+        li = agent_log.string_as_level(level)
+        agent_log.log(li, "OpencogAgent parameters:")
+        agent_log.log(li, "expiry = {}".format(self.expiry))
+        agent_log.log(li, "prior_a = {}".format(self.prior_a))
+        agent_log.log(li, "prior_b = {}".format(self.prior_b))
+        agent_log.log(li, "cpx_penalty = {}".format(self.cpx_penalty))
+        agent_log.log(li, "compressiveness = {}".format(self.compressiveness))
+        agent_log.log(li, "delta = {}".format(self.delta))
+        agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
+        agent_log.log(
+            li,
+            "monoaction_general_succedent_mining = {}".format(
+                self.monoaction_general_succedent_mining
+            ),
+        )
+        agent_log.log(li, "temporal_deduction = {}".format(self.temporal_deduction))
+        agent_log.log(
+            li, "cogscm_minimum_strength = {}".format(self.cogscm_minimum_strength)
+        )
+        agent_log.log(
+            li,
+            "cogscm_maximum_shannon_entropy = {}".format(
+                self.cogscm_maximum_shannon_entropy
+            ),
+        )
+        agent_log.log(
+            li,
+            "cogscm_maximum_differential_entropy = {}".format(
+                self.cogscm_maximum_differential_entropy
+            ),
+        )
+        agent_log.log(
+            li, "cogscm_maximum_variables = {}".format(self.cogscm_maximum_variables)
+        )
+        agent_log.log(
+            li, "miner_minimum_support = {}".format(self.miner_minimum_support)
+        )
+        agent_log.log(
+            li, "miner_maximum_iterations = {}".format(self.miner_maximum_iterations)
+        )
+        agent_log.log(
+            li, "miner_maximum_variables = {}".format(self.miner_maximum_variables)
+        )
 
     def load_opencog_modules(self):
         # Load miner
@@ -233,7 +334,7 @@ class OpencogAgent:
 
         The parameters are
 
-        atomspace: the atomspace over which to do the reasoning. # NEXT: find out if it really does that
+        atomspace: the atomspace over which to do the reasoning. # TODO: find out if it really does that
         source: the atom source to start from.
         maximum_iterations: the maximum number of iterations.
         rules: optional list of rule symbols.  If empty keep current rule set.
@@ -339,7 +440,7 @@ class OpencogAgent:
             # Mine positive succedent goals
             postctxs = [self.positive_goal]
             las = (lag, prectxs, postctxs)
-            # NEXT: use percepta_atomspace
+            # TODO: use percepta_atomspace
             pos_srps = self.mine_temporal_patterns(self.atomspace, las)
             pos_prdi = self.surprises_to_predictive_implications(pos_srps)
             agent_log.fine("pos_prdi = {}".format(pos_prdi))
@@ -348,7 +449,7 @@ class OpencogAgent:
             # Mine negative succedent goals
             postctxs = [self.negative_goal]
             las = (lag, prectxs, postctxs)
-            # NEXT: use percepta_atomspace
+            # TODO: use percepta_atomspace
             neg_srps = self.mine_temporal_patterns(self.atomspace, las)
             neg_prdi = self.surprises_to_predictive_implications(neg_srps)
             agent_log.fine("neg_prdi = {}".format(neg_prdi))
@@ -358,7 +459,7 @@ class OpencogAgent:
             if self.monoaction_general_succedent_mining:
                 postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
                 las = (lag, prectxs, postctxs)
-                # NEXT: use percepta_atomspace
+                # TODO: use percepta_atomspace
                 gen_srps = self.mine_temporal_patterns(self.atomspace, las)
                 gen_prdi = self.surprises_to_predictive_implications(gen_srps)
                 agent_log.fine("gen_prdi = {}".format(gen_prdi))
@@ -373,7 +474,7 @@ class OpencogAgent:
                     )
                     ma_prectxs = (lag, prectxs, [snd_action])
                     compo_las = (lag, ma_prectxs, postctxs)
-                    # NEXT: use percepta_atomspace
+                    # TODO: use percepta_atomspace
                     pos_multi_srps = self.mine_temporal_patterns(
                         self.atomspace, compo_las
                     )
@@ -383,7 +484,9 @@ class OpencogAgent:
                     )
                     cogscms.update(set(pos_multi_prdi))
 
-        agent_log.fine("Mined cognitive schematics = {}".format(cogscms))
+        agent_log.fine(
+            "Mined cognitive schematics [count={}]:\n{}".format(len(cogscms), cogscms)
+        )
         return cogscms
 
     def directly_evaluate(self, atom: Atom):
@@ -760,7 +863,9 @@ class OpencogAgent:
         agent_log.fine("pt = {}".format(pt))
         agent_log.fine("pd = {}".format(pd))
 
-        # HACK: big hack, pd is turned into positive goal
+        # HACK: big hack, pd is turned into positive goal to create a
+        # predictive implication of such positive goal with low
+        # strength.
         if pd == self.negative_goal:
             pd = self.positive_goal
 
@@ -805,19 +910,83 @@ class OpencogAgent:
         1. its confidence above zero
         2. its action fully grounded
         3. all its variables in the antecedent
-        4. a mean greater than or equal to cogscm_min_strength
-        5. a number of variables less than or equal to cogscm_max_variables
+        4. its Shannon entropy must be equal to or lower than
+           cogscm_maximum_shannon_entropy
+        5. its differential entropy must be equal to or lower than
+           cogscm_maximum_differential_entropy
+        6. a number of variables less than or equal to cogscm_maximum_variables
 
         """
 
-        return (
-            cogscm
-            and has_non_null_confidence(cogscm)
-            and is_closed(get_t0_execution(cogscm))
-            and has_all_variables_in_antecedent(cogscm)
-            and has_mean_geq(cogscm, self.cogscm_min_strength)
-            and has_variables_leq(cogscm, self.cogscm_max_variables)
-        )
+        # For logging
+        cogscm_str = cogscm.long_string() if cogscm else str(cogscm)
+        msg = "{} is undesirable because ".format(cogscm_str)
+
+        # Check that cogscm is defined
+        if not cogscm:
+            agent_log.fine(msg + "is it undefined")
+            return False
+
+        # Check that it has confidence greater than 0
+        if not has_non_null_confidence(cogscm):
+            agent_log.fine(msg + "it has null confidence")
+            return False
+
+        # Check that it is closed
+        if not is_closed(get_t0_execution(cogscm)):
+            agent_log.fine(msg + "it is not closed")
+            return False
+
+        # Check that all variables are in the antecedent
+        if not has_all_variables_in_antecedent(cogscm):
+            agent_log.fine(msg + "some variables are not in its antecedent")
+            return False
+
+        # Check that its strength is above than or equal to the
+        # minimum threshold
+        st = cogscm.tv.mean
+        if st < self.cogscm_minimum_strength:
+            agent_log.fine(
+                msg
+                + "its strength {} is below {}".format(st, self.cogscm_minimum_strength)
+            )
+            return False
+
+        # Check that its Shannon entropy is below the maximum threshold
+        se = shannon_entropy(cogscm, self.prior_a, self.prior_b)
+        if self.cogscm_maximum_shannon_entropy < se:
+            agent_log.fine(
+                msg
+                + "its Shannon entropy {} is greater than {}".format(
+                    se, self.cogscm_maximum_shannon_entropy
+                )
+            )
+            return False
+
+        # Check that its differential entropy is below the maximum threshold
+        de = differential_entropy(cogscm, self.prior_a, self.prior_b)
+        if self.cogscm_maximum_differential_entropy < de:
+            agent_log.fine(
+                msg
+                + "its differential entropy {} is greater than {}".format(
+                    se, self.cogscm_maximum_shannon_entropy
+                )
+            )
+            return False
+
+        # Check that it has no more variables than allowed
+        mv = vardecl_size(get_vardecl(cogscm))
+        if self.cogscm_maximum_variables < mv:
+            agent_log.fine(
+                msg
+                + "its number of variables {} is greater than {}".format(
+                    se, self.cogscm_maximum_shannon_entropy
+                )
+            )
+            return False
+
+        # Everything checks, it is desirable
+        return True
 
     def surprises_to_predictive_implications(self, srps: list[Atom]) -> list[Atom]:
         """Like to_predictive_implication but takes surprises."""
@@ -891,7 +1060,7 @@ class OpencogAgent:
 
         More precisely it takes
 
-        1. an atomspace to mine (NEXT: should it be the atomspace to
+        1. an atomspace to mine (TODO: should it be the atomspace to
         mine (which would bedetermined by Percepta Record anyway)?  Or
         the atomspace to dump the result into?)
 
@@ -933,12 +1102,12 @@ class OpencogAgent:
         )
 
         # Set miner parameters
-        minsup = 4
-        maximum_iterations = 1000
+        minsup = self.miner_minimum_support
+        maxiter = self.miner_maximum_iterations
+        maxvars = self.miner_maximum_variables
         cnjexp = "#f"
         enfspe = "#t"
         mspc = 6
-        maxvars = 8
         maxcjnts = 6
         surprise = "'nisurp"
         T = VariableNode("$T")
@@ -958,14 +1127,14 @@ class OpencogAgent:
         mine_query = (
             "(cog-mine "
             + str(self.percepta_record_cpt)
-            + " #:ignore "
+            + " #:ignore-variables "
             + str(ignore)
             + " #:minimum-support "
             + str(minsup)
             + " #:initial-pattern "
             + str(initpat)
             + " #:maximum-iterations "
-            + str(maximum_iterations)
+            + str(maxiter)
             + " #:conjunction-expansion "
             + cnjexp
             + " #:enforce-specialization "
@@ -1103,9 +1272,18 @@ class OpencogAgent:
     def prior_estimate(self, cogscm: Atom) -> float:
         """Calculate the prior probability of cogscm."""
 
+        agent_log.fine("prior_estimate(cogscm={})".format(cogscm.long_string()))
+
         partial_complexity = self.complexity(cogscm)
         remain_data_size = self.data_set_size - cogscm.tv.count
         kestimate = self.kolmogorov_estimate(remain_data_size)
+
+        agent_log.fine(
+            "partial_complexity = {}, remain_data_size = {}, kestimate = {}".format(
+                partial_complexity, remain_data_size, kestimate
+            )
+        )
+
         return self.prior(partial_complexity + kestimate)
 
     # TODO: move to its own class (MixtureModel or something)

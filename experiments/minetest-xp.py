@@ -352,7 +352,7 @@ local pl_stack_count = pl_stack:get_count()
 local pl_leftover_stack = minetest.item_drop(pl_stack, player, {1})
 pl_inv:set_stack('main', {0}, pl_leftover_stack)
 return pl_leftover_stack:to_table()
--- NEXT: minetest.item_drop actually drops the entire stack.
+-- TODO: minetest.item_drop actually drops the entire stack.
 -- Below is a (failed to far) attempt to only drop one item of the stack.
 --
 -- local is_pl_stack_cleared = pl_stack:set_count(pl_stack_count - 1)
@@ -365,7 +365,7 @@ return pl_leftover_stack:to_table()
 leftover_itemstack = player_lua_prt_run(drop_item_lua_code)
 print("leftover_itemstack = {}".format(leftover_itemstack))
 
-# NEXT: minetest.item_eat, maybe
+# TODO: minetest.item_eat, maybe
 
 # Move abruptly player to a position.  Setting the continuous argument
 # of move_to to true does not work for players (as explained in
@@ -378,7 +378,7 @@ move_player_to = "return player:move_to({})".format(lua.dumps(player_shifted_pos
 move_player_to_result = player_lua_prt_run(move_player_to)
 print("move_player_to_result = {}".format(move_player_to_result))
 
-# Come back smoothly to its original position.  NEXT: use player_api
+# Come back smoothly to its original position.  TODO: use player_api
 # to simulate walking.
 log_and_wait("Move smoothly player to back to previous position")
 player_move_back_result = player_lua_prt_run(
@@ -422,7 +422,7 @@ print(
     "set_player_look_horizontal_result = {}".format(set_player_look_horizontal_result)
 )
 
-# NEXT
+# TODO
 # * `minetest.place_node(pos, node)`
 #     * Place node with the same effects that a player would cause
 # * `minetest.punch_node(pos)`
