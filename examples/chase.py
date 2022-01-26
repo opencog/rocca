@@ -110,8 +110,9 @@ class ChaseAgent(OpencogAgent):
         self.polyaction_mining = False
         self.monoaction_general_succeedent_mining = True
         self.temporal_deduction = True
-        self.cogscm_min_strength = 0.99
-        self.cogscm_max_variables = 0
+        self.cogscm_maximum_shannon_entropy = 0.9
+        self.cogscm_maximum_differential_entropy = 0
+        self.cogscm_maximum_variables = 0
 
 
 if __name__ == "__main__":
@@ -122,12 +123,12 @@ if __name__ == "__main__":
     # Init loggers
     log.set_level("info")
     # log.set_sync(True)
-    agent_log.set_level("debug")
+    agent_log.set_level("fine")
     # agent_log.set_sync(True)
-    ure_logger().set_level("debug")
+    ure_logger().set_level("info")
     # ure_logger().set_sync(True)
     miner_log = MinerLogger(atomspace)
-    miner_log.set_level("debug")
+    miner_log.set_level("info")
     # miner_log.set_sync(True)
 
     # Wrap environment
