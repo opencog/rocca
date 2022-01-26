@@ -124,7 +124,7 @@ if __name__ == "__main__":
     # Init loggers
     log.set_level("info")
     # log.set_sync(True)
-    agent_log.set_level("fine")
+    agent_log.set_level("info")
     # agent_log.set_sync(True)
     ure_logger().set_level("info")
     # ure_logger().set_sync(True)
