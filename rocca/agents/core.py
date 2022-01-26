@@ -185,44 +185,45 @@ class OpencogAgent:
     def log_parameters(self, level: str = "debug"):
         """Log all user parameters at the given log level."""
 
-        agent_log.log(level, "OpencogAgent parameters:")
-        agent_log.log(level, "expiry = {}".format(self.expiry))
-        agent_log.log(level, "prior_a = {}".format(self.prior_a))
-        agent_log.log(level, "prior_b = {}".format(self.prior_b))
-        agent_log.log(level, "cpx_penalty = {}".format(self.cpx_penalty))
-        agent_log.log(level, "compressiveness = {}".format(self.compressiveness))
-        agent_log.log(level, "delta = {}".format(self.delta))
-        agent_log.log(level, "polyaction_mining = {}".format(self.polyaction_mining))
+        li = agent_log.string_as_level(level)
+        agent_log.log(li, "OpencogAgent parameters:")
+        agent_log.log(li, "expiry = {}".format(self.expiry))
+        agent_log.log(li, "prior_a = {}".format(self.prior_a))
+        agent_log.log(li, "prior_b = {}".format(self.prior_b))
+        agent_log.log(li, "cpx_penalty = {}".format(self.cpx_penalty))
+        agent_log.log(li, "compressiveness = {}".format(self.compressiveness))
+        agent_log.log(li, "delta = {}".format(self.delta))
+        agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
         agent_log.log(
-            level,
+            li,
             "monoaction_general_succedent_mining = {}".format(
                 self.monoaction_general_succedent_mining
             ),
         )
-        agent_log.log(level, "temporal_deduction = {}".format(self.temporal_deduction))
+        agent_log.log(li, "temporal_deduction = {}".format(self.temporal_deduction))
         agent_log.log(
-            level,
+            li,
             "cogscm_maximum_shannon_entropy = {}".format(
                 self.cogscm_maximum_shannon_entropy
             ),
         )
         agent_log.log(
-            level,
+            li,
             "cogscm_maximum_differential_entropy = {}".format(
                 self.cogscm_maximum_differential_entropy
             ),
         )
         agent_log.log(
-            level, "cogscm_maximum_variables = {}".format(self.cogscm_maximum_variables)
+            li, "cogscm_maximum_variables = {}".format(self.cogscm_maximum_variables)
         )
         agent_log.log(
-            level, "miner_minimum_support = {}".format(self.miner_minimum_support)
+            li, "miner_minimum_support = {}".format(self.miner_minimum_support)
         )
         agent_log.log(
-            level, "miner_maximum_iterations = {}".format(self.miner_maximum_iterations)
+            li, "miner_maximum_iterations = {}".format(self.miner_maximum_iterations)
         )
         agent_log.log(
-            level, "miner_maximum_variables = {}".format(self.miner_maximum_variables)
+            li, "miner_maximum_variables = {}".format(self.miner_maximum_variables)
         )
 
     def load_opencog_modules(self):
