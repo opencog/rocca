@@ -124,6 +124,17 @@ class OpencogAgent:
         # plans from monoaction plans.
         self.temporal_deduction = True
 
+        # Filter out cognitive schematics with strengths below this
+        # threshold.
+        #
+        # Beware that setting this parameter above zero makes ROCCA
+        # blind to negative predictions (i.e. a given context and
+        # action imply that a goal or subgoal is unlikely to be
+        # reached) which are also important to make sound decisions.
+        # Such parameter can however be useful for debugging or other
+        # exceptional situations.
+        self.cogscm_minimum_strength = 0.0
+
         # Filter out cognitive schematics with a Shannon entropy equal
         # to or lower than this parameter.  The Shannon entropy is
         # calculated based on the mean of the corresponding beta
@@ -201,6 +212,9 @@ class OpencogAgent:
             ),
         )
         agent_log.log(li, "temporal_deduction = {}".format(self.temporal_deduction))
+        agent_log.log(
+            li, "cogscm_minimum_strength = {}".format(self.cogscm_minimum_strength)
+        )
         agent_log.log(
             li,
             "cogscm_maximum_shannon_entropy = {}".format(
@@ -927,6 +941,16 @@ class OpencogAgent:
         if not has_all_variables_in_antecedent(cogscm):
             agent_log.fine(msg + "some variables are not in its antecedent")
             return False
+
+        # Check that its strength is above than or equal to the
+        # minimum threshold
+        st = cogscm.tv.mean
+        if st < self.cogscm_minimum_strength:
+            agent_log.fine(
+                msg
+                + "its strength {} is below {}".format(st, self.cogscm_minimum_strength)
+            )
+            return false
 
         # Check that its Shannon entropy is below the maximum threshold
         se = shannon_entropy(cogscm, self.prior_a, self.prior_b)
