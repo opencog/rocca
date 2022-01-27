@@ -99,7 +99,7 @@ class OpencogAgent:
         # cognitive schematics. Ranges from 0, no penalty to +inf,
         # infinit penalty. Affect the calculation of the cognitive
         # schematic prior.
-        self.cpx_penalty = 1.0
+        self.cpx_penalty = 0.1
 
         # Parameter to estimate the length of a whole model given a
         # partial model + unexplained data. Ranges from 0 to 1, 0
