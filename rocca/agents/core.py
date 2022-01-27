@@ -115,10 +115,13 @@ class OpencogAgent:
         # Enable poly-action pattern mining
         self.polyaction_mining = True
 
-        # Enable mono-action pattern mining with general succedent
-        # (not just about goal).  This is important to gather the
-        # knowledge in order to make temporal deduction useful.
-        self.monoaction_general_succedent_mining = True
+        # Enable pattern mining with general succedent (not just about
+        # goal).  This is important to gather the knowledge in order
+        # to make temporal deduction useful.
+        #
+        # Note that general succedent mining is only done for
+        # mono-action pattern for now.
+        self.general_succedent_mining = True
 
         # Enable temporal deduction, to string together polyaction
         # plans from monoaction plans.
@@ -207,8 +210,8 @@ class OpencogAgent:
         agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
         agent_log.log(
             li,
-            "monoaction_general_succedent_mining = {}".format(
-                self.monoaction_general_succedent_mining
+            "general_succedent_mining = {}".format(
+                self.general_succedent_mining
             ),
         )
         agent_log.log(li, "temporal_deduction = {}".format(self.temporal_deduction))
@@ -455,8 +458,8 @@ class OpencogAgent:
             agent_log.fine("neg_prdi = {}".format(neg_prdi))
             cogscms.update(set(neg_prdi))
 
-            # Mine general succedents (only one for now)
-            if self.monoaction_general_succedent_mining:
+            # Mine general succedents (only mono-action for now)
+            if self.general_succedent_mining:
                 postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
                 las = (lag, prectxs, postctxs)
                 # TODO: use percepta_atomspace
