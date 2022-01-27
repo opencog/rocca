@@ -12,6 +12,7 @@ from rocca.envs.malmo_demo.flatworld_env import *
 from rocca.envs.wrappers import MalmoWrapper
 from opencog.ure import ure_logger
 from rocca.envs.wrappers.utils import mk_evaluation
+from rocca.agents.utils import *
 from functools import wraps
 
 
@@ -68,8 +69,14 @@ class FlatworldAgent(OpencogAgent):
         self.polyaction_mining = False
         self.monoaction_general_succeedent_mining = True
         self.temporal_deduction = True
-        self.cogscm_min_strength = 0.99
-        self.cogscm_max_variables = 0
+        self.cogscm_minimum_strength = 0.99
+        self.cogscm_maximum_shannon_entropy = 1
+        self.cogscm_maximum_differential_entropy = 0
+        self.cogscm_maximum_variables = 0
+        self.miner_maximum_iterations = 100000
+        self.miner_maximum_variables = 9
+        self.miner_minimum_support = 3
+
         # Todo: restart the environment to get an initial reward
         self.initial_reward = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
 
@@ -83,12 +90,17 @@ if __name__ == "__main__":
     # log.set_sync(True)
     agent_log.set_level("fine")
     # agent_log.set_sync(True)
-    ure_logger().set_level("info")
+    ure_logger().set_level("debug")
+    miner_log = MinerLogger(atomspace)
+    miner_log.set_level("debug")
 
     #
     wrapped_env = AbstractMalmoWrapper(missionXML=missionXML, validate=True)
 
     cog_agent = FlatworldAgent(wrapped_env, atomspace)
+
+    # Log all parameters of cag, useful for debugging
+    cog_agent.log_parameters(level="debug")
     reward_t0 = cog_agent.record(cog_agent.initial_reward, 0, TRUE_TV)
     agent_log.info("Initial reward: {}".format(reward_t0))
 
@@ -115,4 +127,15 @@ if __name__ == "__main__":
             "Action counter during {}th iteration:\n{}".format(
                 i + 1, cog_agent.action_counter
             )
+        )
+        # Log all agent's atomspaces at the end (at fine level)
+        agent_log_atomspace(cog_agent.atomspace, "fine", "cog_agent.atomspace")
+        agent_log_atomspace(
+            cog_agent.percepta_atomspace, "fine", "cog_agent.percepta_atomspace"
+        )
+        agent_log_atomspace(
+            cog_agent.cogscms_atomspace, "fine", "cog_agent.cogscms_atomspace"
+        )
+        agent_log_atomspace(
+            cog_agent.working_atomspace, "fine", "cog_agent.working_atomspace"
         )
