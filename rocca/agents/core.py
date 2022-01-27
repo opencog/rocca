@@ -446,7 +446,7 @@ class OpencogAgent:
             # TODO: use percepta_atomspace
             pos_srps = self.mine_temporal_patterns(self.atomspace, las)
             pos_prdi = self.surprises_to_predictive_implications(pos_srps)
-            agent_log.fine("pos_prdi = {}".format(pos_prdi))
+            agent_log.fine("Mined positive goal cognitive schematics [count={}]:\n{}".format(len(pos_prdi), pos_prdi))
             cogscms.update(set(pos_prdi))
 
             # Mine negative succedent goals
@@ -455,7 +455,7 @@ class OpencogAgent:
             # TODO: use percepta_atomspace
             neg_srps = self.mine_temporal_patterns(self.atomspace, las)
             neg_prdi = self.surprises_to_predictive_implications(neg_srps)
-            agent_log.fine("neg_prdi = {}".format(neg_prdi))
+            agent_log.fine("Mined negative goal cognitive schematics [count={}]:\n{}".format(len(neg_prdi), neg_prdi))
             cogscms.update(set(neg_prdi))
 
             # Mine general succedents (only mono-action for now)
@@ -465,7 +465,7 @@ class OpencogAgent:
                 # TODO: use percepta_atomspace
                 gen_srps = self.mine_temporal_patterns(self.atomspace, las)
                 gen_prdi = self.surprises_to_predictive_implications(gen_srps)
-                agent_log.fine("gen_prdi = {}".format(gen_prdi))
+                agent_log.fine("Mined general succedent cognitive schematics [count={}]:\n{}".format(len(gen_prdi), gen_prdi))
                 cogscms.update(set(gen_prdi))
 
             # Mine positive succedent goals with poly-actions
@@ -478,14 +478,14 @@ class OpencogAgent:
                     ma_prectxs = (lag, prectxs, [snd_action])
                     compo_las = (lag, ma_prectxs, postctxs)
                     # TODO: use percepta_atomspace
-                    pos_multi_srps = self.mine_temporal_patterns(
+                    pos_poly_srps = self.mine_temporal_patterns(
                         self.atomspace, compo_las
                     )
-                    agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
-                    pos_multi_prdi = self.surprises_to_predictive_implications(
-                        pos_multi_srps
+                    agent_log.fine("Mined positive goal poly-action cognitive schematics[count={}]\n:{}".format(len(pos_poly_srps), pos_poly_srps))
+                    pos_poly_prdi = self.surprises_to_predictive_implications(
+                        pos_poly_srps
                     )
-                    cogscms.update(set(pos_multi_prdi))
+                    cogscms.update(set(pos_poly_prdi))
 
         agent_log.fine(
             "Mined cognitive schematics [count={}]:\n{}".format(len(cogscms), cogscms)
