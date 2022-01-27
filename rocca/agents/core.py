@@ -167,7 +167,7 @@ class OpencogAgent:
         #
         # This parameter is comparable to
         # cogscm_maximum_shannon_entropy but better accounts for
-        # confidence.  NEXT: test for chase
+        # confidence.
         self.cogscm_maximum_differential_entropy = -1e-1
 
         # Filter out cognitive schematics with numbers of variables
