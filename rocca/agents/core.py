@@ -506,7 +506,7 @@ class OpencogAgent:
         )
         return cogscms
 
-    def directly_evaluate(self, atom: Atom):
+    def directly_evaluate(self, atom: Atom) -> None:
         """Directly evaluate the TV of the given atoms.
 
         If the atom is a conjunction, then split that atom into
@@ -538,8 +538,8 @@ class OpencogAgent:
         mean = float(pos_count) / float(self.cycle_count)
         atom.truth_value(mean, conf)
 
-    def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace):
-        """Directly evaluate the TVs of all cogscms outgoings."""
+    def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace) -> None:
+        """Directly evaluate the TVs of all cogscms outgoings in given atomspace."""
 
         agent_log.fine("directly_evaluate_cogscms_ante_succ()")
         for atom in atomspace:
