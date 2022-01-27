@@ -2,7 +2,13 @@
 from pytest import approx
 
 # OpenCog
-from opencog.type_constructors import EvaluationLink, ListLink, PredicateNode, ConceptNode, TruthValue
+from opencog.type_constructors import (
+    EvaluationLink,
+    ListLink,
+    PredicateNode,
+    ConceptNode,
+    TruthValue,
+)
 from opencog.atomspace import AtomSpace, createTruthValue
 from opencog.utilities import set_default_atomspace
 
