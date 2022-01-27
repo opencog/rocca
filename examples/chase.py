@@ -159,7 +159,7 @@ if __name__ == "__main__":
             cag.control_cycle()
             wrapped_env.render()
             time.sleep(0.1)
-            log.info("cycle_count = {}".format(cag.cycle_count))
+            agent_log.info("cycle_count = {}".format(cag.cycle_count))
         nar = cag.accumulated_reward - par
         agent_log.info(
             "Accumulated reward during {}th iteration = {}".format(i + 1, nar)
