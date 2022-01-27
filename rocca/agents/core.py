@@ -1287,24 +1287,10 @@ class OpencogAgent:
         return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
 
     # TODO: move to its own class (MixtureModel or something)
-    def get_all_uniq_atoms(self, atom: Atom) -> set[Atom]:
-        """Return the set of all unique atoms in atom."""
-
-        # Recursive cases
-        if atom.is_link():
-            results = {atom}
-            for o in atom.out:
-                results.union(self.get_all_uniq_atoms(o))
-            return results
-
-        # Base cases (atom is a node)
-        return {atom}
-
-    # TODO: move to its own class (MixtureModel or something)
     def complexity(self, atom: Atom) -> int:
         """Return the count of all unique atoms in atom."""
 
-        return len(self.get_all_uniq_atoms(atom))
+        return len(get_uniq_atoms(atom))
 
     # TODO: move to its own class (MixtureModel or something)
     def prior(self, length: float) -> float:
