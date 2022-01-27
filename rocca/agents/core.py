@@ -1380,16 +1380,18 @@ class OpencogAgent:
 
     # TODO: move to its own class (MixtureModel or something)
     def infer_data_set_size(self, cogscms: list[Atom]) -> float:
-        """Infer the data set size by taking the max count of all models
+        """Infer the data set size (universe size)
 
-        (it works assuming that one of them is complete).
+        For now it uses the max of the cycle_count the max count of
+        all cognitive schematics (to work around the fact that we may
+        not have a complete model).
 
         """
 
+        max_count = 0.0
         if 0 < len(cogscms):
-            return max(cogscms, key=lambda x: x.tv.count).tv.count
-        else:
-            return 0.0
+            max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
+        return max(max_count, float(self.cycle_count))
 
     def deduce(self, cogscms: list[Atom]) -> omdict:
         """Return an action distribution given a list cognitive schematics.
@@ -1470,10 +1472,7 @@ class OpencogAgent:
         agent_log.fine("valid_cogscms = {}".format(valid_cogscms))
 
         # Size of the complete data set, including all observations
-        # used to build the models. For simplicity we're gonna assume
-        # that it is the max of all counts over the models. Meaning
-        # that to do well, at least one model has to be complete,
-        # however bad this model might be.
+        # used to build the models.
         #
         # Needs to be set before calling self.weight
         self.data_set_size = self.infer_data_set_size(valid_cogscms)
