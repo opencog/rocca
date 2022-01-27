@@ -123,8 +123,26 @@ class OpencogAgent:
         # mono-action pattern for now.
         self.general_succedent_mining = True
 
-        # Enable temporal deduction, to string together polyaction
-        # plans from monoaction plans.
+        # Enable conditional conjunction introduction
+        #
+        # C ∧ A ↝ D
+        # C ∧ A ↝ E
+        # ⊢
+        # C ∧ A ↝ D ∧ E
+        #
+        # This is useful when multiple consequents must be combined to
+        # be used as antecedant of other cognitive schematics.
+        self.conditional_conjunction_introduction = True
+
+        # Enable temporal deduction
+        #
+        # C ∧ A₁ ↝ D
+        # D ∧ A₂ ↝ E
+        # ⊢
+        # (C ∧ A₁) ≺ A₂ ↝ E
+        #
+        # Useful to string together cognitive schematics into larger
+        # ones.
         self.temporal_deduction = True
 
         # Filter out cognitive schematics with strengths below this
@@ -541,39 +559,25 @@ class OpencogAgent:
     def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace) -> None:
         """Directly evaluate the TVs of all cogscms outgoings in given atomspace."""
 
-        agent_log.fine("directly_evaluate_cogscms_ante_succ()")
         for atom in atomspace:
             if not is_predictive_implication_scope(atom):
                 continue
             self.directly_evaluate(get_antecedent(atom))
             self.directly_evaluate(get_succedent(atom))
 
-    def infer_cogscms(self) -> set[Atom]:
-        """Discover cognitive schematics via reasoning.
+    def apply_conditional_conjunction_introduction(
+        self, atomspace: AtomSpace
+    ) -> set[Atom]:
+        """Infer conditional conjunctions from cogscms in given atomspace.
 
-        For now only temporal deduction is implemented and the
-        reasoning task is decomposed into 3 phases:
+        Meaning, apply conditional conjunction introduction
 
-          1. Infer conditional conjunctions
-          2. Infer conjunctions TVs inside predictive implications
-          3. Infer temporal deductions
-
-        then return the set of inferred cognitive schematics.
+        C ∧ A ↝ D
+        C ∧ A ↝ E
+        ⊢
+        C ∧ A ↝ D ∧ E
 
         """
-
-        agent_log.fine("infer_cogscms()")
-
-        # All resulting cognitive schematics
-        cogscms: set[Atom] = set()
-
-        # 1. Infer conditional conjunctions
-
-        agent_log.fine(
-            "cogscms_atomspace before inferring conditional conjunctions [count={}]:\n{}".format(
-                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
-            )
-        )
 
         # Call PLN to infer new cognitive schematics by combining
         # existing ones
@@ -593,25 +597,19 @@ class OpencogAgent:
         cogscms = self.pln_fc(
             self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
         )
+        return cogscms
 
-        # 2. Infer conjunctions TVs
+    def apply_temporal_deduction(self, atomspace: AtomSpace) -> set[Atom]:
+        """Infer temporal deduction from cogscms in given atomspace.
 
-        agent_log.fine(
-            "cogscms_atomspace before inferring outgoings TVs [count={}]:\n{}".format(
-                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
-            )
-        )
+        Meaning apply temporal deduction
 
-        # Infer antecedents and consequents TVs of cognitive schematics
-        self.directly_evaluate_cogscms_ante_succ(self.cogscms_atomspace)
+        C ∧ A₁ ↝ D
+        D ∧ A₂ ↝ E
+        ⊢
+        (C ∧ A₁) ≺ A₂ ↝ E
 
-        # 3. Infer temporal deductions
-
-        agent_log.fine(
-            "cogscms_atomspace before temporal deduction [count={}]:\n{}".format(
-                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
-            )
-        )
+        """
 
         # TODO: apply all rules for now (till the unifier gets fixed)
         source = SetLink()
@@ -619,11 +617,65 @@ class OpencogAgent:
         rules = [
             "back-predictive-implication-scope-deduction-cogscm",
         ]
-        inferred_cogscms = self.pln_fc(
+        return self.pln_fc(
             self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
         )
-        cogscms.update(inferred_cogscms)
 
+    def infer_cogscms(self) -> set[Atom]:
+        """Discover cognitive schematics via reasoning.
+
+        For now only temporal deduction is implemented and the
+        reasoning task is decomposed into 3 phases:
+
+          1. Infer conditional conjunctions
+          2. Infer TVs inside predictive implications (for temporal deduction)
+          3. Infer temporal deductions
+
+        then return the set of inferred cognitive schematics.
+
+        """
+
+        # All resulting cognitive schematics
+        cogscms: set[Atom] = set()
+
+        # 1. Infer conditional conjunctions
+
+        if self.conditional_conjunction_introduction:
+            agent_log.fine(
+                "cogscms_atomspace before inferring conditional conjunctions [count={}]:\n{}".format(
+                    len(self.cogscms_atomspace),
+                    atomspace_to_str(self.cogscms_atomspace),
+                )
+            )
+            inferred_cond_cjns = self.apply_conditional_conjunction_introduction(
+                self.cogscms_atomspace
+            )
+            cogscms.update(inferred_cond_cjns)
+
+        # 2. Infer antecedents and consequents TVs of cognitive schematics
+
+        if self.temporal_deduction:  # Only needed if temporal deduction is enabled
+            agent_log.fine(
+                "cogscms_atomspace before inferring cognitive schematics outgoings TVs [count={}]:\n{}".format(
+                    len(self.cogscms_atomspace),
+                    atomspace_to_str(self.cogscms_atomspace),
+                )
+            )
+            self.directly_evaluate_cogscms_ante_succ(self.cogscms_atomspace)
+
+        # 3. Infer temporal deductions
+
+        if self.temporal_deduction:
+            agent_log.fine(
+                "cogscms_atomspace before temporal deduction [count={}]:\n{}".format(
+                    len(self.cogscms_atomspace),
+                    atomspace_to_str(self.cogscms_atomspace),
+                )
+            )
+            inferred_cogscms = self.apply_temporal_deduction(self.cogscms_atomspace)
+            cogscms.update(inferred_cogscms)
+
+        # Log all inferred cognitive schematics
         agent_log.fine(
             "Inferred cognitive schematics [count={}]:\n{}".format(
                 len(cogscms), cogscms
@@ -649,10 +701,9 @@ class OpencogAgent:
         mined_cogscms = self.mine_cogscms()
         self.update_cognitive_schematics(mined_cogscms)
 
-        # Infer cognitive schematics (via temporal deduction)
-        if self.temporal_deduction:
-            inferred_cogscms = self.infer_cogscms()
-            self.update_cognitive_schematics(inferred_cogscms)
+        # Infer cognitive schematics
+        inferred_cogscms = self.infer_cogscms()
+        self.update_cognitive_schematics(inferred_cogscms)
 
     def get_pattern(self, surprise_eval: Atom) -> Atom:
         """Extract the pattern wrapped in a surprisingness evaluation.
