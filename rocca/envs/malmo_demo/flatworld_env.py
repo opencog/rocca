@@ -340,7 +340,7 @@ missionXML = (
     + """
 
         </DrawingDecorator>
-      <ServerQuitFromTimeUp description="" timeLimitMs="10000000"/>
+      <ServerQuitFromTimeUp description="" timeLimitMs="100000000"/>
       <ServerQuitWhenAnyAgentFinishes/>
     </ServerHandlers>
   </ServerSection>
