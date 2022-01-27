@@ -1002,7 +1002,14 @@ class OpencogAgent:
         ]
 
         # Remove undesirable cognitive schematics
+        len_cogscms = len(cogscms)
         cogscms = [cogscm for cogscm in cogscms if self.is_desirable(cogscm)]
+        len_desirable_cogscms = len(cogscms)
+        agent_log.fine(
+            "Among {} cognitive schematics, {} are desirable".format(
+                len_cogscms, len_desirable_cogscms
+            )
+        )
 
         return cogscms
 
