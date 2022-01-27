@@ -99,7 +99,7 @@ class OpencogAgent:
         # cognitive schematics. Ranges from 0, no penalty to +inf,
         # infinit penalty. Affect the calculation of the cognitive
         # schematic prior.
-        self.cpx_penalty = 1.0
+        self.cpx_penalty = 0.1
 
         # Parameter to estimate the length of a whole model given a
         # partial model + unexplained data. Ranges from 0 to 1, 0
@@ -115,13 +115,34 @@ class OpencogAgent:
         # Enable poly-action pattern mining
         self.polyaction_mining = True
 
-        # Enable mono-action pattern mining with general succedent
-        # (not just about goal).  This is important to gather the
-        # knowledge in order to make temporal deduction useful.
-        self.monoaction_general_succedent_mining = True
+        # Enable pattern mining with general succedent (not just about
+        # goal).  This is important to gather the knowledge in order
+        # to make temporal deduction useful.
+        #
+        # Note that general succedent mining is only done for
+        # mono-action pattern for now.
+        self.general_succedent_mining = True
 
-        # Enable temporal deduction, to string together polyaction
-        # plans from monoaction plans.
+        # Enable conditional conjunction introduction
+        #
+        # C ∧ A ↝ D
+        # C ∧ A ↝ E
+        # ⊢
+        # C ∧ A ↝ D ∧ E
+        #
+        # This is useful when multiple consequents must be combined to
+        # be used as antecedant of other cognitive schematics.
+        self.conditional_conjunction_introduction = True
+
+        # Enable temporal deduction
+        #
+        # C ∧ A₁ ↝ D
+        # D ∧ A₂ ↝ E
+        # ⊢
+        # (C ∧ A₁) ≺ A₂ ↝ E
+        #
+        # Useful to string together cognitive schematics into larger
+        # ones.
         self.temporal_deduction = True
 
         # Filter out cognitive schematics with strengths below this
@@ -167,7 +188,7 @@ class OpencogAgent:
         #
         # This parameter is comparable to
         # cogscm_maximum_shannon_entropy but better accounts for
-        # confidence.  NEXT: test for chase
+        # confidence.
         self.cogscm_maximum_differential_entropy = -1e-1
 
         # Filter out cognitive schematics with numbers of variables
@@ -207,9 +228,7 @@ class OpencogAgent:
         agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
         agent_log.log(
             li,
-            "monoaction_general_succedent_mining = {}".format(
-                self.monoaction_general_succedent_mining
-            ),
+            "general_succedent_mining = {}".format(self.general_succedent_mining),
         )
         agent_log.log(li, "temporal_deduction = {}".format(self.temporal_deduction))
         agent_log.log(
@@ -443,7 +462,11 @@ class OpencogAgent:
             # TODO: use percepta_atomspace
             pos_srps = self.mine_temporal_patterns(self.atomspace, las)
             pos_prdi = self.surprises_to_predictive_implications(pos_srps)
-            agent_log.fine("pos_prdi = {}".format(pos_prdi))
+            agent_log.fine(
+                "Mined positive goal cognitive schematics [count={}]:\n{}".format(
+                    len(pos_prdi), pos_prdi
+                )
+            )
             cogscms.update(set(pos_prdi))
 
             # Mine negative succedent goals
@@ -452,17 +475,25 @@ class OpencogAgent:
             # TODO: use percepta_atomspace
             neg_srps = self.mine_temporal_patterns(self.atomspace, las)
             neg_prdi = self.surprises_to_predictive_implications(neg_srps)
-            agent_log.fine("neg_prdi = {}".format(neg_prdi))
+            agent_log.fine(
+                "Mined negative goal cognitive schematics [count={}]:\n{}".format(
+                    len(neg_prdi), neg_prdi
+                )
+            )
             cogscms.update(set(neg_prdi))
 
-            # Mine general succedents (only one for now)
-            if self.monoaction_general_succedent_mining:
+            # Mine general succedents (only mono-action for now)
+            if self.general_succedent_mining:
                 postctxs = [EvaluationLink(VariableNode("$R"), VariableNode("$Z"))]
                 las = (lag, prectxs, postctxs)
                 # TODO: use percepta_atomspace
                 gen_srps = self.mine_temporal_patterns(self.atomspace, las)
                 gen_prdi = self.surprises_to_predictive_implications(gen_srps)
-                agent_log.fine("gen_prdi = {}".format(gen_prdi))
+                agent_log.fine(
+                    "Mined general succedent cognitive schematics [count={}]:\n{}".format(
+                        len(gen_prdi), gen_prdi
+                    )
+                )
                 cogscms.update(set(gen_prdi))
 
             # Mine positive succedent goals with poly-actions
@@ -475,21 +506,25 @@ class OpencogAgent:
                     ma_prectxs = (lag, prectxs, [snd_action])
                     compo_las = (lag, ma_prectxs, postctxs)
                     # TODO: use percepta_atomspace
-                    pos_multi_srps = self.mine_temporal_patterns(
+                    pos_poly_srps = self.mine_temporal_patterns(
                         self.atomspace, compo_las
                     )
-                    agent_log.fine("pos_multi_srps = {}".format(pos_multi_srps))
-                    pos_multi_prdi = self.surprises_to_predictive_implications(
-                        pos_multi_srps
+                    agent_log.fine(
+                        "Mined positive goal poly-action cognitive schematics[count={}]\n:{}".format(
+                            len(pos_poly_srps), pos_poly_srps
+                        )
                     )
-                    cogscms.update(set(pos_multi_prdi))
+                    pos_poly_prdi = self.surprises_to_predictive_implications(
+                        pos_poly_srps
+                    )
+                    cogscms.update(set(pos_poly_prdi))
 
         agent_log.fine(
             "Mined cognitive schematics [count={}]:\n{}".format(len(cogscms), cogscms)
         )
         return cogscms
 
-    def directly_evaluate(self, atom: Atom):
+    def directly_evaluate(self, atom: Atom) -> None:
         """Directly evaluate the TV of the given atoms.
 
         If the atom is a conjunction, then split that atom into
@@ -521,42 +556,28 @@ class OpencogAgent:
         mean = float(pos_count) / float(self.cycle_count)
         atom.truth_value(mean, conf)
 
-    def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace):
-        """Directly evaluate the TVs of all cogscms outgoings."""
+    def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace) -> None:
+        """Directly evaluate the TVs of all cogscms outgoings in given atomspace."""
 
-        agent_log.fine("directly_evaluate_cogscms_ante_succ()")
         for atom in atomspace:
             if not is_predictive_implication_scope(atom):
                 continue
             self.directly_evaluate(get_antecedent(atom))
             self.directly_evaluate(get_succedent(atom))
 
-    def infer_cogscms(self) -> set[Atom]:
-        """Discover cognitive schematics via reasoning.
+    def apply_conditional_conjunction_introduction(
+        self, atomspace: AtomSpace
+    ) -> set[Atom]:
+        """Infer conditional conjunctions from cogscms in given atomspace.
 
-        For now only temporal deduction is implemented and the
-        reasoning task is decomposed into 3 phases:
+        Meaning, apply conditional conjunction introduction
 
-          1. Infer conditional conjunctions
-          2. Infer conjunctions TVs inside predictive implications
-          3. Infer temporal deductions
-
-        then return the set of inferred cognitive schematics.
+        C ∧ A ↝ D
+        C ∧ A ↝ E
+        ⊢
+        C ∧ A ↝ D ∧ E
 
         """
-
-        agent_log.fine("infer_cogscms()")
-
-        # All resulting cognitive schematics
-        cogscms: set[Atom] = set()
-
-        # 1. Infer conditional conjunctions
-
-        agent_log.fine(
-            "cogscms_atomspace before inferring conditional conjunctions [count={}]:\n{}".format(
-                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
-            )
-        )
 
         # Call PLN to infer new cognitive schematics by combining
         # existing ones
@@ -576,25 +597,19 @@ class OpencogAgent:
         cogscms = self.pln_fc(
             self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
         )
+        return cogscms
 
-        # 2. Infer conjunctions TVs
+    def apply_temporal_deduction(self, atomspace: AtomSpace) -> set[Atom]:
+        """Infer temporal deduction from cogscms in given atomspace.
 
-        agent_log.fine(
-            "cogscms_atomspace before inferring outgoings TVs [count={}]:\n{}".format(
-                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
-            )
-        )
+        Meaning apply temporal deduction
 
-        # Infer antecedents and consequents TVs of cognitive schematics
-        self.directly_evaluate_cogscms_ante_succ(self.cogscms_atomspace)
+        C ∧ A₁ ↝ D
+        D ∧ A₂ ↝ E
+        ⊢
+        (C ∧ A₁) ≺ A₂ ↝ E
 
-        # 3. Infer temporal deductions
-
-        agent_log.fine(
-            "cogscms_atomspace before temporal deduction [count={}]:\n{}".format(
-                len(self.cogscms_atomspace), atomspace_to_str(self.cogscms_atomspace)
-            )
-        )
+        """
 
         # TODO: apply all rules for now (till the unifier gets fixed)
         source = SetLink()
@@ -602,11 +617,65 @@ class OpencogAgent:
         rules = [
             "back-predictive-implication-scope-deduction-cogscm",
         ]
-        inferred_cogscms = self.pln_fc(
+        return self.pln_fc(
             self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
         )
-        cogscms.update(inferred_cogscms)
 
+    def infer_cogscms(self) -> set[Atom]:
+        """Discover cognitive schematics via reasoning.
+
+        For now only temporal deduction is implemented and the
+        reasoning task is decomposed into 3 phases:
+
+          1. Infer conditional conjunctions
+          2. Infer TVs inside predictive implications (for temporal deduction)
+          3. Infer temporal deductions
+
+        then return the set of inferred cognitive schematics.
+
+        """
+
+        # All resulting cognitive schematics
+        cogscms: set[Atom] = set()
+
+        # 1. Infer conditional conjunctions
+
+        if self.conditional_conjunction_introduction:
+            agent_log.fine(
+                "cogscms_atomspace before inferring conditional conjunctions [count={}]:\n{}".format(
+                    len(self.cogscms_atomspace),
+                    atomspace_to_str(self.cogscms_atomspace),
+                )
+            )
+            inferred_cond_cjns = self.apply_conditional_conjunction_introduction(
+                self.cogscms_atomspace
+            )
+            cogscms.update(inferred_cond_cjns)
+
+        # 2. Infer antecedents and consequents TVs of cognitive schematics
+
+        if self.temporal_deduction:  # Only needed if temporal deduction is enabled
+            agent_log.fine(
+                "cogscms_atomspace before inferring cognitive schematics outgoings TVs [count={}]:\n{}".format(
+                    len(self.cogscms_atomspace),
+                    atomspace_to_str(self.cogscms_atomspace),
+                )
+            )
+            self.directly_evaluate_cogscms_ante_succ(self.cogscms_atomspace)
+
+        # 3. Infer temporal deductions
+
+        if self.temporal_deduction:
+            agent_log.fine(
+                "cogscms_atomspace before temporal deduction [count={}]:\n{}".format(
+                    len(self.cogscms_atomspace),
+                    atomspace_to_str(self.cogscms_atomspace),
+                )
+            )
+            inferred_cogscms = self.apply_temporal_deduction(self.cogscms_atomspace)
+            cogscms.update(inferred_cogscms)
+
+        # Log all inferred cognitive schematics
         agent_log.fine(
             "Inferred cognitive schematics [count={}]:\n{}".format(
                 len(cogscms), cogscms
@@ -632,10 +701,9 @@ class OpencogAgent:
         mined_cogscms = self.mine_cogscms()
         self.update_cognitive_schematics(mined_cogscms)
 
-        # Infer cognitive schematics (via temporal deduction)
-        if self.temporal_deduction:
-            inferred_cogscms = self.infer_cogscms()
-            self.update_cognitive_schematics(inferred_cogscms)
+        # Infer cognitive schematics
+        inferred_cogscms = self.infer_cogscms()
+        self.update_cognitive_schematics(inferred_cogscms)
 
     def get_pattern(self, surprise_eval: Atom) -> Atom:
         """Extract the pattern wrapped in a surprisingness evaluation.
@@ -999,7 +1067,14 @@ class OpencogAgent:
         ]
 
         # Remove undesirable cognitive schematics
+        len_cogscms = len(cogscms)
         cogscms = [cogscm for cogscm in cogscms if self.is_desirable(cogscm)]
+        len_desirable_cogscms = len(cogscms)
+        agent_log.fine(
+            "Among {} cognitive schematics, {} are desirable".format(
+                len_cogscms, len_desirable_cogscms
+            )
+        )
 
         return cogscms
 
@@ -1212,24 +1287,10 @@ class OpencogAgent:
         return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
 
     # TODO: move to its own class (MixtureModel or something)
-    def get_all_uniq_atoms(self, atom: Atom) -> set[Atom]:
-        """Return the set of all unique atoms in atom."""
-
-        # Recursive cases
-        if atom.is_link():
-            results = {atom}
-            for o in atom.out:
-                results.union(self.get_all_uniq_atoms(o))
-            return results
-
-        # Base cases (atom is a node)
-        return {atom}
-
-    # TODO: move to its own class (MixtureModel or something)
     def complexity(self, atom: Atom) -> int:
         """Return the count of all unique atoms in atom."""
 
-        return len(self.get_all_uniq_atoms(atom))
+        return len(get_uniq_atoms(atom))
 
     # TODO: move to its own class (MixtureModel or something)
     def prior(self, length: float) -> float:
@@ -1319,16 +1380,18 @@ class OpencogAgent:
 
     # TODO: move to its own class (MixtureModel or something)
     def infer_data_set_size(self, cogscms: list[Atom]) -> float:
-        """Infer the data set size by taking the max count of all models
+        """Infer the data set size (universe size)
 
-        (it works assuming that one of them is complete).
+        For now it uses the max of the cycle_count the max count of
+        all cognitive schematics (to work around the fact that we may
+        not have a complete model).
 
         """
 
+        max_count = 0.0
         if 0 < len(cogscms):
-            return max(cogscms, key=lambda x: x.tv.count).tv.count
-        else:
-            return 0.0
+            max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
+        return max(max_count, float(self.cycle_count))
 
     def deduce(self, cogscms: list[Atom]) -> omdict:
         """Return an action distribution given a list cognitive schematics.
@@ -1409,10 +1472,7 @@ class OpencogAgent:
         agent_log.fine("valid_cogscms = {}".format(valid_cogscms))
 
         # Size of the complete data set, including all observations
-        # used to build the models. For simplicity we're gonna assume
-        # that it is the max of all counts over the models. Meaning
-        # that to do well, at least one model has to be complete,
-        # however bad this model might be.
+        # used to build the models.
         #
         # Needs to be set before calling self.weight
         self.data_set_size = self.infer_data_set_size(valid_cogscms)

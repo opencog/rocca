@@ -2,12 +2,18 @@
 from pytest import approx
 
 # OpenCog
-from opencog.type_constructors import ConceptNode, TruthValue
+from opencog.type_constructors import (
+    EvaluationLink,
+    ListLink,
+    PredicateNode,
+    ConceptNode,
+    TruthValue,
+)
 from opencog.atomspace import AtomSpace, createTruthValue
 from opencog.utilities import set_default_atomspace
 
 # ROCCA
-from rocca.agents.utils import shannon_entropy, differential_entropy
+from rocca.agents.utils import shannon_entropy, differential_entropy, get_uniq_atoms
 
 # Set main atomspace
 atomspace = AtomSpace()
@@ -136,3 +142,19 @@ def test_differential_entropy():
     assert -1e-1 < J_de
 
     teardown()
+
+
+def test_get_uniq_atoms():
+    P = PredicateNode("P")
+    A = ConceptNode("A")
+    B = ConceptNode("B")
+    AB = ListLink(A, B)
+    AA = ListLink(A, A)
+    PAB = EvaluationLink(P, AB)
+    PAA = EvaluationLink(P, AA)
+
+    # Test all uniq atoms of PAB
+    assert get_uniq_atoms(PAB) == {P, A, B, AB, PAB}
+
+    # Test all uniq atoms of PAA
+    assert get_uniq_atoms(PAA) == {P, A, AA, PAA}

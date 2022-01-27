@@ -968,6 +968,21 @@ def agent_log_atomspace(
     agent_log.log(li, msg)
 
 
+def get_uniq_atoms(atom: Atom) -> set[Atom]:
+    """Return the set of all unique atoms in atom."""
+
+    result = {atom}
+
+    # Recursive cases
+    if atom.is_link():
+        for o in atom.out:
+            result.update(get_uniq_atoms(o))
+        return result
+
+    # Base cases (atom is a node)
+    return result
+
+
 class MinerLogger:
     """Quick and dirty miner logger Python bindings"""
 
