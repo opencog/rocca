@@ -58,11 +58,7 @@ agent_log.set_component("Agent")
 # Functions #
 #############
 
-# TODO: replace list[Atom] by set[Atom] | list[Atom] once we have
-# completely moved to Python 3.10.  Indeed for instance
-# OpencogAgent.update_cognitive_schematics uses set[Atom], not
-# list[Atom].
-def add_to_atomspace(atoms: list[Atom], atomspace: AtomSpace) -> None:
+def add_to_atomspace(atoms: set[Atom] | list[Atom], atomspace: AtomSpace) -> None:
     """Add all atoms to the atomspace."""
 
     for atom in atoms:
@@ -543,7 +539,7 @@ def maybe_and(clauses: list[Atom]) -> Atom:
     return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
 
 
-def get_antecedent(atom: Atom):  # TODO: requires Python 3.10 -> (Atom | None):
+def get_antecedent(atom: Atom) -> Atom | None:
     """Return the antecedent of a temporal atom.
 
     For instance is the cognitive schematics is represented by
