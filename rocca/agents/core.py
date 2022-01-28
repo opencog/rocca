@@ -1469,7 +1469,7 @@ class OpencogAgent:
             self.atomspace, cogscm, self.cycle_count
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
-        agent_log.fine("valid_cogscms [count={}]\n{}".format(len(valid_cogscms), valid_cogscms))
+        agent_log.fine("valid_cogscms [count={}]:\n{}".format(len(valid_cogscms), valid_cogscms))
 
         # Size of the complete data set, including all observations
         # used to build the models.
