@@ -58,6 +58,7 @@ agent_log.set_component("Agent")
 # Functions #
 #############
 
+
 def add_to_atomspace(atoms: set[Atom] | list[Atom], atomspace: AtomSpace) -> None:
     """Add all atoms to the atomspace."""
 
