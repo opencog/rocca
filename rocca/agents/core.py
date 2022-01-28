@@ -1469,7 +1469,9 @@ class OpencogAgent:
             self.atomspace, cogscm, self.cycle_count
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
-        agent_log.fine("valid_cogscms = {}".format(valid_cogscms))
+        agent_log.fine(
+            "valid_cogscms [count={}]:\n{}".format(len(valid_cogscms), valid_cogscms)
+        )
 
         # Size of the complete data set, including all observations
         # used to build the models.
@@ -1537,24 +1539,24 @@ class OpencogAgent:
 
         """
 
-        agent_log.debug("atomese_obs = {}".format(self.observation))
+        agent_log.debug("atomese_obs:\n{}".format(self.observation))
         obs_record = [
             self.record(o, self.cycle_count, tv=TRUE_TV) for o in self.observation
         ]
-        agent_log.debug("obs_record = {}".format(obs_record))
+        agent_log.debug("obs_record:\n{}".format(obs_record))
 
         # Make the goal for that iteration
         goal = self.make_goal()
-        agent_log.debug("goal = {}".format(goal))
+        agent_log.debug("goal:\n{}".format(goal))
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
         # goal expiry is 2, i.e. must be fulfilled set for the next two iterations.
         cogscms = self.plan(goal, self.expiry)
-        agent_log.debug("cogscms = {}".format(cogscms))
+        agent_log.debug("cogscms [count={}]:\n{}".format(len(cogscms), cogscms))
 
         # Deduce the action distribution
         mxmdl = self.deduce(cogscms)
-        agent_log.debug("mxmdl = {}".format(mxmdl_to_str(mxmdl)))
+        agent_log.debug("mxmdl:\n{}".format(mxmdl_to_str(mxmdl)))
 
         # Select the next action
         action, pblty = self.decide(mxmdl)
@@ -1566,23 +1568,31 @@ class OpencogAgent:
 
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.cycle_count, tv=TRUE_TV)
-        agent_log.debug("action_record = {}".format(action_record))
-        agent_log.debug("action = {}".format(action))
+        agent_log.debug("action_record:\n{}".format(action_record))
+        agent_log.debug("action:\n{}".format(action))
 
         # Increment the counter for that action and log it
         self.action_counter[action] += 1
-        agent_log.debug("action_counter = {}".format(self.action_counter))
+        agent_log.debug(
+            "action_counter [total={}]:\n{}".format(
+                self.action_counter.total(), self.action_counter
+            )
+        )
 
         # Increase the step count and run the next step of the environment
         self.cycle_count += 1
         # TODO gather environment info.
         self.observation, reward, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
-        agent_log.debug("observation = {}".format(self.observation))
-        agent_log.debug("reward = {}".format(reward))
+        agent_log.debug(
+            "observation [count={}]:\n{}".format(
+                len(self.observation), self.observation
+            )
+        )
+        agent_log.debug("reward:\n{}".format(reward))
         agent_log.debug("accumulated reward = {}".format(self.accumulated_reward))
 
         reward_record = self.record(reward, self.cycle_count, tv=TRUE_TV)
-        agent_log.debug("reward_record = {}".format(reward_record))
+        agent_log.debug("reward_record:\n{}".format(reward_record))
 
         return done

@@ -27,7 +27,7 @@ from opencog.atomspace import (
 from opencog.execute import execute_atom
 from opencog.logger import create_logger
 from opencog.pln import ZLink, SLink
-from opencog.scheme import scheme_eval
+from opencog.scheme import scheme_eval, scheme_eval_h
 from opencog.spacetime import AtTimeLink, TimeNode
 from opencog.type_constructors import (
     VariableSet,
@@ -58,11 +58,8 @@ agent_log.set_component("Agent")
 # Functions #
 #############
 
-# TODO: replace list[Atom] by set[Atom] | list[Atom] once we have
-# completely moved to Python 3.10.  Indeed for instance
-# OpencogAgent.update_cognitive_schematics uses set[Atom], not
-# list[Atom].
-def add_to_atomspace(atoms: list[Atom], atomspace: AtomSpace) -> None:
+
+def add_to_atomspace(atoms: set[Atom] | list[Atom], atomspace: AtomSpace) -> None:
     """Add all atoms to the atomspace."""
 
     for atom in atoms:
@@ -543,7 +540,7 @@ def maybe_and(clauses: list[Atom]) -> Atom:
     return AndLink(*clauses) if 1 < len(clauses) else clauses[0]
 
 
-def get_antecedent(atom: Atom):  # TODO: requires Python 3.10 -> (Atom | None):
+def get_antecedent(atom: Atom) -> Atom | None:
     """Return the antecedent of a temporal atom.
 
     For instance is the cognitive schematics is represented by
@@ -943,6 +940,7 @@ def to_int(n: Atom) -> int:
 
 def to_scheme_str(vs: Any) -> str:
     """Takes a python value and convert it to a scheme value string"""
+
     if vs == True:
         return "#t"
     elif vs == False:
@@ -951,9 +949,18 @@ def to_scheme_str(vs: Any) -> str:
         return str(vs)
 
 
+# TODO: this should really be moved to the atomspace python bindings
+def atomspace_roots(atomspace: AtomSpace) -> set[Atom]:
+    """Return all roots of an atomspace."""
+
+    return set(scheme_eval_h(atomspace, "(List (cog-get-all-roots))").out)
+
+
 def atomspace_to_str(atomspace: AtomSpace) -> str:
     """Takes an atomspace and return its content as a string"""
-    return str(scheme_eval(atomspace, "(cog-get-all-roots)").decode("utf-8"))
+
+    roots = atomspace_roots(atomspace)
+    return "\n".join([root.long_string() for root in roots])
 
 
 def agent_log_atomspace(
