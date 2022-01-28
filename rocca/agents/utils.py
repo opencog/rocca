@@ -951,9 +951,18 @@ def to_scheme_str(vs: Any) -> str:
         return str(vs)
 
 
+# TODO: this should really be moved to the atomspace python bindings
+def atomspace_roots(atomspace: AtomSpace) -> set[Atom]:
+    """Return all roots of an atomspace."""
+
+    return set(scheme_eval_h(atomspace, "(List (cog-get-all-roots))").out)
+
+
 def atomspace_to_str(atomspace: AtomSpace) -> str:
     """Takes an atomspace and return its content as a string"""
-    return str(scheme_eval(atomspace, "(cog-get-all-roots)").decode("utf-8"))
+
+    roots = atomspace_roots(atomspace)
+    return "\n".join([root.long_string() for root in roots])
 
 
 def agent_log_atomspace(
