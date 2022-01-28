@@ -232,7 +232,7 @@ def inside_house(x, z):
 
 # Move the agent towards the key
 # reward=0
-def go_to_the_key(agent):
+def go_to_key(agent):
     global holds_key
     reward = 0
     observation = {}
@@ -260,7 +260,7 @@ def go_to_the_key(agent):
 
 # Move the agent towards the house and enter the house.
 # reward = 0
-def go_to_the_house(agent):
+def go_to_house(agent):
     global holds_key
     reward = 0
     observation = {}
@@ -288,7 +288,7 @@ def go_to_the_house(agent):
 
 # Move the agent towards the diamond and collect it.
 # reward = 1
-def go_to_the_diamonds(agent):
+def go_to_diamonds(agent):
     curr_x, curr_y, curr_z = get_curr_loc(agent)
     turn_to(agent, curr_x, curr_y, curr_z, diamond_x, diamond_y, diamond_z)
     time.sleep(0.2)
@@ -403,15 +403,15 @@ if __name__ == "__main__":
         if world_state.number_of_rewards_since_last_state > 0:
             total_reward += world_state.rewards[-1].getValue()
             print("total reward minecraft = {}".format(total_reward))
-        ob, rw, _ = go_to_the_key(agent)
+        ob, rw, _ = go_to_key(agent)
         print("Observation: {}, reward: {}".format(ob, rw))
         total_reward += rw
 
-        ob, rw, _ = go_to_the_house(agent)
+        ob, rw, _ = go_to_house(agent)
         print("Observation: {}, reward: {}".format(ob, rw))
         total_reward += rw
 
-        ob, rw, _ = go_to_the_diamonds(agent)
+        ob, rw, _ = go_to_diamonds(agent)
         print("Observation: {}, reward: {}".format(ob, rw))
         total_reward += rw
 

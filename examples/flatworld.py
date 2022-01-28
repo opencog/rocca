@@ -54,9 +54,9 @@ class FlatworldAgent(OpencogAgent):
         # Create Action Space. The set of allowed actions an agent can take.
         # TODO take care of action parameters.
         action_space = {
-            ExecutionLink(SchemaNode("go_to_the_key")),
-            ExecutionLink(SchemaNode("go_to_the_house")),
-            ExecutionLink(SchemaNode("go_to_the_diamonds")),
+            ExecutionLink(SchemaNode("go_to_key")),
+            ExecutionLink(SchemaNode("go_to_house")),
+            ExecutionLink(SchemaNode("go_to_diamonds")),
         }
         # Create Goal
         pgoal = EvaluationLink(PredicateNode("Reward"), NumberNode("1"))
@@ -69,13 +69,14 @@ class FlatworldAgent(OpencogAgent):
         self.polyaction_mining = False
         self.monoaction_general_succeedent_mining = True
         self.temporal_deduction = True
-        self.cogscm_minimum_strength = 0.99
+        self.cogscm_minimum_strength = 0.9
         self.cogscm_maximum_shannon_entropy = 1
         self.cogscm_maximum_differential_entropy = 0
         self.cogscm_maximum_variables = 0
         self.miner_maximum_iterations = 100000
         self.miner_maximum_variables = 9
         self.miner_minimum_support = 3
+        self.conditional_conjunction_introduction = False
 
         # Todo: restart the environment to get an initial reward
         self.initial_reward = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
