@@ -27,7 +27,7 @@ from opencog.atomspace import (
 from opencog.execute import execute_atom
 from opencog.logger import create_logger
 from opencog.pln import ZLink, SLink
-from opencog.scheme import scheme_eval
+from opencog.scheme import scheme_eval, scheme_eval_h
 from opencog.spacetime import AtTimeLink, TimeNode
 from opencog.type_constructors import (
     VariableSet,
@@ -943,6 +943,7 @@ def to_int(n: Atom) -> int:
 
 def to_scheme_str(vs: Any) -> str:
     """Takes a python value and convert it to a scheme value string"""
+
     if vs == True:
         return "#t"
     elif vs == False:
