@@ -68,7 +68,8 @@ class OpencogAgent:
 
         self.env = env
         self.observation, _, _ = self.env.restart()
-        self.cycle_count = 0
+        self.cycle_count: int = 0
+        self.total_count: int = 0
         self.accumulated_reward = 0
         self.percepta_record_cpt = ConceptNode("Percepta Record")
         # The percepta_record is a list of sets of timestamped
@@ -535,11 +536,11 @@ class OpencogAgent:
         agent_log.fine("directly_evaluate(atom={})".format(atom))
 
         # Exit now to avoid division by zero
-        if self.cycle_count == 0:
+        if self.total_count == 0:
             return
 
         # Exit if the confidence will not increase
-        conf = count_to_confidence(self.cycle_count)
+        conf = count_to_confidence(self.total_count)
         if conf <= atom.tv.confidence:
             return
 
@@ -553,7 +554,7 @@ class OpencogAgent:
                 pos_count += 1
 
         # Update the TV of atom
-        mean = float(pos_count) / float(self.cycle_count)
+        mean = float(pos_count) / float(self.total_count)
         atom.truth_value(mean, conf)
 
     def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace) -> None:
@@ -696,6 +697,9 @@ class OpencogAgent:
         # For now we only learn cognitive schematics.  Later on we can
         # introduce more types of knowledge, temporal and more
         # abstract.
+
+        # Set the total count, will be used to calculate some TVs
+        self.total_count = self.cycle_count
 
         # Mine cognitive schematics
         mined_cogscms = self.mine_cogscms()
@@ -1037,7 +1041,7 @@ class OpencogAgent:
             agent_log.fine(
                 msg
                 + "its differential entropy {} is greater than {}".format(
-                    se, self.cogscm_maximum_shannon_entropy
+                    de, self.cogscm_maximum_differential_entropy
                 )
             )
             return False
@@ -1048,7 +1052,7 @@ class OpencogAgent:
             agent_log.fine(
                 msg
                 + "its number of variables {} is greater than {}".format(
-                    se, self.cogscm_maximum_shannon_entropy
+                    mv, self.cogscm_maximum_variables
                 )
             )
             return False
@@ -1382,16 +1386,16 @@ class OpencogAgent:
     def infer_data_set_size(self, cogscms: list[Atom]) -> float:
         """Infer the data set size (universe size)
 
-        For now it uses the max of the cycle_count the max count of
-        all cognitive schematics (to work around the fact that we may
-        not have a complete model).
+        For now it uses the max of the total_count and the max count
+        of all cognitive schematics (to work around the fact that we
+        may not have a complete model).
 
         """
 
         max_count = 0.0
         if 0 < len(cogscms):
             max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
-        return max(max_count, float(self.cycle_count))
+        return max(max_count, float(self.total_count))
 
     def deduce(self, cogscms: list[Atom]) -> omdict:
         """Return an action distribution given a list cognitive schematics.
@@ -1536,6 +1540,15 @@ class OpencogAgent:
 
         Return whether we're done for that session (as determined by
         the environment).
+
+        Note that at the moment no learning is taking place during
+        that cycle, eventhough in principle it could take place during
+        the
+
+        2.2. Find plans for that goal
+
+        step.  For learning plans (and more), the learn() method takes
+        care of that and should be called at appropriate times.
 
         """
 
