@@ -68,7 +68,7 @@ class OpencogAgent:
 
         self.env = env
         self.observation, _, _ = self.env.restart()
-        self.cycle_count = 0
+        self.cycle_count: int = 0
         self.accumulated_reward = 0
         self.percepta_record_cpt = ConceptNode("Percepta Record")
         # The percepta_record is a list of sets of timestamped
