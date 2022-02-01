@@ -1386,16 +1386,16 @@ class OpencogAgent:
     def infer_data_set_size(self, cogscms: list[Atom]) -> float:
         """Infer the data set size (universe size)
 
-        For now it uses the max of the cycle_count the max count of
-        all cognitive schematics (to work around the fact that we may
-        not have a complete model).
+        For now it uses the max of the total_count and the max count
+        of all cognitive schematics (to work around the fact that we
+        may not have a complete model).
 
         """
 
         max_count = 0.0
         if 0 < len(cogscms):
             max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
-        return max(max_count, float(self.cycle_count))
+        return max(max_count, float(self.total_count))
 
     def deduce(self, cogscms: list[Atom]) -> omdict:
         """Return an action distribution given a list cognitive schematics.
