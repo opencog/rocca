@@ -135,6 +135,9 @@ class ChaseEnv(gym.Env):
                 -WINDOW_W / SCALE, WINDOW_W / SCALE, -WINDOW_H / SCALE, WINDOW_H / SCALE
             )
 
+        # TODO: display text about observation, reward, cumulative
+        # reward and last action.  See
+        # https://github.com/openai/gym/blob/58aeddb62fb9d46d2d2481d1f7b0a380d8c454b1/gym/envs/box2d/car_racing.py#L424
         self.board.draw(self.viewer)
         self.pellet.draw(self.viewer)
         self.player.draw(self.viewer)
