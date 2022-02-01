@@ -1537,6 +1537,15 @@ class OpencogAgent:
         Return whether we're done for that session (as determined by
         the environment).
 
+        Note that at the moment no learning is taking place during
+        that cycle, eventhough in principle it could take place during
+        the
+
+        2.2. Find plans for that goal
+
+        step.  For learning plans (and more), the learn() method takes
+        care of that and should be called at appropriate times.
+
         """
 
         agent_log.debug("atomese_obs:\n{}".format(self.observation))
