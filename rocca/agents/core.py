@@ -1041,7 +1041,7 @@ class OpencogAgent:
             agent_log.fine(
                 msg
                 + "its differential entropy {} is greater than {}".format(
-                    se, self.cogscm_maximum_shannon_entropy
+                    de, self.cogscm_maximum_differential_entropy
                 )
             )
             return False
@@ -1052,7 +1052,7 @@ class OpencogAgent:
             agent_log.fine(
                 msg
                 + "its number of variables {} is greater than {}".format(
-                    se, self.cogscm_maximum_shannon_entropy
+                    mv, self.cogscm_maximum_variables
                 )
             )
             return False
