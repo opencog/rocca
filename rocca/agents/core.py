@@ -69,6 +69,7 @@ class OpencogAgent:
         self.env = env
         self.observation, _, _ = self.env.restart()
         self.cycle_count: int = 0
+        self.total_count: int = 0
         self.accumulated_reward = 0
         self.percepta_record_cpt = ConceptNode("Percepta Record")
         # The percepta_record is a list of sets of timestamped
@@ -535,11 +536,11 @@ class OpencogAgent:
         agent_log.fine("directly_evaluate(atom={})".format(atom))
 
         # Exit now to avoid division by zero
-        if self.cycle_count == 0:
+        if self.total_count == 0:
             return
 
         # Exit if the confidence will not increase
-        conf = count_to_confidence(self.cycle_count)
+        conf = count_to_confidence(self.total_count)
         if conf <= atom.tv.confidence:
             return
 
@@ -553,7 +554,7 @@ class OpencogAgent:
                 pos_count += 1
 
         # Update the TV of atom
-        mean = float(pos_count) / float(self.cycle_count)
+        mean = float(pos_count) / float(self.total_count)
         atom.truth_value(mean, conf)
 
     def directly_evaluate_cogscms_ante_succ(self, atomspace: AtomSpace) -> None:
@@ -696,6 +697,9 @@ class OpencogAgent:
         # For now we only learn cognitive schematics.  Later on we can
         # introduce more types of knowledge, temporal and more
         # abstract.
+
+        # Set the total count, will be used to calculate some TVs
+        self.total_count = self.cycle_count
 
         # Mine cognitive schematics
         mined_cogscms = self.mine_cogscms()
