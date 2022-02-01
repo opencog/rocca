@@ -15,7 +15,7 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 from gym.envs.classic_control import rendering
 
-from rocca.envs.gym_chase.game_objects import Player, Table, Pellet
+from rocca.envs.gym_chase.game_objects import Player, Board, Pellet
 
 FPS = 30
 
@@ -26,9 +26,9 @@ WINDOW_H = 400
 LEFT_TRANS_X = -0.5
 RIGHT_TRANS_X = 0.5
 
-TABLE_TRANS_X = 0.0
-TABLE_TRANS_Y = -0.3
-PLAYER_TRANS_Y = 0.6
+BOARD_TRANS_X = 0.0
+BOARD_TRANS_Y = -0.3
+PLAYER_TRANS_Y = -0.15
 
 
 class Action(Enum):
@@ -79,9 +79,9 @@ class ChaseEnv(gym.Env):
 
     def get_pellet_transform(self):
         if self.food_position == Position.LEFT:
-            return LEFT_TRANS_X, TABLE_TRANS_Y
+            return LEFT_TRANS_X, BOARD_TRANS_Y
         else:
-            return RIGHT_TRANS_X, TABLE_TRANS_Y
+            return RIGHT_TRANS_X, BOARD_TRANS_Y
 
     def _get_ob(self):
         return np.array([self.player_position.value, self.food_position.value])
@@ -123,7 +123,7 @@ class ChaseEnv(gym.Env):
 
     def reset(self):
         self._setup()
-        self.table = Table(TABLE_TRANS_X, TABLE_TRANS_Y)
+        self.board = Board(BOARD_TRANS_X, BOARD_TRANS_Y)
         self.player = Player(*self.get_player_transform())
         self.pellet = Pellet(*self.get_pellet_transform())
         return self._get_ob()
@@ -135,9 +135,9 @@ class ChaseEnv(gym.Env):
                 -WINDOW_W / SCALE, WINDOW_W / SCALE, -WINDOW_H / SCALE, WINDOW_H / SCALE
             )
 
-        self.table.draw(self.viewer)
-        self.player.draw(self.viewer)
+        self.board.draw(self.viewer)
         self.pellet.draw(self.viewer)
+        self.player.draw(self.viewer)
         return self.viewer.render(return_rgb_array=mode == "rgb_array")
 
     def close(self):
