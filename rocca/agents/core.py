@@ -271,6 +271,7 @@ class OpencogAgent:
             "back-predictive-implication-scope-direct-evaluation",
             "back-predictive-implication-scope-conditional-conjunction-introduction",
             "back-predictive-implication-scope-deduction-cogscm-Q-conjunction",
+            "back-predictive-implication-scope-deduction-cogscm-Q-evaluation",
         ]
         self.pln_load_rules(rules)
         # scheme_eval(self.atomspace, "(pln-log-atomspace)")
@@ -628,6 +629,7 @@ class OpencogAgent:
         mi = 1
         rules = [
             "back-predictive-implication-scope-deduction-cogscm-Q-conjunction",
+            "back-predictive-implication-scope-deduction-cogscm-Q-evaluation",
         ]
         return self.pln_fc(
             self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
