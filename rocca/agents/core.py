@@ -419,8 +419,8 @@ class OpencogAgent:
         """
 
         agent_log.fine(
-            "pln_bc(atomspace={}, target={}, maximum_iterations={})".format(
-                atomspace, target, maximum_iterations
+            "pln_bc(atomspace={}, target={}, maximum_iterations={}, rules={})".format(
+                atomspace, target.long_string(), maximum_iterations, rules
             )
         )
 
@@ -608,7 +608,10 @@ class OpencogAgent:
             "back-predictive-implication-scope-conditional-conjunction-introduction",
         ]
         cogscms = self.pln_fc(
-            self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
+            self.cogscms_atomspace,
+            source.long_string(),
+            maximum_iterations=mi,
+            rules=rules,
         )
         return cogscms
 
