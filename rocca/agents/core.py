@@ -658,7 +658,7 @@ class OpencogAgent:
 
         if self.temporal_deduction:  # Only needed if temporal deduction is enabled
             agent_log.fine(
-                "cogscms_atomspace before inferring cognitive schematics outgoings TVs [count={}]:\n{}".format(
+                "cogscms_atomspace before inferring cognitive schematics outgoings [count={}]:\n{}".format(
                     len(self.cogscms_atomspace),
                     atomspace_to_str(self.cogscms_atomspace),
                 )
@@ -1229,9 +1229,9 @@ class OpencogAgent:
             + surprise
             + ")"
         )
-        agent_log.fine("mine_query = {}".format(mine_query))
+        agent_log.fine("Miner query:\n{}".format(mine_query))
         surprises = scheme_eval_h(atomspace, "(List " + mine_query + ")")
-        agent_log.fine("surprises = {}".format(surprises))
+        agent_log.fine("Surprising patterns:\n{}".format(surprises))
 
         return surprises.out
 
