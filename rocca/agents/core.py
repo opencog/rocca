@@ -270,7 +270,8 @@ class OpencogAgent:
         rules = [
             "back-predictive-implication-scope-direct-evaluation",
             "back-predictive-implication-scope-conditional-conjunction-introduction",
-            "back-predictive-implication-scope-deduction-cogscm",
+            "back-predictive-implication-scope-deduction-cogscm-Q-conjunction",
+            "back-predictive-implication-scope-deduction-cogscm-Q-evaluation",
         ]
         self.pln_load_rules(rules)
         # scheme_eval(self.atomspace, "(pln-log-atomspace)")
@@ -364,11 +365,12 @@ class OpencogAgent:
         """
 
         agent_log.fine(
-            "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={})".format(
+            "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={}, rules={})".format(
                 atomspace,
                 source,
                 maximum_iterations,
                 full_rule_application,
+                rules,
             )
         )
 
@@ -388,8 +390,13 @@ class OpencogAgent:
         command += str(source)
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maximum_iterations)
-        command += " #:fc-full-rule-application " + str(full_rule_application)
+        command += " #:fc-full-rule-application " + to_scheme_str(full_rule_application)
         command += ")"
+
+        # Log FC query before running
+        agent_log.fine("PLN forward chainer query:\n{}".format(command))
+
+        # Run query and return results
         return set(scheme_eval_h(atomspace, command).out)
 
     def pln_bc(
@@ -434,6 +441,11 @@ class OpencogAgent:
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maximum_iterations)
         command += ")"
+
+        # Log BC query before running
+        agent_log.fine("PLN backward chainer query:\n{}".format(command))
+
+        # Run query and return results
         return set(scheme_eval_h(atomspace, command).out)
 
     def mine_cogscms(self) -> set[Atom]:
@@ -616,7 +628,8 @@ class OpencogAgent:
         source = SetLink()
         mi = 1
         rules = [
-            "back-predictive-implication-scope-deduction-cogscm",
+            "back-predictive-implication-scope-deduction-cogscm-Q-conjunction",
+            "back-predictive-implication-scope-deduction-cogscm-Q-evaluation",
         ]
         return self.pln_fc(
             self.cogscms_atomspace, source, maximum_iterations=mi, rules=rules
@@ -657,7 +670,7 @@ class OpencogAgent:
 
         if self.temporal_deduction:  # Only needed if temporal deduction is enabled
             agent_log.fine(
-                "cogscms_atomspace before inferring cognitive schematics outgoings TVs [count={}]:\n{}".format(
+                "cogscms_atomspace before inferring cognitive schematics outgoings [count={}]:\n{}".format(
                     len(self.cogscms_atomspace),
                     atomspace_to_str(self.cogscms_atomspace),
                 )
@@ -1228,9 +1241,9 @@ class OpencogAgent:
             + surprise
             + ")"
         )
-        agent_log.fine("mine_query = {}".format(mine_query))
+        agent_log.fine("Miner query:\n{}".format(mine_query))
         surprises = scheme_eval_h(atomspace, "(List " + mine_query + ")")
-        agent_log.fine("surprises = {}".format(surprises))
+        agent_log.fine("Surprising patterns:\n{}".format(surprises))
 
         return surprises.out
 
