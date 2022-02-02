@@ -389,7 +389,7 @@ class OpencogAgent:
         command += str(source)
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maximum_iterations)
-        command += " #:fc-full-rule-application " + str(full_rule_application)
+        command += " #:fc-full-rule-application " + to_scheme_str(full_rule_application)
         command += ")"
         return set(scheme_eval_h(atomspace, command).out)
 
