@@ -367,7 +367,7 @@ class OpencogAgent:
         agent_log.fine(
             "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={}, rules={})".format(
                 atomspace,
-                source,
+                source.long_string(),
                 maximum_iterations,
                 full_rule_application,
                 rules,
@@ -609,7 +609,7 @@ class OpencogAgent:
         ]
         cogscms = self.pln_fc(
             self.cogscms_atomspace,
-            source.long_string(),
+            source,
             maximum_iterations=mi,
             rules=rules,
         )
