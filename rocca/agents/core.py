@@ -391,6 +391,11 @@ class OpencogAgent:
         command += " #:maximum-iterations " + str(maximum_iterations)
         command += " #:fc-full-rule-application " + to_scheme_str(full_rule_application)
         command += ")"
+
+        # Log FC query before running
+        agent_log.fine("PLN forward chainer query:\n{}".format(command))
+
+        # Run query and return results
         return set(scheme_eval_h(atomspace, command).out)
 
     def pln_bc(
@@ -435,6 +440,11 @@ class OpencogAgent:
         command += ("#:vardecl " + str(vardecl)) if vardecl else ""
         command += " #:maximum-iterations " + str(maximum_iterations)
         command += ")"
+
+        # Log BC query before running
+        agent_log.fine("PLN backward chainer query:\n{}".format(command))
+
+        # Run query and return results
         return set(scheme_eval_h(atomspace, command).out)
 
     def mine_cogscms(self) -> set[Atom]:
