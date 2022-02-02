@@ -364,11 +364,12 @@ class OpencogAgent:
         """
 
         agent_log.fine(
-            "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={})".format(
+            "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={}, rules={})".format(
                 atomspace,
                 source,
                 maximum_iterations,
                 full_rule_application,
+                rules,
             )
         )
 
