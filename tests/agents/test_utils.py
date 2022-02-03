@@ -8,12 +8,22 @@ from opencog.type_constructors import (
     PredicateNode,
     ConceptNode,
     TruthValue,
+    VariableSet,
+    AndLink,
+    ExecutionLink,
+    SchemaNode,
+)
+from opencog.pln import (
+    SLink,
+    ZLink,
+    BackPredictiveImplicationScopeLink,
+    BackSequentialAndLink,
 )
 from opencog.atomspace import AtomSpace, createTruthValue
 from opencog.utilities import set_default_atomspace
 
 # ROCCA
-from rocca.agents.utils import shannon_entropy, differential_entropy, get_uniq_atoms
+from rocca.agents.utils import shannon_entropy, differential_entropy, get_uniq_atoms, to_human_readable_str
 
 # Set main atomspace
 atomspace = AtomSpace()
@@ -158,3 +168,27 @@ def test_get_uniq_atoms():
 
     # Test all uniq atoms of PAA
     assert get_uniq_atoms(PAA) == {P, A, AA, PAA}
+
+
+def test_to_human_readable_str():
+    cogscm = BackPredictiveImplicationScopeLink(
+        VariableSet(),
+        SLink(ZLink()),
+        AndLink(
+            EvaluationLink(
+                PredicateNode("outside"),
+                ListLink(
+                    ConceptNode("self"),
+                    ConceptNode("house"))),
+            ExecutionLink(
+                SchemaNode("go_to_key"))),
+        EvaluationLink(
+            PredicateNode("hold"),
+            ListLink(
+                ConceptNode("self"),
+                ConceptNode("key"))))
+
+    cogscm_hrs = to_human_readable_str(cogscm)
+    expected = "outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)"
+
+    assert cogscm_hrs == expected
