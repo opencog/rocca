@@ -9,9 +9,14 @@ from opencog.type_constructors import (
     ConceptNode,
     TruthValue,
     VariableSet,
+    VariableNode,
+    TypeNode,
+    TypedVariableLink,
     AndLink,
     ExecutionLink,
     SchemaNode,
+    NumberNode,
+    GreaterThanLink,
 )
 from opencog.pln import (
     SLink,
@@ -23,7 +28,12 @@ from opencog.atomspace import AtomSpace, createTruthValue
 from opencog.utilities import set_default_atomspace
 
 # ROCCA
-from rocca.agents.utils import shannon_entropy, differential_entropy, get_uniq_atoms, to_human_readable_str
+from rocca.agents.utils import (
+    shannon_entropy,
+    differential_entropy,
+    get_uniq_atoms,
+    to_human_readable_str,
+)
 
 # Set main atomspace
 atomspace = AtomSpace()
@@ -171,24 +181,80 @@ def test_get_uniq_atoms():
 
 
 def test_to_human_readable_str():
-    cogscm = BackPredictiveImplicationScopeLink(
+    # 1. outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)
+    cogscm_1 = BackPredictiveImplicationScopeLink(
         VariableSet(),
         SLink(ZLink()),
         AndLink(
             EvaluationLink(
                 PredicateNode("outside"),
-                ListLink(
-                    ConceptNode("self"),
-                    ConceptNode("house"))),
-            ExecutionLink(
-                SchemaNode("go_to_key"))),
+                ListLink(ConceptNode("self"), ConceptNode("house")),
+            ),
+            ExecutionLink(SchemaNode("go_to_key")),
+        ),
         EvaluationLink(
-            PredicateNode("hold"),
-            ListLink(
-                ConceptNode("self"),
-                ConceptNode("key"))))
+            PredicateNode("hold"), ListLink(ConceptNode("self"), ConceptNode("key"))
+        ),
+    )
 
-    cogscm_hrs = to_human_readable_str(cogscm)
-    expected = "outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)"
+    cogscm_hrs_1 = to_human_readable_str(cogscm_1)
 
-    assert cogscm_hrs == expected
+    # Two expected results due to AndLink commutativity
+    expected_1a = "outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)"
+    expected_1b = "do(go_to_key) ∧ outside(self, house) ↝ hold(self, key)"
+
+    assert cogscm_hrs_1 == expected_1a or cogscm_hrs_1 == expected_1b
+
+    # 2. AgentPosition(RightSquare) ∧ do(Eat) ↝ Reward(1)
+    # Check that whitespace is removed in names
+    cogscm_2 = BackPredictiveImplicationScopeLink(
+        VariableSet(),
+        SLink(ZLink()),
+        AndLink(
+            ExecutionLink(SchemaNode("Eat")),
+            EvaluationLink(
+                PredicateNode("Agent Position"), ConceptNode("Right Square")
+            ),
+        ),
+        EvaluationLink(PredicateNode("Reward"), NumberNode("1")),
+    )
+
+    cogscm_hrs_2 = to_human_readable_str(cogscm_2)
+
+    # Two expected results due to AndLink commutativity
+    expected_2a = "AgentPosition(RightSquare) ∧ do(Eat) ↝ Reward(1)"
+    expected_2b = "do(Eat) ∧ AgentPosition(RightSquare) ↝ Reward(1)"
+
+    assert cogscm_hrs_2 == expected_2a or cogscm_hrs_2 == expected_2b
+
+    # 3. -0.01 > $angle ∧ PoleAngle($angle) ∧ do(GoLeft) ↝ Reward(1)
+    # Test with variable and GreaterThanLink
+    cogscm_3 = BackPredictiveImplicationScopeLink(
+        TypedVariableLink(VariableNode("$angle"), TypeNode("NumberNode")),
+        SLink(ZLink()),
+        AndLink(
+            GreaterThanLink(NumberNode("-0.01"), VariableNode("$angle")),
+            ExecutionLink(SchemaNode("Go Left")),
+            EvaluationLink(PredicateNode("Pole Angle"), VariableNode("$angle")),
+        ),
+        EvaluationLink(PredicateNode("Reward"), NumberNode("1")),
+    )
+
+    cogscm_hrs_3 = to_human_readable_str(cogscm_3)
+
+    # Six expected results due to AndLink commutativity
+    expected_3a = "-0.01 > $angle ∧ PoleAngle($angle) ∧ do(GoLeft) ↝ Reward(1)"
+    expected_3b = "-0.01 > $angle ∧ do(GoLeft) ∧ PoleAngle($angle) ↝ Reward(1)"
+    expected_3c = "do(GoLeft) ∧ -0.01 > $angle ∧ PoleAngle($angle) ↝ Reward(1)"
+    expected_3d = "PoleAngle($angle) ∧ -0.01 > $angle ∧ do(GoLeft) ↝ Reward(1)"
+    expected_3e = "PoleAngle($angle) ∧ -0.01 > $angle ∧ do(GoLeft) ↝ Reward(1)"
+    expected_3f = "PoleAngle($angle) ∧ do(GoLeft) ∧ -0.01 > $angle ↝ Reward(1)"
+
+    assert (
+        cogscm_hrs_3 == expected_3a
+        or cogscm_hrs_3 == expected_3b
+        or cogscm_hrs_3 == expected_3c
+        or cogscm_hrs_3 == expected_3d
+        or cogscm_hrs_3 == expected_3e
+        or cogscm_hrs_3 == expected_3f
+    )

@@ -1009,8 +1009,8 @@ def syntax_precede(a1: Atom, a2: Atom) -> bool:
 
     Precedence order is as follows
 
-    1. Concept/Predicate/Schema
-    2. Evaluation/Execution
+    1. Variable/Number/Concept/Predicate/Schema
+    2. Evaluation/Execution/GreaterThan
     3. Not
     4. And/Or
     5. SequentialAnd
@@ -1026,14 +1026,15 @@ def syntax_precede(a1: Atom, a2: Atom) -> bool:
 
     """
 
-    print("syntax_precede(a1={}, a2={})".format(a1, a2))
-
     precedence = {
+        types.VariableNode: 1,
+        types.NumberNode: 1,
         types.ConceptNode: 1,
         types.PredicateNode: 1,
         types.SchemaNode: 1,
         types.EvaluationLink: 2,
         types.ExecutionLink: 2,
+        types.GreaterThanLink: 2,
         types.NotLink: 3,
         types.AndLink: 4,
         types.OrLink: 4,
@@ -1044,15 +1045,16 @@ def syntax_precede(a1: Atom, a2: Atom) -> bool:
     return precedence[a1.type] < precedence[a2.type]
 
 
-# Add type annotation on ty
+# TODO: add type annotation on ty
 def type_to_human_readable_str(ty) -> str:
-    """Convert atom type to human readable character
+    """Convert atom type to human readable character.
 
     The conversion goes as follows
 
     And                          -> ∧
     Or                           -> ∨
     Not                          -> ¬
+    GreaterThan                  -> >
     SequentialAnd                -> ≺
     PredictiveImplication[Scope] -> ↝
     Execution                    -> do
@@ -1063,8 +1065,10 @@ def type_to_human_readable_str(ty) -> str:
         types.NotLink: "∨",
         types.AndLink: "∧",
         types.OrLink: "¬",
+        types.GreaterThanLink: ">",
         types.ExecutionLink: "do",
         get_type("BackSequentialAndLink"): "≺",
+        get_type("BackPredictiveImplicationScope"): "↝",
         get_type("BackPredictiveImplicationScopeLink"): "↝",
     }
 
@@ -1136,7 +1140,9 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
     ##############
 
     if atom.is_node():
-        return "(" + atom.name + ")" if parenthesis else atom.name
+        obj_str = atom.name
+        obj_str = obj_str.replace(" ", "")  # Remove whitespace
+        return "(" + obj_str + ")" if parenthesis else obj_str
 
     ###################
     # Recursive cases #
@@ -1163,6 +1169,7 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
         # and the arguments are the renaming outgoings (possibly
         # wrapped in a ListLink.
         op_str = atom.out[0].name
+        op_str = op_str.replace(" ", "")  # Remove whitespace
         arg = atom.out[1]
         out = arg.out if is_list(arg) else [arg]
         is_infix = False
