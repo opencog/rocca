@@ -20,6 +20,7 @@ from opencog.atomspace import (
     Atom,
     AtomSpace,
     get_type,
+    get_type_name,
     is_a,
     types,
     createTruthValue,
@@ -1202,7 +1203,37 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
     return "(" + final_str + ")" if parenthesis else final_str
 
 
+def cogscm_to_str(cogscm: Atom) -> str:
+    """Convert a cognitive schematics to string.
+
+    The cognitive schematic is turned into a string in Scheme format,
+    prepended with a comment of its human readable form (see
+    to_human_readable_str).
+
+    """
+
+    msg = ";; " + to_human_readable_str(cogscm) + "\n"
+    msg += cogscm.long_string()
+    return msg
+
+
+def cogscms_to_str(cogscms: set[Atom] | list[Atom]) -> str:
+    """Convert a collection of cognitive schematics to string.
+
+    Each cognitive schematic is turned into a string in Scheme format,
+    prepended with a comment of its human readable form (see
+    to_human_readable_str).
+
+    """
+
+    msgs = []
+    for cogscm in cogscms:
+        msgs.append(cogscm_to_str(cogscm))
+    return "\n".join(msgs)
+
+
 class MinerLogger:
+
     """Quick and dirty miner logger Python bindings"""
 
     def __init__(self, atomspace: AtomSpace):

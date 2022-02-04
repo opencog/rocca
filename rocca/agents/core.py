@@ -477,7 +477,7 @@ class OpencogAgent:
             pos_prdi = self.surprises_to_predictive_implications(pos_srps)
             agent_log.fine(
                 "Mined positive goal cognitive schematics [count={}]:\n{}".format(
-                    len(pos_prdi), pos_prdi
+                    len(pos_prdi), cogscms_to_str(pos_prdi)
                 )
             )
             cogscms.update(set(pos_prdi))
@@ -490,7 +490,7 @@ class OpencogAgent:
             neg_prdi = self.surprises_to_predictive_implications(neg_srps)
             agent_log.fine(
                 "Mined negative goal cognitive schematics [count={}]:\n{}".format(
-                    len(neg_prdi), neg_prdi
+                    len(neg_prdi), cogscms_to_str(neg_prdi)
                 )
             )
             cogscms.update(set(neg_prdi))
@@ -504,7 +504,7 @@ class OpencogAgent:
                 gen_prdi = self.surprises_to_predictive_implications(gen_srps)
                 agent_log.fine(
                     "Mined general succedent cognitive schematics [count={}]:\n{}".format(
-                        len(gen_prdi), gen_prdi
+                        len(gen_prdi), cogscms_to_str(gen_prdi)
                     )
                 )
                 cogscms.update(set(gen_prdi))
@@ -524,7 +524,7 @@ class OpencogAgent:
                     )
                     agent_log.fine(
                         "Mined positive goal poly-action cognitive schematics[count={}]\n:{}".format(
-                            len(pos_poly_srps), pos_poly_srps
+                            len(pos_poly_srps), cogscms_to_str(pos_poly_srps)
                         )
                     )
                     pos_poly_prdi = self.surprises_to_predictive_implications(
@@ -533,7 +533,9 @@ class OpencogAgent:
                     cogscms.update(set(pos_poly_prdi))
 
         agent_log.fine(
-            "Mined cognitive schematics [count={}]:\n{}".format(len(cogscms), cogscms)
+            "Mined cognitive schematics [count={}]:\n{}".format(
+                len(cogscms), cogscms_to_str(cogscms)
+            )
         )
         return cogscms
 
@@ -695,7 +697,7 @@ class OpencogAgent:
         # Log all inferred cognitive schematics
         agent_log.fine(
             "Inferred cognitive schematics [count={}]:\n{}".format(
-                len(cogscms), cogscms
+                len(cogscms), cogscms_to_str(cogscms)
             )
         )
 
@@ -1007,7 +1009,7 @@ class OpencogAgent:
         """
 
         # For logging
-        cogscm_str = cogscm.long_string() if cogscm else str(cogscm)
+        cogscm_str = cogscm_to_str(cogscm) if cogscm else str(cogscm)
         msg = "{} is undesirable because ".format(cogscm_str)
 
         # Check that cogscm is defined
@@ -1490,7 +1492,9 @@ class OpencogAgent:
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
         agent_log.fine(
-            "valid_cogscms [count={}]:\n{}".format(len(valid_cogscms), valid_cogscms)
+            "Valid cognitive schematics [count={}]:\n{}".format(
+                len(valid_cogscms), cogscms_to_str(valid_cogscms)
+            )
         )
 
         # Size of the complete data set, including all observations
@@ -1581,7 +1585,9 @@ class OpencogAgent:
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
         # goal expiry is 2, i.e. must be fulfilled set for the next two iterations.
         cogscms = self.plan(goal, self.expiry)
-        agent_log.debug("cogscms [count={}]:\n{}".format(len(cogscms), cogscms))
+        agent_log.debug(
+            "cogscms [count={}]:\n{}".format(len(cogscms), cogscms_to_str(cogscms))
+        )
 
         # Deduce the action distribution
         mxmdl = self.deduce(cogscms)
