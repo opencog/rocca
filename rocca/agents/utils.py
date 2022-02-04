@@ -20,6 +20,7 @@ from opencog.atomspace import (
     Atom,
     AtomSpace,
     get_type,
+    get_type_name,
     is_a,
     types,
     createTruthValue,
@@ -458,6 +459,12 @@ def get_context(cogscm: Atom) -> tuple[Atom, Atom]:
     return (present_clauses, virtual_clauses)
 
 
+def is_list(atom: Atom) -> bool:
+    """Return True iff the atom is a ListLink."""
+
+    return is_a(atom.type, types.ListLink)
+
+
 def is_variable(atom: Atom) -> bool:
     """Return True iff the atom is a variable node."""
 
@@ -514,6 +521,12 @@ def is_sequential_and(atom: Atom) -> bool:
     """
 
     return is_a(atom.type, get_type("BackSequentialAndLink"))
+
+
+def is_evaluation(atom: Atom) -> bool:
+    """Return True iff the atom is an EvaluationLink."""
+
+    return is_a(atom.type, types.EvaluationLink)
 
 
 def is_execution(atom: Atom) -> bool:
@@ -990,7 +1003,235 @@ def get_uniq_atoms(atom: Atom) -> set[Atom]:
     return result
 
 
+def syntax_precede(a1: Atom, a2: Atom) -> bool:
+    """Return true iff a1 syntactically precedes a2.
+
+    This function is used by to_human_readable_str
+
+    Precedence order is as follows
+
+    1. Variable/Number/Concept/Predicate/Schema
+    2. Evaluation/Execution/GreaterThan
+    3. Not
+    4. And/Or
+    5. SequentialAnd
+    6. PredictiveImplication
+
+    Thus
+
+    op_precede(And(...), SequentialAnd(...))
+
+    returns
+
+    True
+
+    """
+
+    precedence = {
+        types.VariableNode: 1,
+        types.NumberNode: 1,
+        types.ConceptNode: 1,
+        types.PredicateNode: 1,
+        types.SchemaNode: 1,
+        types.EvaluationLink: 2,
+        types.ExecutionLink: 2,
+        types.GreaterThanLink: 2,
+        types.NotLink: 3,
+        types.AndLink: 4,
+        types.OrLink: 4,
+        get_type("BackSequentialAndLink"): 5,
+        get_type("BackPredictiveImplicationScopeLink"): 6,
+    }
+
+    return precedence[a1.type] < precedence[a2.type]
+
+
+# TODO: add type annotation on ty
+def type_to_human_readable_str(ty) -> str:
+    """Convert atom type to human readable character.
+
+    The conversion goes as follows
+
+    And                          -> ∧
+    Or                           -> ∨
+    Not                          -> ¬
+    GreaterThan                  -> >
+    SequentialAnd                -> ≺
+    PredictiveImplication[Scope] -> ↝
+    Execution                    -> do
+
+    """
+
+    to_hrs = {
+        types.NotLink: "∨",
+        types.AndLink: "∧",
+        types.OrLink: "¬",
+        types.GreaterThanLink: ">",
+        types.ExecutionLink: "do",
+        get_type("BackSequentialAndLink"): "≺",
+        get_type("BackPredictiveImplicationScope"): "↝",
+        get_type("BackPredictiveImplicationScopeLink"): "↝",
+    }
+
+    return to_hrs[ty]
+
+
+def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
+    """Convert a cognitive schematic into a compact human readable form.
+
+    For instance
+
+    (BackPredictiveImplicationScopeLink (stv 1 0.00990099)
+      (VariableSet)
+      (SLink
+        (ZLink))
+      (AndLink (stv 0.16 0.0588235)
+        (EvaluationLink (stv 0.6 0.0588235)
+          (PredicateNode "outside")
+          (ListLink
+            (ConceptNode "self")
+            (ConceptNode "house")))
+        (ExecutionLink
+          (SchemaNode "go_to_key")))
+      (EvaluationLink (stv 0.26 0.0588235)
+        (PredicateNode "hold")
+        (ListLink
+          (ConceptNode "self")
+          (ConceptNode "key"))))
+
+    returns
+
+    "outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)"
+
+    For now lags and truth values are ignored in that compact human
+    readable form.
+
+    The optional parenthesis flag wraps the resulting expression with
+    parenthesis if set to true (this mostly useful for the recursive
+    calls).
+
+    Precedence order is as follows
+
+    1. ∧
+    2. ≺
+    3. ↝
+
+    so that
+
+    C ∧ A₁ ≺ A₂ ↝ G
+
+    is equivalent to
+
+    ((C ∧ A₁) ≺ A₂) ↝ G
+
+    Additionally ≺ is left-associative so that
+
+    A₁ ≺ A₂ ≺ A₃
+
+    is equivalent to
+
+    (A₁ ≺ A₂) ≺ A₃
+
+    TODO: support action with arguments.
+
+    """
+
+    ##############
+    # Base cases #
+    ##############
+
+    if atom.is_node():
+        obj_str = atom.name
+        obj_str = obj_str.replace(" ", "")  # Remove whitespace
+        return "(" + obj_str + ")" if parenthesis else obj_str
+
+    ###################
+    # Recursive cases #
+    ###################
+
+    # By now atom must be a link
+    assert atom.is_link()
+
+    # By default the link is represented as an infix operator
+    is_infix = True
+
+    if (
+        is_predictive_implication_scope(atom)
+        or is_predictive_implication(atom)
+        or is_sequential_and(atom)
+    ):
+        # If the atom is a sequential and, or a predictive
+        # implication, ignore the lag and (possibly) the variable
+        # declaration.
+        out = [get_antecedent(atom), get_succedent(atom)]
+        op_str = type_to_human_readable_str(atom.type)
+    elif is_evaluation(atom):
+        # If evaluation then the operator name is the predicate name,
+        # and the arguments are the renaming outgoings (possibly
+        # wrapped in a ListLink.
+        op_str = atom.out[0].name
+        op_str = op_str.replace(" ", "")  # Remove whitespace
+        arg = atom.out[1]
+        out = arg.out if is_list(arg) else [arg]
+        is_infix = False
+    elif is_execution(atom):
+        op_str = type_to_human_readable_str(atom.type)
+        out = [atom.out[0]]  # Only action with no argument is
+        # supported
+        # If execution then the operator is prefix
+        is_infix = False
+    else:
+        out = atom.out
+        op_str = type_to_human_readable_str(atom.type)
+
+    # Recursively convert outgoings to human readable strings, adding
+    # parenthesis if necessary.
+    wrap_parenthesis = lambda child, atom: not (is_infix or syntax_precede(child, atom))
+    hrs_out = [
+        to_human_readable_str(child, wrap_parenthesis(child, atom)) for child in out
+    ]
+
+    # Construct the final string
+    if is_infix:
+        op_str = " " + op_str + " "  # Breathe
+        final_str = op_str.join(hrs_out)
+    else:
+        # It is prefix then
+        final_str = op_str + "(" + ", ".join(hrs_out) + ")"
+
+    # Possibly wrap parenthesis around it and return
+    return "(" + final_str + ")" if parenthesis else final_str
+
+
+def cogscm_to_str(cogscm: Atom, only_id: bool = False) -> str:
+    """Convert a cognitive schematics to string.
+
+    Represent the human readable form of cogscm, then on the next line
+    its Scheme representation.  If only_id is True, then only its ID,
+    instead of the whole Scheme representation, is rendered.
+
+    """
+
+    msg = ";; " + to_human_readable_str(cogscm) + "\n"
+    msg += cogscm.id_string() if only_id else cogscm.long_string()
+    return msg
+
+
+def cogscms_to_str(cogscms: set[Atom] | list[Atom], only_id: bool = False) -> str:
+    """Convert a collection of cognitive schematics to string.
+
+    Apply cogscm_to_str to a collection of cogscms.
+
+    """
+
+    msgs = []
+    for cogscm in cogscms:
+        msgs.append(cogscm_to_str(cogscm, only_id))
+    return "\n".join(msgs)
+
+
 class MinerLogger:
+
     """Quick and dirty miner logger Python bindings"""
 
     def __init__(self, atomspace: AtomSpace):
