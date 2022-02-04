@@ -150,7 +150,7 @@ key_x, key_y, key_z = 7, 228, -10
 door_x, door_y, door_z = -4, 228, -3
 diamond_x, diamond_y, diamond_z = -18, 228, -3
 start_x, start_y, start_z, width, length, height = -4, 226, -1, 6, 15, 5
-holds_key = False
+hold_key = False
 
 # relocates the agent to the starting point
 def relocate_agent(agent):
@@ -233,7 +233,8 @@ def inside_house(x, z):
 # Move the agent towards the key
 # reward=0
 def go_to_key(agent):
-    global holds_key
+    global hold_key
+    agent.sendCommand("chat go_to_key")
     reward = 0
     observation = {}
     curr_x, curr_y, curr_z = get_curr_loc(agent)
@@ -242,26 +243,28 @@ def go_to_key(agent):
         return observation, reward, is_mission_running
     else:
         observation["outside"] = ["self", "house"]
-    if holds_key:
-        observation["holds"] = ["self", "key"]
+    if hold_key:
+        observation["hold"] = ["self", "key"]
         return observation, reward, is_mission_running
     turn_to(agent, curr_x, curr_y, curr_z, key_x, key_y, key_z)
     time.sleep(0.2)
     agent.sendCommand("move 1")
     action_complete = stop_condition(agent, "tripwire_hook")
     if action_complete:
-        observation["holds"] = ["self", "key"]
+        observation["hold"] = ["self", "key"]
         agent.sendCommand("hotbar.2 1")
-        holds_key = True
+        hold_key = True
     else:
         observation = []
+    agent.sendCommand("chat {}".format(observation))
     return observation, reward, is_mission_running
 
 
 # Move the agent towards the house and enter the house.
 # reward = 0
 def go_to_house(agent):
-    global holds_key
+    global hold_key
+    agent.sendCommand("chat go_to_house")
     reward = 0
     observation = {}
     curr_x, curr_y, curr_z = get_curr_loc(agent)
@@ -273,22 +276,25 @@ def go_to_house(agent):
     agent.sendCommand("move 1")
     action_complete = stop_condition(agent, "dark_oak_door")
     if action_complete:
-        if holds_key:
+        if hold_key:
+            time.sleep(0.2)
             agent.sendCommand("tp {} {} {}".format(door_x, door_y, door_z))
             time.sleep(0.2)
             observation["inside"] = ["self", "house"]
             agent.sendCommand("hotbar.1 1")
-            holds_key = False
+            hold_key = False
         else:
             observation["outside"] = ["self", "house"]
             observation["nextto"] = ["self", "closed_door"]
     reward = 0
+    agent.sendCommand("chat {}".format(observation))
     return observation, reward, is_mission_running
 
 
 # Move the agent towards the diamond and collect it.
 # reward = 1
 def go_to_diamonds(agent):
+    agent.sendCommand("chat go_to_diamonds")
     curr_x, curr_y, curr_z = get_curr_loc(agent)
     turn_to(agent, curr_x, curr_y, curr_z, diamond_x, diamond_y, diamond_z)
     time.sleep(0.2)
@@ -302,8 +308,12 @@ def go_to_diamonds(agent):
     observation = {}
     if not inside_house(curr_x, curr_z):
         observation["outside"] = ["self", "house"]
-    if holds_key:
-        observation["holds"] = ["self", "key"]
+    if hold_key:
+        observation["hold"] = ["self", "key"]
+    if observation:
+        agent.sendCommand("chat {}".format(observation))
+    if reward > 0:
+        agent.sendCommand("chat Reward: {}".format(reward))
     return observation, reward, is_mission_running
 
 
@@ -340,7 +350,6 @@ missionXML = (
     + """
 
         </DrawingDecorator>
-      <ServerQuitFromTimeUp description="" timeLimitMs="100000000"/>
       <ServerQuitWhenAnyAgentFinishes/>
     </ServerHandlers>
   </ServerSection>
@@ -370,6 +379,7 @@ missionXML = (
       <ContinuousMovementCommands turnSpeedDegs="180"/>
       <AbsoluteMovementCommands />
       <InventoryCommands/>
+      <ChatCommands/>
       <RewardForTouchingBlockType>
         <Block type="diamond_block" reward="1.0"/>
       </RewardForTouchingBlockType>
