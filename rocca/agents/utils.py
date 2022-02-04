@@ -1203,32 +1203,30 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
     return "(" + final_str + ")" if parenthesis else final_str
 
 
-def cogscm_to_str(cogscm: Atom) -> str:
+def cogscm_to_str(cogscm: Atom, only_id: bool = False) -> str:
     """Convert a cognitive schematics to string.
 
-    The cognitive schematic is turned into a string in Scheme format,
-    prepended with a comment of its human readable form (see
-    to_human_readable_str).
+    Represent the human readable form of cogscm, then on the next line
+    its Scheme representation.  If only_id is True, then only its ID,
+    instead of the whole Scheme representation, is rendered.
 
     """
 
     msg = ";; " + to_human_readable_str(cogscm) + "\n"
-    msg += cogscm.long_string()
+    msg += cogscm.id_string() if only_id else cogscm.long_string()
     return msg
 
 
-def cogscms_to_str(cogscms: set[Atom] | list[Atom]) -> str:
+def cogscms_to_str(cogscms: set[Atom] | list[Atom], only_id: bool = False) -> str:
     """Convert a collection of cognitive schematics to string.
 
-    Each cognitive schematic is turned into a string in Scheme format,
-    prepended with a comment of its human readable form (see
-    to_human_readable_str).
+    Apply cogscm_to_str to a collection of cogscms.
 
     """
 
     msgs = []
     for cogscm in cogscms:
-        msgs.append(cogscm_to_str(cogscm))
+        msgs.append(cogscm_to_str(cogscm, only_id))
     return "\n".join(msgs)
 
 

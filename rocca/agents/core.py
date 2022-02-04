@@ -1493,7 +1493,7 @@ class OpencogAgent:
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
         agent_log.fine(
             "Valid cognitive schematics [count={}]:\n{}".format(
-                len(valid_cogscms), cogscms_to_str(valid_cogscms)
+                len(valid_cogscms), cogscms_to_str(valid_cogscms, only_id=True)
             )
         )
 
