@@ -367,7 +367,7 @@ class OpencogAgent:
         agent_log.fine(
             "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={}, rules={})".format(
                 atomspace,
-                source.long_string(),
+                source.id_string(),
                 maximum_iterations,
                 full_rule_application,
                 rules,
@@ -379,8 +379,6 @@ class OpencogAgent:
             scheme_eval(self.atomspace, "(pln-rm-all-rules)")
             for rule in rules:
                 er = scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
-                # agent_log.fine("(pln-add-rule '" + rule + ")")
-                # agent_log.fine("er = " + str(er))
 
         # Log the entire atomspace (fine level), uncomment to enable.
         # agent_log_atomspace(atomspace)
@@ -420,7 +418,7 @@ class OpencogAgent:
 
         agent_log.fine(
             "pln_bc(atomspace={}, target={}, maximum_iterations={}, rules={})".format(
-                atomspace, target.long_string(), maximum_iterations, rules
+                atomspace, target.id_string(), maximum_iterations, rules
             )
         )
 
@@ -429,8 +427,6 @@ class OpencogAgent:
             scheme_eval(self.atomspace, "(pln-rm-all-rules)")
             for rule in rules:
                 er = scheme_eval(self.atomspace, "(pln-add-rule '" + rule + ")")
-                # agent_log.fine("(pln-add-rule '" + rule + ")")
-                # agent_log.fine("er = " + str(er))
 
         # Log the entire atomspace (fine level), uncomment to enable.
         # agent_log_atomspace(atomspace)
@@ -547,7 +543,7 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("directly_evaluate(atom={})".format(atom))
+        agent_log.fine("directly_evaluate(atom={})".format(atom.id_string()))
 
         # Exit now to avoid division by zero
         if self.total_count == 0:
@@ -836,7 +832,9 @@ class OpencogAgent:
     def to_predictive_implicant(self, pattern: Atom) -> Atom:
         """Turn a temporal pattern into predictive implicant."""
 
-        agent_log.fine("to_predictive_implicant(pattern={})".format(pattern))
+        agent_log.fine(
+            "to_predictive_implicant(pattern={})".format(pattern.id_string())
+        )
 
         timed_clauses = self.get_pattern_timed_clauses(pattern)
         early_clauses = get_early_clauses(timed_clauses)
@@ -943,15 +941,17 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("to_predictive_implication_scope(pattern={})".format(pattern))
+        agent_log.fine(
+            "to_predictive_implication_scope(pattern={})".format(pattern.id_string())
+        )
 
         # Get the predictive implication implicant and implicand
         # respectively
         pt = self.to_predictive_implicant(pattern)
         pd = self.to_predictive_implicand(pattern)
 
-        agent_log.fine("pt = {}".format(pt))
-        agent_log.fine("pd = {}".format(pd))
+        agent_log.fine("pt = {}".format(pt.id_string()))
+        agent_log.fine("pd = {}".format(pd.id_string()))
 
         # HACK: big hack, pd is turned into positive goal to create a
         # predictive implication of such positive goal with low
@@ -982,7 +982,6 @@ class OpencogAgent:
         if vardecl_vars != pt_vars:
             return None
 
-        agent_log.fine("preimp = {}".format(preimp))
         # Calculate the truth value of the predictive implication
         mi = 2
         rules = ["back-predictive-implication-scope-direct-evaluation"]
@@ -1248,7 +1247,11 @@ class OpencogAgent:
         )
         agent_log.fine("Miner query:\n{}".format(mine_query))
         surprises = scheme_eval_h(atomspace, "(List " + mine_query + ")")
-        agent_log.fine("Surprising patterns:\n{}".format(surprises))
+        agent_log.fine(
+            "Surprising patterns [count={}]:\n{}".format(
+                surprises.arity, surprises.long_string()
+            )
+        )
 
         return surprises.out
 
@@ -1292,7 +1295,8 @@ class OpencogAgent:
         agent_log.fine("plan(goal={}, expiry={})".format(goal, expiry))
         agent_log.fine(
             "self.cognitive_schematics [count={}]:\n{}".format(
-                len(self.cognitive_schematics), self.cognitive_schematics
+                len(self.cognitive_schematics),
+                cogscms_to_str(self.cognitive_schematics),
             )
         )
 
@@ -1355,7 +1359,7 @@ class OpencogAgent:
     def prior_estimate(self, cogscm: Atom) -> float:
         """Calculate the prior probability of cogscm."""
 
-        agent_log.fine("prior_estimate(cogscm={})".format(cogscm.long_string()))
+        agent_log.fine("prior_estimate(cogscm={})".format(cogscm.id_string()))
 
         partial_complexity = self.complexity(cogscm)
         remain_data_size = self.data_set_size - cogscm.tv.count
