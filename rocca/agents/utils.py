@@ -1031,7 +1031,7 @@ def syntax_lt(a1: Atom, a2: Atom) -> bool:
 
     """
 
-    return (not(is_execution(a1)) and is_execution(a2)) or a1 < a2
+    return (not is_execution(a1) and is_execution(a2)) or a1 < a2
 
 
 def syntax_cmp(a1: Atom, a2: Atom) -> int:
