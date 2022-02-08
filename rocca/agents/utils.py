@@ -8,7 +8,7 @@
 import random
 import math
 from typing import Any
-
+from functools import cmp_to_key
 from orderedmultidict import omdict
 
 # SciPy
@@ -393,6 +393,18 @@ def has_variables_leq(cogscm: Atom, vc: int) -> bool:
     """Return True iff `cogscm` has a number of variables less than or equal to `vc`."""
 
     return vardecl_size(get_vardecl(cogscm)) <= vc
+
+
+def is_ordered(atom: Atom) -> bool:
+    """Return true iff the atom inherits from the OrderedLink type."""
+
+    return is_a(atom.type, types.OrderedLink)
+
+
+def is_unordered(atom: Atom) -> bool:
+    """Return true iff the atom inherits from the UnorderedLink type."""
+
+    return is_a(atom.type, types.UnorderedLink)
 
 
 def is_virtual(clause: Atom) -> bool:
@@ -1003,10 +1015,42 @@ def get_uniq_atoms(atom: Atom) -> set[Atom]:
     return result
 
 
+def syntax_lt(a1: Atom, a2: Atom) -> bool:
+    """Custom less-than function for unordered links.
+
+    It is used by to_human_readable_str to place the do(Action) to the
+    right, so that for instance
+
+    do(Eat) ∧ AgentPosition(RightSquare) ↝ Reward(1)
+
+    becomes
+
+    AgentPosition(RightSquare) ∧ do(Eat) ↝ Reward(1)
+
+    which makes it easier to read and search.
+
+    """
+
+    return (not is_execution(a1) and is_execution(a2)) or a1 < a2
+
+
+def syntax_cmp(a1: Atom, a2: Atom) -> int:
+    """Compare function based on syntax_lt for to_human_readable_str."""
+
+    if a1 == a2:
+        return 0
+    elif syntax_lt(a1, a2):
+        return -1
+    else:
+        return 1
+
+
 def syntax_precede(a1: Atom, a2: Atom) -> bool:
+
     """Return true iff a1 syntactically precedes a2.
 
-    This function is used by to_human_readable_str
+    This function is used by to_human_readable_str to minimize the
+    number of parenthesis.
 
     Precedence order is as follows
 
@@ -1182,6 +1226,8 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
         is_infix = False
     else:
         out = atom.out
+        if is_unordered(atom):
+            out = sorted(out, key=cmp_to_key(syntax_cmp))
         op_str = type_to_human_readable_str(atom.type)
 
     # Recursively convert outgoings to human readable strings, adding
