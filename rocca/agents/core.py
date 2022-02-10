@@ -100,7 +100,7 @@ class OpencogAgent:
         # cognitive schematics. Ranges from 0, no penalty to +inf,
         # infinit penalty. Affect the calculation of the cognitive
         # schematic prior.
-        self.cpx_penalty = 0.1
+        self.complexity_penalty = 0.1
 
         # Parameter to estimate the length of a whole model given a
         # partial model + unexplained data. Ranges from 0 to 1, 0
@@ -223,7 +223,7 @@ class OpencogAgent:
         agent_log.log(li, "expiry = {}".format(self.expiry))
         agent_log.log(li, "prior_a = {}".format(self.prior_a))
         agent_log.log(li, "prior_b = {}".format(self.prior_b))
-        agent_log.log(li, "cpx_penalty = {}".format(self.cpx_penalty))
+        agent_log.log(li, "complexity_penalty = {}".format(self.complexity_penalty))
         agent_log.log(li, "compressiveness = {}".format(self.compressiveness))
         agent_log.log(li, "delta = {}".format(self.delta))
         agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
@@ -1324,11 +1324,11 @@ class OpencogAgent:
 
         Specifically
 
-        exp(-cpx_penalty*length)
+        exp(-complexity_penalty*length)
 
-        where cpx_penalty is a complexity penalty parameter (0 for no
-        penalty, +inf for infinit penalty), and length is the size of
-        the model, the total number of atoms involved in its
+        where complexity_penalty is a complexity penalty parameter (0
+        for no penalty, +inf for infinit penalty), and length is the
+        size of the model, the total number of atoms involved in its
         definition.
 
         The prior doesn't have to sum up to 1 because the probability
@@ -1336,7 +1336,7 @@ class OpencogAgent:
 
         """
 
-        return math.exp(-self.cpx_penalty * length)
+        return math.exp(-self.complexity_penalty * length)
 
     # TODO: move to its own class (MixtureModel or something)
     def kolmogorov_estimate(self, remain_count: float) -> float:
