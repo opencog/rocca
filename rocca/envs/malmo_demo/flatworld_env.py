@@ -295,17 +295,22 @@ def go_to_house(agent):
 # reward = 1
 def go_to_diamonds(agent):
     agent.sendCommand("chat go_to_diamonds")
+    observation = {}
     curr_x, curr_y, curr_z = get_curr_loc(agent)
     turn_to(agent, curr_x, curr_y, curr_z, diamond_x, diamond_y, diamond_z)
     time.sleep(0.2)
     agent.sendCommand("move 1")
     action_complete = stop_condition(agent, "diamond_block")
     if action_complete:
+        agent.sendCommand("attack 1")
+        time.sleep(0.2)
+        agent.sendCommand("attack 0")
+        time.sleep(0.2)
         reward = 1
         relocate_agent(agent)
+        observation["outside"] = ["self", "house"]
     else:
         reward = 0
-    observation = {}
     if not inside_house(curr_x, curr_z):
         observation["outside"] = ["self", "house"]
     if hold_key:
