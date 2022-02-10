@@ -100,7 +100,7 @@ class OpencogAgent:
         # cognitive schematics. Ranges from 0, no penalty to +inf,
         # infinit penalty. Affect the calculation of the cognitive
         # schematic prior.
-        self.cpx_penalty = 0.1
+        self.complexity_penalty = 0.1
 
         # Parameter to estimate the length of a whole model given a
         # partial model + unexplained data. Ranges from 0 to 1, 0
@@ -223,7 +223,7 @@ class OpencogAgent:
         agent_log.log(li, "expiry = {}".format(self.expiry))
         agent_log.log(li, "prior_a = {}".format(self.prior_a))
         agent_log.log(li, "prior_b = {}".format(self.prior_b))
-        agent_log.log(li, "cpx_penalty = {}".format(self.cpx_penalty))
+        agent_log.log(li, "complexity_penalty = {}".format(self.complexity_penalty))
         agent_log.log(li, "compressiveness = {}".format(self.compressiveness))
         agent_log.log(li, "delta = {}".format(self.delta))
         agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
@@ -528,7 +528,7 @@ class OpencogAgent:
                     )
                     cogscms.update(set(pos_poly_prdi))
 
-        agent_log.fine(
+        agent_log.debug(
             "Mined cognitive schematics [count={}]:\n{}".format(
                 len(cogscms), cogscms_to_str(cogscms)
             )
@@ -691,7 +691,7 @@ class OpencogAgent:
             cogscms.update(inferred_cogscms)
 
         # Log all inferred cognitive schematics
-        agent_log.fine(
+        agent_log.debug(
             "Inferred cognitive schematics [count={}]:\n{}".format(
                 len(cogscms), cogscms_to_str(cogscms)
             )
@@ -1324,11 +1324,11 @@ class OpencogAgent:
 
         Specifically
 
-        exp(-cpx_penalty*length)
+        exp(-complexity_penalty*length)
 
-        where cpx_penalty is a complexity penalty parameter (0 for no
-        penalty, +inf for infinit penalty), and length is the size of
-        the model, the total number of atoms involved in its
+        where complexity_penalty is a complexity penalty parameter (0
+        for no penalty, +inf for infinit penalty), and length is the
+        size of the model, the total number of atoms involved in its
         definition.
 
         The prior doesn't have to sum up to 1 because the probability
@@ -1336,7 +1336,7 @@ class OpencogAgent:
 
         """
 
-        return math.exp(-self.cpx_penalty * length)
+        return math.exp(-self.complexity_penalty * length)
 
     # TODO: move to its own class (MixtureModel or something)
     def kolmogorov_estimate(self, remain_count: float) -> float:
@@ -1495,9 +1495,11 @@ class OpencogAgent:
             self.atomspace, cogscm, self.cycle_count
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
-        agent_log.fine(
-            "Valid cognitive schematics [count={}]:\n{}".format(
-                len(valid_cogscms), cogscms_to_str(valid_cogscms, only_id=True)
+        agent_log.debug(
+            "Valid cognitive schematics [cycle={}, count={}]:\n{}".format(
+                self.cycle_count,
+                len(valid_cogscms),
+                cogscms_to_str(valid_cogscms, only_id=True),
             )
         )
 
@@ -1576,45 +1578,60 @@ class OpencogAgent:
 
         """
 
-        agent_log.debug("atomese_obs:\n{}".format(self.observation))
         obs_record = [
             self.record(o, self.cycle_count, tv=TRUE_TV) for o in self.observation
         ]
-        agent_log.debug("obs_record:\n{}".format(obs_record))
+        agent_log.fine(
+            "Timestamped observations [cycle={}]:\n{}".format(
+                self.cycle_count, obs_record
+            )
+        )
 
         # Make the goal for that iteration
         goal = self.make_goal()
-        agent_log.debug("goal:\n{}".format(goal))
+        agent_log.debug(
+            "Goal for that cycle [cycle={}]:\n{}".format(self.cycle_count, goal)
+        )
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
         # goal expiry is 2, i.e. must be fulfilled set for the next two iterations.
         cogscms = self.plan(goal, self.expiry)
         agent_log.debug(
-            "cogscms [count={}]:\n{}".format(len(cogscms), cogscms_to_str(cogscms))
+            "Planned cognitive schematics [cycle={}, count={}]:\n{}".format(
+                self.cycle_count, len(cogscms), cogscms_to_str(cogscms)
+            )
         )
 
         # Deduce the action distribution
         mxmdl = self.deduce(cogscms)
-        agent_log.debug("mxmdl:\n{}".format(mxmdl_to_str(mxmdl)))
+        agent_log.debug(
+            "Mixture models [cycle={}]:\n{}".format(
+                self.cycle_count, mxmdl_to_str(mxmdl)
+            )
+        )
 
         # Select the next action
         action, pblty = self.decide(mxmdl)
         agent_log.debug(
-            "action with probability of success = {}".format(
-                act_pblt_to_str((action, pblty))
+            "Selected action with its probability of success [cycle={}]:\n{}".format(
+                self.cycle_count, act_pblt_to_str((action, pblty))
             )
         )
 
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.cycle_count, tv=TRUE_TV)
-        agent_log.debug("action_record:\n{}".format(action_record))
-        agent_log.debug("action:\n{}".format(action))
+        agent_log.fine(
+            "Timestamped action [cycle={}]:\n{}".format(self.cycle_count, action_record)
+        )
+        agent_log.debug(
+            "Action to execute [cycle={}]:\n{}".format(self.cycle_count, action)
+        )
 
         # Increment the counter for that action and log it
         self.action_counter[action] += 1
         agent_log.debug(
-            "action_counter [total={}]:\n{}".format(
-                self.action_counter.total(), self.action_counter
+            "Action counter [cycle={}, total={}]:\n{}".format(
+                self.cycle_count, self.action_counter.total(), self.action_counter
             )
         )
 
@@ -1624,14 +1641,20 @@ class OpencogAgent:
         self.observation, reward, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
         agent_log.debug(
-            "observation [count={}]:\n{}".format(
-                len(self.observation), self.observation
+            "Observations [cycle={}, count={}]:\n{}".format(
+                self.cycle_count, len(self.observation), self.observation
             )
         )
-        agent_log.debug("reward:\n{}".format(reward))
-        agent_log.debug("accumulated reward = {}".format(self.accumulated_reward))
+        agent_log.debug("Reward [cycle={}]:\n{}".format(self.cycle_count, reward))
+        agent_log.debug(
+            "Accumulated reward [cycle={}] = {}".format(
+                self.cycle_count, self.accumulated_reward
+            )
+        )
 
         reward_record = self.record(reward, self.cycle_count, tv=TRUE_TV)
-        agent_log.debug("reward_record:\n{}".format(reward_record))
+        agent_log.fine(
+            "Timestamped reward [cycle={}]:\n{}".format(self.cycle_count, reward_record)
+        )
 
         return done
