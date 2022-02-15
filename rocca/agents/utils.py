@@ -423,8 +423,13 @@ def is_virtual(clause: Atom) -> bool:
     return is_a(clause.type, types.VirtualLink)
 
 
-def get_context(cogscm: Atom) -> tuple[Atom, Atom]:
+def get_context(cogscm: Atom) -> tuple[list[Atom], list[Atom]]:
     """Extract the context of a cognitive schematic.
+
+    Since the context can be multiple clauses, virtual and
+    non-virtual, it outputs a pair of two lists
+
+    (present-clauses, virtual-clauses)
 
     For instance given a cognitive schematic of that format
 
@@ -436,7 +441,7 @@ def get_context(cogscm: Atom) -> tuple[Atom, Atom]:
         <execution>
       <goal>
 
-    return <context>.
+    return ([<context>], []).
 
     Another example, given a cognitive schematic of that format
 
@@ -450,12 +455,7 @@ def get_context(cogscm: Atom) -> tuple[Atom, Atom]:
         ...
       <goal>
 
-    return <context>
-
-    Since the context can be multiple clauses, virtual and
-    non-virtual, it outputs a pair of two lists
-
-    (present-clauses, virtual-clauses)
+    return ([<context>], [])
 
     """
 
@@ -826,7 +826,7 @@ def get_context_actual_truth(atomspace: AtomSpace, cogscm: Atom, i: int) -> Trut
 
     BackPredictiveImplicationScope <tv>
       <vardecl>
-      <expiry>
+      <lag>
       And (or SimultaneousAnd?)
         <context>
         Execution
