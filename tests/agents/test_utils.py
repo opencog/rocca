@@ -33,6 +33,7 @@ from rocca.agents.utils import (
     differential_entropy,
     get_uniq_atoms,
     to_human_readable_str,
+    get_context,
 )
 
 # Set main atomspace
@@ -242,3 +243,92 @@ def test_to_human_readable_str():
     expected_3b = "PoleAngle($angle) ∧ -0.01 > $angle ∧ do(GoLeft) ↝ Reward(1)"
 
     assert cogscm_hrs_3 == expected_3a or cogscm_hrs_3 == expected_3b
+
+
+def test_get_context():
+    # 1. Monoaction plan:
+    #    outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)
+    cogscm_1 = BackPredictiveImplicationScopeLink(
+        VariableSet(),
+        SLink(ZLink()),
+        AndLink(
+            EvaluationLink(
+                PredicateNode("outside"),
+                ListLink(ConceptNode("self"), ConceptNode("house")),
+            ),
+            ExecutionLink(SchemaNode("go_to_key")),
+        ),
+        EvaluationLink(
+            PredicateNode("hold"), ListLink(ConceptNode("self"), ConceptNode("key"))
+        ),
+    )
+
+    context_1, _ = get_context(cogscm_1)
+    expected_1 = EvaluationLink(
+        PredicateNode("outside"),
+        ListLink(ConceptNode("self"), ConceptNode("house")),
+    )
+
+    assert context_1[0] == expected_1
+
+    # 2. Dioaction plan:
+    #    outside(self, house) ∧ do(go_to_key) ≺ do(go_to_house) ↝ inside(self, house)
+    cogscm_2 = BackPredictiveImplicationScopeLink(
+        VariableSet(),
+        SLink(ZLink()),
+        BackSequentialAndLink(
+            SLink(ZLink()),
+            AndLink(
+                EvaluationLink(
+                    PredicateNode("outside"),
+                    ListLink(ConceptNode("self"), ConceptNode("house")),
+                ),
+                ExecutionLink(SchemaNode("go_to_key")),
+            ),
+            ExecutionLink(SchemaNode("go_to_house")),
+        ),
+        EvaluationLink(
+            PredicateNode("inside"), ListLink(ConceptNode("self"), ConceptNode("house"))
+        ),
+    )
+
+    context_2, _ = get_context(cogscm_2)
+    expected_2 = EvaluationLink(
+        PredicateNode("outside"),
+        ListLink(ConceptNode("self"), ConceptNode("house")),
+    )
+
+    assert context_2[0] == expected_2
+
+    # 3. Triaction plan
+    #    outside(self, house) ∧ do(go_to_key) ≺ do(go_to_house) ≺ do(go_to_diamonds) ↝ Reward(1)
+    cogscm_3 = BackPredictiveImplicationScopeLink(
+        VariableSet(),
+        SLink(ZLink()),
+        BackSequentialAndLink(
+            SLink(ZLink()),
+            BackSequentialAndLink(
+                SLink(ZLink()),
+                AndLink(
+                    EvaluationLink(
+                        PredicateNode("outside"),
+                        ListLink(ConceptNode("self"), ConceptNode("house")),
+                    ),
+                    ExecutionLink(SchemaNode("go_to_key")),
+                ),
+                ExecutionLink(SchemaNode("go_to_house")),
+            ),
+            ExecutionLink(SchemaNode("go_to_house")),
+        ),
+        EvaluationLink(
+            PredicateNode("inside"), ListLink(ConceptNode("self"), ConceptNode("house"))
+        ),
+    )
+
+    context_3, _ = get_context(cogscm_3)
+    expected_3 = EvaluationLink(
+        PredicateNode("outside"),
+        ListLink(ConceptNode("self"), ConceptNode("house")),
+    )
+
+    assert context_3[0] == expected_3
