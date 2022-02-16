@@ -169,7 +169,7 @@ class OpencogAgent:
         # Shannon entropy below 0.1, but an atom with truth value (stv
         # 0 0.01) has Shannon entropy above 0.1, and an atom with
         # truth value (stv 0 0.001) has a Shannon entropy above 0.9.
-        self.cogscm_maximum_shannon_entropy = 0.9
+        self.cogscm_maximum_shannon_entropy = 1.0
 
         # Filter out cognitive schematics with a differential entropy
         # equal to or lower than this parameter.  The differential
@@ -190,7 +190,7 @@ class OpencogAgent:
         # This parameter is comparable to
         # cogscm_maximum_shannon_entropy but better accounts for
         # confidence.
-        self.cogscm_maximum_differential_entropy = -1e-1
+        self.cogscm_maximum_differential_entropy = 0.0
 
         # Filter out cognitive schematics with numbers of variables
         # above this threshold
@@ -1042,26 +1042,28 @@ class OpencogAgent:
             return False
 
         # Check that its Shannon entropy is below the maximum threshold
-        se = shannon_entropy(cogscm, self.prior_a, self.prior_b)
-        if self.cogscm_maximum_shannon_entropy < se:
-            agent_log.fine(
-                msg
-                + "its Shannon entropy {} is greater than {}".format(
-                    se, self.cogscm_maximum_shannon_entropy
+        if self.cogscm_maximum_shannon_entropy < 1.0:
+            se = shannon_entropy(cogscm, self.prior_a, self.prior_b)
+            if self.cogscm_maximum_shannon_entropy < se:
+                agent_log.fine(
+                    msg
+                    + "its Shannon entropy {} is greater than {}".format(
+                        se, self.cogscm_maximum_shannon_entropy
+                    )
                 )
-            )
-            return False
+                return False
 
         # Check that its differential entropy is below the maximum threshold
-        de = differential_entropy(cogscm, self.prior_a, self.prior_b)
-        if self.cogscm_maximum_differential_entropy < de:
-            agent_log.fine(
-                msg
-                + "its differential entropy {} is greater than {}".format(
-                    de, self.cogscm_maximum_differential_entropy
+        if self.cogscm_maximum_differential_entropy < 0.0:
+            de = differential_entropy(cogscm, self.prior_a, self.prior_b)
+            if self.cogscm_maximum_differential_entropy < de:
+                agent_log.fine(
+                    msg
+                    + "its differential entropy {} is greater than {}".format(
+                        de, self.cogscm_maximum_differential_entropy
+                    )
                 )
-            )
-            return False
+                return False
 
         # Check that it has no more variables than allowed
         mv = vardecl_size(get_vardecl(cogscm))
