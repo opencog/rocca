@@ -843,6 +843,12 @@ def get_context_actual_truth(atomspace: AtomSpace, cogscm: Atom, i: int) -> Trut
 
     """
 
+    agent_log.fine(
+        "get_context_actual_truth(atomspace={}, cogscm={}, i={}".format(
+            atomspace, cogscm_to_str(cogscm), i
+        )
+    )
+
     # Build and run a query to check if the context is true
     vardecl = get_vardecl(cogscm)
     present_clauses, virtual_clauses = get_context(cogscm)
@@ -854,7 +860,9 @@ def get_context_actual_truth(atomspace: AtomSpace, cogscm: Atom, i: int) -> Trut
         *virtual_clauses
     )
     query = SatisfactionLink(vardecl, body)
+    agent_log.fine("query = {}".format(query))
     tv = execute_atom(atomspace, query)
+    agent_log.fine("tv = {}".format(tv))
     return tv
 
 
@@ -1107,9 +1115,9 @@ def type_to_human_readable_str(ty) -> str:
     """
 
     to_hrs = {
-        types.NotLink: "∨",
+        types.NotLink: "¬",
         types.AndLink: "∧",
-        types.OrLink: "¬",
+        types.OrLink: "∨",
         types.GreaterThanLink: ">",
         types.ExecutionLink: "do",
         get_type("BackSequentialAndLink"): "≺",
@@ -1168,7 +1176,9 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
 
     ((C ∧ A₁) ≺ A₂) ↝ G
 
-    Additionally ≺ is left-associative so that
+    Additionally ≺ is left-associative (due to being a
+    BackSequentialAnd, we would probably want it to be
+    right-associative if it were a ForeSequentialAnd) so that
 
     A₁ ≺ A₂ ≺ A₃
 
