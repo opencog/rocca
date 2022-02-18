@@ -1168,7 +1168,9 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
 
     ((C ∧ A₁) ≺ A₂) ↝ G
 
-    Additionally ≺ is left-associative so that
+    Additionally ≺ is left-associative (due to being a
+    BackSequentialAnd, we would probably want it to be
+    right-associative if it were a ForeSequentialAnd) so that
 
     A₁ ≺ A₂ ≺ A₃
 
