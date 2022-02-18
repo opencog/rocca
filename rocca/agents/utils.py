@@ -1107,9 +1107,9 @@ def type_to_human_readable_str(ty) -> str:
     """
 
     to_hrs = {
-        types.NotLink: "∨",
+        types.NotLink: "¬",
         types.AndLink: "∧",
-        types.OrLink: "¬",
+        types.OrLink: "∨",
         types.GreaterThanLink: ">",
         types.ExecutionLink: "do",
         get_type("BackSequentialAndLink"): "≺",
