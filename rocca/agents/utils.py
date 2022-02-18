@@ -843,7 +843,11 @@ def get_context_actual_truth(atomspace: AtomSpace, cogscm: Atom, i: int) -> Trut
 
     """
 
-    agent_log.fine("get_context_actual_truth(atomspace={}, cogscm={}, i={}".format(atomspace, cogscm_to_str(cogscm), i))
+    agent_log.fine(
+        "get_context_actual_truth(atomspace={}, cogscm={}, i={}".format(
+            atomspace, cogscm_to_str(cogscm), i
+        )
+    )
 
     # Build and run a query to check if the context is true
     vardecl = get_vardecl(cogscm)
