@@ -843,6 +843,8 @@ def get_context_actual_truth(atomspace: AtomSpace, cogscm: Atom, i: int) -> Trut
 
     """
 
+    agent_log.fine("get_context_actual_truth(atomspace={}, cogscm={}, i={}".format(atomspace, cogscm_to_str(cogscm), i))
+
     # Build and run a query to check if the context is true
     vardecl = get_vardecl(cogscm)
     present_clauses, virtual_clauses = get_context(cogscm)
@@ -854,7 +856,9 @@ def get_context_actual_truth(atomspace: AtomSpace, cogscm: Atom, i: int) -> Trut
         *virtual_clauses
     )
     query = SatisfactionLink(vardecl, body)
+    agent_log.fine("query = {}".format(query))
     tv = execute_atom(atomspace, query)
+    agent_log.fine("tv = {}".format(tv))
     return tv
 
 
