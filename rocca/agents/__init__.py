@@ -1,1 +1,1 @@
-from .core import OpencogAgent
+from .core import OpencogAgent, MixtureModel
