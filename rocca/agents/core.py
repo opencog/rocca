@@ -99,7 +99,7 @@ class OpencogAgent:
         # Construct mixture model for action decision.  See
         # MixtureModel class for user parameters pertaining to mixture
         # model.
-        self.mixture_model = MixtureModel(self.prior_a, self.prior_b)
+        self.mixture_model = MixtureModel(self.action_space, self.prior_a, self.prior_b)
 
         # Expiry time to fulfill the goal. The system will not plan
         # beyond expiry.
