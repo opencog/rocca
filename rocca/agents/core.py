@@ -38,7 +38,7 @@ from opencog.type_constructors import (
 
 from rocca.envs.wrappers import Wrapper
 
-# OpencogAgent
+# ROCCA
 from .utils import *
 
 logging.basicConfig(filename="agent.log", format="%(asctime)s %(message)s")
@@ -1665,7 +1665,7 @@ class MixtureModel:
         return self.prior_estimate(cogscm) * self.beta_factor(cogscm)
 
     def infer_data_set_size(self, cogscms: list[Atom], total_count: int) -> None:
-        """Infer the data set size (universe size)
+        """Infer the data set size (universe size).
 
         For now it uses the max of the total_count and the max count
         of all cognitive schematics (to work around the fact that we
