@@ -212,12 +212,12 @@ class OpencogAgent:
 
         li = agent_log.string_as_level(level)
         agent_log.log(li, "OpencogAgent parameters:")
-        agent_log.log(li, "expiry = {}".format(self.expiry))
         agent_log.log(li, "prior_a = {}".format(self.prior_a))
         agent_log.log(li, "prior_b = {}".format(self.prior_b))
-        agent_log.log(li, "complexity_penalty = {}".format(self.complexity_penalty))
-        agent_log.log(li, "compressiveness = {}".format(self.compressiveness))
-        agent_log.log(li, "delta = {}".format(self.delta))
+        agent_log.log(li, "mixture_model.complexity_penalty = {}".format(self.mixture_model.complexity_penalty))
+        agent_log.log(li, "mixture_model.compressiveness = {}".format(self.mixture_model.compressiveness))
+        agent_log.log(li, "mixture_model.delta = {}".format(self.mixture_model.delta))
+        agent_log.log(li, "expiry = {}".format(self.expiry))
         agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
         agent_log.log(
             li,
