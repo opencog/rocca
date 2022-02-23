@@ -1261,7 +1261,7 @@ class OpencogAgent:
         """Plan the next actions given a goal and its expiry time offset
 
         Return a python list of cognivite schematics meeting the
-        expiry constrain.  Whole cognitive schematics are output in
+        expiry constraint.  Whole cognitive schematics are output in
         order to make a decision based on their truth values and
         priors.
 
@@ -1302,7 +1302,8 @@ class OpencogAgent:
             )
         )
 
-        # Retrieve all cognitive schematics meeting the constrains which are
+        # Retrieve all cognitive schematics meeting the constraints
+        # which are
         #
         # 1. The total lag of the cognitive schematics is below or
         #    equal to the expiry.
