@@ -11,6 +11,9 @@ import multiprocessing
 from collections import Counter
 from typing import Any
 
+# SciPy
+import scipy.special as sp
+
 # OpenCog
 from opencog.atomspace import Atom, AtomSpace
 from opencog.spacetime import AtTimeLink, TimeNode
