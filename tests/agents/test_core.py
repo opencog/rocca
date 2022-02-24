@@ -26,10 +26,15 @@ from opencog.utilities import set_default_atomspace
 
 # ROCCA
 from rocca.agents import MixtureModel
+from rocca.agents.utils import agent_log
 
 # Set main atomspace
 atomspace = AtomSpace()
 set_default_atomspace(atomspace)
+
+# Set loggers
+agent_log.set_level("fine")
+agent_log.use_stdout()
 
 def setup():
     """Setup, to be called before each test."""
