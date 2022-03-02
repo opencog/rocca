@@ -40,6 +40,7 @@ from rocca.agents.utils import (
 atomspace = AtomSpace()
 set_default_atomspace(atomspace)
 
+
 def setup():
     """Setup, to be called before each test."""
 
