@@ -217,8 +217,18 @@ class OpencogAgent:
         agent_log.log(li, "OpencogAgent parameters:")
         agent_log.log(li, "prior_a = {}".format(self.prior_a))
         agent_log.log(li, "prior_b = {}".format(self.prior_b))
-        agent_log.log(li, "mixture_model.complexity_penalty = {}".format(self.mixture_model.complexity_penalty))
-        agent_log.log(li, "mixture_model.compressiveness = {}".format(self.mixture_model.compressiveness))
+        agent_log.log(
+            li,
+            "mixture_model.complexity_penalty = {}".format(
+                self.mixture_model.complexity_penalty
+            ),
+        )
+        agent_log.log(
+            li,
+            "mixture_model.compressiveness = {}".format(
+                self.mixture_model.compressiveness
+            ),
+        )
         agent_log.log(li, "mixture_model.delta = {}".format(self.mixture_model.delta))
         agent_log.log(li, "expiry = {}".format(self.expiry))
         agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
@@ -1608,7 +1618,6 @@ class MixtureModel:
         # Estimate of the size of unexplained data by cogscm
         return self.data_set_size - cogscm.tv.count
 
-
     def kolmogorov_estimate(self, remain_count: float) -> float:
         """Given the size of the data set that isn't explained by a model,
         estimate the complexity of a model that would explain them
@@ -1713,4 +1722,3 @@ class MixtureModel:
             mxmdl.add(action, (self.delta, None))
 
         return mxmdl
-

@@ -36,6 +36,7 @@ set_default_atomspace(atomspace)
 agent_log.set_level("fine")
 agent_log.use_stdout()
 
+
 def setup():
     """Setup, to be called before each test."""
 
