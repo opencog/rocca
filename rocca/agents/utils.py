@@ -12,7 +12,6 @@ from functools import cmp_to_key
 from orderedmultidict import omdict
 
 # SciPy
-import scipy.special as sp
 import scipy.stats as st
 
 # OpenCog

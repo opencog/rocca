@@ -24,7 +24,7 @@ from opencog.pln import *
 from opencog.ure import ure_logger
 from opencog.logger import log
 
-# OpenCog Gym
+# ROCCA
 from rocca.agents import OpencogAgent
 from rocca.agents.utils import *
 from rocca.envs.wrappers import GymWrapper

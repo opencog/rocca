@@ -11,6 +11,9 @@ import multiprocessing
 from collections import Counter
 from typing import Any
 
+# SciPy
+import scipy.special as sp
+
 # OpenCog
 from opencog.atomspace import Atom, AtomSpace
 from opencog.spacetime import AtTimeLink, TimeNode
@@ -38,7 +41,7 @@ from opencog.type_constructors import (
 
 from rocca.envs.wrappers import Wrapper
 
-# OpencogAgent
+# ROCCA
 from .utils import *
 
 logging.basicConfig(filename="agent.log", format="%(asctime)s %(message)s")
@@ -50,6 +53,8 @@ logger = logging.getLogger(__name__)
 
 
 class OpencogAgent:
+    """Class for controlling an agent using OpenCog."""
+
     def __init__(
         self,
         env: Wrapper,
@@ -85,33 +90,23 @@ class OpencogAgent:
         self.load_opencog_modules()
         self.reset_action_counter()
 
-        # User parameters controlling learning and decision
-
-        # Expiry time to fulfill the goal. The system will not plan
-        # beyond expiry.
-        self.expiry = 2
+        ###################
+        # User parameters #
+        ###################
 
         # Prior alpha and beta of beta-distributions corresponding to
         # truth values
         self.prior_a = 1.0
         self.prior_b = 1.0
 
-        # Parameter to control the complexity penalty over the
-        # cognitive schematics. Ranges from 0, no penalty to +inf,
-        # infinit penalty. Affect the calculation of the cognitive
-        # schematic prior.
-        self.complexity_penalty = 0.1
+        # Construct mixture model for action decision.  See
+        # MixtureModel class for user parameters pertaining to mixture
+        # model.
+        self.mixture_model = MixtureModel(self.action_space, self.prior_a, self.prior_b)
 
-        # Parameter to estimate the length of a whole model given a
-        # partial model + unexplained data. Ranges from 0 to 1, 0
-        # being no compressiveness at all of the unexplained data, 1
-        # being full compressiveness.
-        self.compressiveness = 0.75
-
-        # Add an unknown component for each action. For now its weight
-        # is constant, delta, but ultimately is should be calculated
-        # as a rest in the Solomonoff mixture.
-        self.delta = 1.0e-5
+        # Expiry time to fulfill the goal. The system will not plan
+        # beyond expiry.
+        self.expiry = 2
 
         # Enable poly-action pattern mining
         self.polyaction_mining = True
@@ -220,12 +215,22 @@ class OpencogAgent:
 
         li = agent_log.string_as_level(level)
         agent_log.log(li, "OpencogAgent parameters:")
-        agent_log.log(li, "expiry = {}".format(self.expiry))
         agent_log.log(li, "prior_a = {}".format(self.prior_a))
         agent_log.log(li, "prior_b = {}".format(self.prior_b))
-        agent_log.log(li, "complexity_penalty = {}".format(self.complexity_penalty))
-        agent_log.log(li, "compressiveness = {}".format(self.compressiveness))
-        agent_log.log(li, "delta = {}".format(self.delta))
+        agent_log.log(
+            li,
+            "mixture_model.complexity_penalty = {}".format(
+                self.mixture_model.complexity_penalty
+            ),
+        )
+        agent_log.log(
+            li,
+            "mixture_model.compressiveness = {}".format(
+                self.mixture_model.compressiveness
+            ),
+        )
+        agent_log.log(li, "mixture_model.delta = {}".format(self.mixture_model.delta))
+        agent_log.log(li, "expiry = {}".format(self.expiry))
         agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
         agent_log.log(
             li,
@@ -1261,7 +1266,7 @@ class OpencogAgent:
         """Plan the next actions given a goal and its expiry time offset
 
         Return a python list of cognivite schematics meeting the
-        expiry constrain.  Whole cognitive schematics are output in
+        expiry constraint.  Whole cognitive schematics are output in
         order to make a decision based on their truth values and
         priors.
 
@@ -1302,7 +1307,8 @@ class OpencogAgent:
             )
         )
 
-        # Retrieve all cognitive schematics meeting the constrains which are
+        # Retrieve all cognitive schematics meeting the constraints
+        # which are
         #
         # 1. The total lag of the cognitive schematics is below or
         #    equal to the expiry.
@@ -1313,113 +1319,6 @@ class OpencogAgent:
             and get_succedent(cogscm) == goal
         )
         return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
-
-    # TODO: move to its own class (MixtureModel or something)
-    def complexity(self, atom: Atom) -> int:
-        """Return the count of all unique atoms in atom."""
-
-        return len(get_uniq_atoms(atom))
-
-    # TODO: move to its own class (MixtureModel or something)
-    def prior(self, length: float) -> float:
-        """Given the length of a model, calculate its prior.
-
-        Specifically
-
-        exp(-complexity_penalty*length)
-
-        where complexity_penalty is a complexity penalty parameter (0
-        for no penalty, +inf for infinit penalty), and length is the
-        size of the model, the total number of atoms involved in its
-        definition.
-
-        The prior doesn't have to sum up to 1 because the probability
-        estimates are normalized.
-
-        """
-
-        return math.exp(-self.complexity_penalty * length)
-
-    # TODO: move to its own class (MixtureModel or something)
-    def kolmogorov_estimate(self, remain_count: float) -> float:
-        """Given the size of the data set that isn't explained by a model,
-        estimate the complexity of a model that would explain them
-        perfectly. The heuristic used here is
-
-        remain_data_size^(1 - compressiveness)
-
-        If compressiveness is null, then no compression occurs, the
-        model is the data set itself, if compressiveness equals 1,
-        then it return 1, which is the maximum compression, all data
-        can be explained with just one bit.
-
-        """
-
-        return pow(remain_count, 1.0 - self.compressiveness)
-
-    # TODO: move to its own class (MixtureModel or something)
-    def prior_estimate(self, cogscm: Atom) -> float:
-        """Calculate the prior probability of cogscm."""
-
-        agent_log.fine("prior_estimate(cogscm={})".format(cogscm.id_string()))
-
-        partial_complexity = self.complexity(cogscm)
-        remain_data_size = self.data_set_size - cogscm.tv.count
-        kestimate = self.kolmogorov_estimate(remain_data_size)
-
-        agent_log.fine(
-            "partial_complexity = {}, remain_data_size = {}, kestimate = {}".format(
-                partial_complexity, remain_data_size, kestimate
-            )
-        )
-
-        return self.prior(partial_complexity + kestimate)
-
-    # TODO: move to its own class (MixtureModel or something)
-    def beta_factor(self, cogscm: Atom) -> float:
-        """Return the beta factor as described in Eq.26 of
-
-        https://github.com/ngeiswei/papers/blob/master/PartialBetaOperatorInduction/PartialBetaOperatorInduction.pdf
-
-        Note that we do account for the normalizing factor (numerator
-        of the fraction of Eq.22) as its not clear we want to
-        normalize the BMA (we might want to replace rest by an unknown
-        distribution, i.e. a prior beta-distribution).
-
-        """
-
-        a = tv_to_alpha_param(cogscm.tv, self.prior_a, self.prior_b)
-        b = tv_to_beta_param(cogscm.tv, self.prior_a, self.prior_b)
-        return sp.beta(a, b) / sp.beta(self.prior_a, self.prior_b)
-
-    # TODO: move to its own class (MixtureModel or something)
-    def weight(self, cogscm: Atom) -> float:
-        """Calculate the weight of a cogscm for Model Bayesian Averaging.
-
-        The calculation is based on
-
-        https://github.com/ngeiswei/papers/blob/master/PartialBetaOperatorInduction/PartialBetaOperatorInduction.pdf
-
-        It assumes self.data_set_size has been properly set.
-
-        """
-
-        return self.prior_estimate(cogscm) * self.beta_factor(cogscm)
-
-    # TODO: move to its own class (MixtureModel or something)
-    def infer_data_set_size(self, cogscms: list[Atom]) -> float:
-        """Infer the data set size (universe size)
-
-        For now it uses the max of the total_count and the max count
-        of all cognitive schematics (to work around the fact that we
-        may not have a complete model).
-
-        """
-
-        max_count = 0.0
-        if 0 < len(cogscms):
-            max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
-        return max(max_count, float(self.total_count))
 
     def deduce(self, cogscms: list[Atom]) -> omdict:
         """Return an action distribution given a list cognitive schematics.
@@ -1505,25 +1404,8 @@ class OpencogAgent:
             )
         )
 
-        # Size of the complete data set, including all observations
-        # used to build the models.
-        #
-        # Needs to be set before calling self.weight
-        self.data_set_size = self.infer_data_set_size(valid_cogscms)
-
-        # For each action, map a list of weighted valid cognitive
-        # schematics.
-        mxmdl = omdict(
-            [
-                (get_t0_execution(cogscm), (self.weight(cogscm), cogscm))
-                for cogscm in valid_cogscms
-            ]
-        )
-        # Add delta (unknown) components
-        for action in self.action_space:
-            mxmdl.add(action, (self.delta, None))
-
-        return mxmdl
+        # Return the mixture model for that cycle
+        return self.mixture_model.mk_mxmdl(valid_cogscms, self.total_count)
 
     def decide(self, mxmdl: omdict) -> tuple[Atom, float]:
         """Select the next action to enact from a mixture model of cogscms.
@@ -1660,3 +1542,183 @@ class OpencogAgent:
         )
 
         return done
+
+
+class MixtureModel:
+    """Class holding a Mixture Model for action decision."""
+
+    def __init__(self, action_space: set[Atom], prior_a: float, prior_b: float):
+        # Set of actions the agent can do
+        self.action_space = action_space
+
+        # Prior alpha and beta of beta-distributions corresponding to
+        # truth values
+        self.prior_a = prior_a
+        self.prior_b = prior_b
+
+        # Total evidence count.  Negative means unset.
+        self.data_set_size = -1.0
+
+        ###################
+        # User parameters #
+        ###################
+
+        # Parameter to control the complexity penalty over the
+        # cognitive schematics. Ranges from 0, no penalty to +inf,
+        # infinit penalty. Affect the calculation of the cognitive
+        # schematic prior.
+        self.complexity_penalty = 0.1
+
+        # Parameter to estimate the length of a whole model given a
+        # partial model + unexplained data. Ranges from 0 to 1, 0
+        # being no compressiveness at all of the unexplained data, 1
+        # being full compressiveness.
+        self.compressiveness = 0.75
+
+        # Add an unknown component for each action. For now its weight
+        # is constant, delta, but ultimately is should be calculated
+        # as a rest in the Solomonoff mixture.
+        self.delta = 1.0e-5
+
+    def complexity(self, atom: Atom) -> int:
+        """Return the count of all unique atoms in atom."""
+
+        return len(get_uniq_atoms(atom))
+
+    def prior(self, length: float) -> float:
+        """Given the length of a model, calculate its prior.
+
+        Specifically
+
+        exp(-complexity_penalty*length)
+
+        where complexity_penalty is a complexity penalty parameter (0
+        for no penalty, +inf for infinit penalty), and length is the
+        size of the model, the total number of atoms involved in its
+        definition.
+
+        The prior doesn't have to sum up to 1 because the probability
+        estimates are normalized.
+
+        """
+
+        return math.exp(-self.complexity_penalty * length)
+
+    def unexplained_data_size(self, cogscm: Atom) -> float:
+        """Estimate the size of the unexplained data by cogscm.
+
+        This is the number of observations that the antecedent of
+        cogscm does not cover.
+
+        """
+
+        # Make sure data_set_size has been set
+        assert 0 < self.data_set_size
+
+        # Estimate of the size of unexplained data by cogscm
+        return self.data_set_size - cogscm.tv.count
+
+    def kolmogorov_estimate(self, remain_count: float) -> float:
+        """Given the size of the data set that isn't explained by a model,
+        estimate the complexity of a model that would explain them
+        perfectly. The heuristic used here is
+
+        remain_data_size^(1 - compressiveness)
+
+        If compressiveness is null, then no compression occurs, the
+        model is the data set itself, if compressiveness equals 1,
+        then it return 1, which is the maximum compression, all data
+        can be explained with just one bit.
+
+        """
+
+        return pow(remain_count, 1.0 - self.compressiveness)
+
+    def prior_estimate(self, cogscm: Atom) -> float:
+        """Calculate the prior probability of cogscm."""
+
+        agent_log.fine("prior_estimate(cogscm={})".format(cogscm.id_string()))
+
+        # Get the complexity (program size) of cogscm
+        partial_complexity = self.complexity(cogscm)
+
+        # Calculate the kolmogotov complexity estimate of the
+        # data unexplained by cogscm
+        unexplained_data_size = self.unexplained_data_size(cogscm)
+        kestimate = self.kolmogorov_estimate(unexplained_data_size)
+
+        agent_log.fine(
+            "partial_complexity = {}, unexplained_data_size = {}, kestimate = {}".format(
+                partial_complexity, unexplained_data_size, kestimate
+            )
+        )
+
+        return self.prior(partial_complexity + kestimate)
+
+    def beta_factor(self, cogscm: Atom) -> float:
+        """Return the beta factor as described in Eq.26 of
+
+        https://github.com/ngeiswei/papers/blob/master/PartialBetaOperatorInduction/PartialBetaOperatorInduction.pdf
+
+        Note that we do account for the normalizing factor (numerator
+        of the fraction of Eq.22) as its not clear we want to
+        normalize the BMA (we might want to replace rest by an unknown
+        distribution, i.e. a prior beta-distribution).
+
+        """
+
+        a = tv_to_alpha_param(cogscm.tv, self.prior_a, self.prior_b)
+        b = tv_to_beta_param(cogscm.tv, self.prior_a, self.prior_b)
+        return sp.beta(a, b) / sp.beta(self.prior_a, self.prior_b)
+
+    def weight(self, cogscm: Atom) -> float:
+        """Calculate the weight of a cogscm for Model Bayesian Averaging.
+
+        The calculation is based on
+
+        https://github.com/ngeiswei/papers/blob/master/PartialBetaOperatorInduction/PartialBetaOperatorInduction.pdf
+
+        It assumes self.data_set_size has been properly set.
+
+        """
+
+        # NEXT: write unit tests for weight, prior_estimate and
+        # beta_factor for comparing [c7fe1cb2bb48fc37][3] and
+        # [f4dde218e5acedc6][3]
+
+        return self.prior_estimate(cogscm) * self.beta_factor(cogscm)
+
+    def infer_data_set_size(self, cogscms: list[Atom], total_count: int) -> None:
+        """Infer the data set size (universe size).
+
+        For now it uses the max of the total_count and the max count
+        of all cognitive schematics (to work around the fact that we
+        may not have a complete model).
+
+        """
+
+        max_count = 0.0
+        if 0 < len(cogscms):
+            max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
+        self.data_set_size = max(max_count, float(total_count))
+
+    # NEXT: find a better name
+    def mk_mxmdl(self, valid_cogscms: list[Atom], total_count: int) -> omdict:
+        # Infer the size of the complete data set, including all
+        # observations used to build the mixture model.  It needs to
+        # be called before calling MixtureModel.weight
+        self.infer_data_set_size(valid_cogscms, total_count)
+
+        # For each action, map a list of weighted valid cognitive
+        # schematics.
+        mxmdl = omdict(
+            [
+                (get_t0_execution(cogscm), (self.weight(cogscm), cogscm))
+                for cogscm in valid_cogscms
+            ]
+        )
+        # Add delta (unknown) components
+        for action in self.action_space:
+            mxmdl.add(action, (self.delta, None))
+
+        return mxmdl

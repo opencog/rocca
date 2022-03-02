@@ -40,9 +40,6 @@ from rocca.agents.utils import (
 atomspace = AtomSpace()
 set_default_atomspace(atomspace)
 
-# TODO: for now setup and teardown are manually called for each test.
-# Surely pytest can do better.
-
 
 def setup():
     """Setup, to be called before each test."""
@@ -59,6 +56,7 @@ def teardown():
 def test_shannon_entropy():
     """Test Shannon entropy."""
 
+    # Manually call setup for now (surely pytest can do better)
     setup()
 
     # A is almost sure, thus has minimum Shannon entropy
@@ -104,12 +102,14 @@ def test_shannon_entropy():
     H_se = shannon_entropy(H)
     assert 0.9 < H_se
 
+    # Manually call teardown for now (surely pytest can do better)
     teardown()
 
 
 def test_differential_entropy():
     """Test differential entropy."""
 
+    # Manually call setup for now (surely pytest can do better)
     setup()
 
     # A is almost sure, thus has minimum differential entropy
@@ -162,10 +162,16 @@ def test_differential_entropy():
     assert -1e-1 < I_de
     assert -1e-1 < J_de
 
+    # Manually call teardown for now (surely pytest can do better)
     teardown()
 
 
 def test_get_uniq_atoms():
+    """Test get_uniq_atoms."""
+
+    # Manually call setup for now (surely pytest can do better)
+    setup()
+
     P = PredicateNode("P")
     A = ConceptNode("A")
     B = ConceptNode("B")
@@ -180,8 +186,16 @@ def test_get_uniq_atoms():
     # Test all uniq atoms of PAA
     assert get_uniq_atoms(PAA) == {P, A, AA, PAA}
 
+    # Manually call teardown for now (surely pytest can do better)
+    teardown()
+
 
 def test_to_human_readable_str():
+    """Test to_human_readable_str."""
+
+    # Manually call setup for now (surely pytest can do better)
+    setup()
+
     # 1. outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)
     cogscm_1 = BackPredictiveImplicationScopeLink(
         VariableSet(),
@@ -244,8 +258,16 @@ def test_to_human_readable_str():
 
     assert cogscm_hrs_3 == expected_3a or cogscm_hrs_3 == expected_3b
 
+    # Manually call teardown for now (surely pytest can do better)
+    teardown()
+
 
 def test_get_context():
+    """Test get_context."""
+
+    # Manually call setup for now (surely pytest can do better)
+    setup()
+
     # 1. Monoaction plan:
     #    outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)
     cogscm_1 = BackPredictiveImplicationScopeLink(
@@ -320,9 +342,7 @@ def test_get_context():
             ),
             ExecutionLink(SchemaNode("go_to_house")),
         ),
-        EvaluationLink(
-            PredicateNode("inside"), ListLink(ConceptNode("self"), ConceptNode("house"))
-        ),
+        EvaluationLink(PredicateNode("Reward"), NumberNode("1")),
     )
 
     context_3, _ = get_context(cogscm_3)
@@ -332,3 +352,6 @@ def test_get_context():
     )
 
     assert context_3[0] == expected_3
+
+    # Manually call teardown for now (surely pytest can do better)
+    teardown()
