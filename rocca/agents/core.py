@@ -1594,6 +1594,21 @@ class MixtureModel:
 
         return math.exp(-self.complexity_penalty * length)
 
+    def unexplained_data_size(self, cogscm: Atom) -> float:
+        """Estimate the size of the unexplained data by cogscm.
+
+        This is the number of observations that the antecedent of
+        cogscm does not cover.
+
+        """
+
+        # Make sure data_set_size has been set
+        assert 0 < self.data_set_size
+
+        # Estimate of the size of unexplained data by cogscm
+        return self.data_set_size - cogscm.tv.count
+
+
     def kolmogorov_estimate(self, remain_count: float) -> float:
         """Given the size of the data set that isn't explained by a model,
         estimate the complexity of a model that would explain them
@@ -1618,17 +1633,14 @@ class MixtureModel:
         # Get the complexity (program size) of cogscm
         partial_complexity = self.complexity(cogscm)
 
-        # Make sure data_set_size has been set
-        assert 0 < self.data_set_size
-
         # Calculate the kolmogotov complexity estimate of the
         # data unexplained by cogscm
-        remain_data_size = self.data_set_size - cogscm.tv.count
-        kestimate = self.kolmogorov_estimate(remain_data_size)
+        unexplained_data_size = self.unexplained_data_size(cogscm)
+        kestimate = self.kolmogorov_estimate(unexplained_data_size)
 
         agent_log.fine(
-            "partial_complexity = {}, remain_data_size = {}, kestimate = {}".format(
-                partial_complexity, remain_data_size, kestimate
+            "partial_complexity = {}, unexplained_data_size = {}, kestimate = {}".format(
+                partial_complexity, unexplained_data_size, kestimate
             )
         )
 
