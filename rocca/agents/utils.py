@@ -1073,10 +1073,11 @@ def syntax_precede(a1: Atom, a2: Atom) -> bool:
 
     1. Variable/Number/Concept/Predicate/Schema
     2. Evaluation/Execution/GreaterThan
-    3. Not
-    4. And/Or
-    5. SequentialAnd
-    6. PredictiveImplication
+    3. AtTime/Member
+    4. Not
+    5. And/Or
+    6. SequentialAnd
+    7. PredictiveImplication
 
     Thus
 
@@ -1094,14 +1095,17 @@ def syntax_precede(a1: Atom, a2: Atom) -> bool:
         types.ConceptNode: 1,
         types.PredicateNode: 1,
         types.SchemaNode: 1,
+        types.TimeNode: 1,
         types.EvaluationLink: 2,
         types.ExecutionLink: 2,
         types.GreaterThanLink: 2,
-        types.NotLink: 3,
-        types.AndLink: 4,
-        types.OrLink: 4,
-        get_type("BackSequentialAndLink"): 5,
-        get_type("BackPredictiveImplicationScopeLink"): 6,
+        types.AtTimeLink: 3,
+        types.MemberLink: 3,
+        types.NotLink: 4,
+        types.AndLink: 5,
+        types.OrLink: 5,
+        get_type("BackSequentialAndLink"): 6,
+        get_type("BackPredictiveImplicationScopeLink"): 7,
     }
 
     return precedence[a1.type] < precedence[a2.type]
