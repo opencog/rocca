@@ -1146,9 +1146,25 @@ def type_to_human_readable_str(ty) -> str:
 
 
 def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
-    """Convert a cognitive schematic into a compact human readable form.
+    """Convert an atom into a compact human readable form.
 
-    For instance
+    For instance, the timestamped perceptum
+
+    (AtTime (stv 1 1)
+      (EvaluationLink
+        (PredicateNode "outside")
+        (ListLink
+          (ConceptNode "self")
+          (ConceptNode "house")))
+      (SLink
+        (SLink
+          (ZLink))))
+
+    returns
+
+    "outside(self, house) @ 2"
+
+    Another example, the cognitive schematic
 
     (BackPredictiveImplicationScopeLink (stv 1 0.00990099)
       (VariableSet)
@@ -1172,20 +1188,14 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
 
     "outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)"
 
-    For now lags and truth values are ignored in that compact human
-    readable form.
+    Note that for now lags and truth values are ignored in that
+    cognitive schematics compact human readable form.
 
     The optional parenthesis flag wraps the resulting expression with
     parenthesis if set to true (this mostly useful for the recursive
     calls).
 
-    Precedence order is as follows
-
-    1. ∧
-    2. ≺
-    3. ↝
-
-    so that
+    Precedence order is defined in the syntax_precede function, so that
 
     C ∧ A₁ ≺ A₂ ↝ G
 
@@ -1251,6 +1261,10 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
         # supported
         # If execution then the operator is prefix
         is_infix = False
+    elif is_at_time(atom):
+        op_str = type_to_human_readable_str(atom.type)
+        time = TimeNode(str(to_int(atom.out[1])))
+        out = [atom.out[0], time]
     else:
         out = atom.out
         if is_unordered(atom):
