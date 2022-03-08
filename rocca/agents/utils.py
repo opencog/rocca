@@ -1273,7 +1273,7 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
 
     # Recursively convert outgoings to human readable strings, adding
     # parenthesis if necessary.
-    wrap_parenthesis = lambda child, atom: not (is_infix or syntax_precede(child, atom))
+    wrap_parenthesis = lambda child, atom: is_infix and not syntax_precede(child, atom)
     hrs_out = [
         to_human_readable_str(child, wrap_parenthesis(child, atom)) for child in out
     ]
