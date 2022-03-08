@@ -546,6 +546,12 @@ def is_execution(atom: Atom) -> bool:
     return is_a(atom.type, types.ExecutionLink)
 
 
+def is_at_time(atom: Atom) -> bool:
+    """Return True iff the atom in an AtTimeLink."""
+
+    return is_a(atom.type, get_type("AtTimeLink"))
+
+
 def is_Z(atom: Atom) -> bool:
     """Return True iff the atom is Z."""
 
@@ -844,7 +850,7 @@ def get_context_actual_truth(atomspace: AtomSpace, cogscm: Atom, i: int) -> Trut
 
     agent_log.fine(
         "get_context_actual_truth(atomspace={}, cogscm={}, i={}".format(
-            atomspace, cogscm_to_str(cogscm), i
+            atomspace, atom_to_scheme_str(cogscm), i
         )
     )
 
@@ -955,10 +961,14 @@ def to_int(n: Atom) -> int:
 
     """
 
+    # Optimize
+    #
     #    if is_Z(n):
     #        return 0
     #    if is_S(n):
     #        return 1 + to_int(n.out[0])
+    #
+    # to avoid stack overflow
 
     ret = 0
     link = n
@@ -1063,10 +1073,11 @@ def syntax_precede(a1: Atom, a2: Atom) -> bool:
 
     1. Variable/Number/Concept/Predicate/Schema
     2. Evaluation/Execution/GreaterThan
-    3. Not
-    4. And/Or
-    5. SequentialAnd
-    6. PredictiveImplication
+    3. AtTime/Member
+    4. Not
+    5. And/Or
+    6. SequentialAnd
+    7. PredictiveImplication
 
     Thus
 
@@ -1084,14 +1095,17 @@ def syntax_precede(a1: Atom, a2: Atom) -> bool:
         types.ConceptNode: 1,
         types.PredicateNode: 1,
         types.SchemaNode: 1,
+        types.TimeNode: 1,
         types.EvaluationLink: 2,
         types.ExecutionLink: 2,
         types.GreaterThanLink: 2,
-        types.NotLink: 3,
-        types.AndLink: 4,
-        types.OrLink: 4,
-        get_type("BackSequentialAndLink"): 5,
-        get_type("BackPredictiveImplicationScopeLink"): 6,
+        types.AtTimeLink: 3,
+        types.MemberLink: 3,
+        types.NotLink: 4,
+        types.AndLink: 5,
+        types.OrLink: 5,
+        get_type("BackSequentialAndLink"): 6,
+        get_type("BackPredictiveImplicationScopeLink"): 7,
     }
 
     return precedence[a1.type] < precedence[a2.type]
@@ -1103,6 +1117,8 @@ def type_to_human_readable_str(ty) -> str:
 
     The conversion goes as follows
 
+    AtTime                       -> @
+    Member                       -> ∈
     And                          -> ∧
     Or                           -> ∨
     Not                          -> ¬
@@ -1114,6 +1130,8 @@ def type_to_human_readable_str(ty) -> str:
     """
 
     to_hrs = {
+        types.AtTimeLink: "@",
+        types.MemberLink: "∈",
         types.NotLink: "¬",
         types.AndLink: "∧",
         types.OrLink: "∨",
@@ -1128,9 +1146,25 @@ def type_to_human_readable_str(ty) -> str:
 
 
 def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
-    """Convert a cognitive schematic into a compact human readable form.
+    """Convert an atom into a compact human readable form.
 
-    For instance
+    For instance, the timestamped perceptum
+
+    (AtTime (stv 1 1)
+      (EvaluationLink
+        (PredicateNode "outside")
+        (ListLink
+          (ConceptNode "self")
+          (ConceptNode "house")))
+      (SLink
+        (SLink
+          (ZLink))))
+
+    returns
+
+    "outside(self, house) @ 2"
+
+    Another example, the cognitive schematic
 
     (BackPredictiveImplicationScopeLink (stv 1 0.00990099)
       (VariableSet)
@@ -1154,20 +1188,14 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
 
     "outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)"
 
-    For now lags and truth values are ignored in that compact human
-    readable form.
+    Note that for now lags and truth values are ignored in that
+    cognitive schematics compact human readable form.
 
     The optional parenthesis flag wraps the resulting expression with
     parenthesis if set to true (this mostly useful for the recursive
     calls).
 
-    Precedence order is as follows
-
-    1. ∧
-    2. ≺
-    3. ↝
-
-    so that
+    Precedence order is defined in the syntax_precede function, so that
 
     C ∧ A₁ ≺ A₂ ↝ G
 
@@ -1233,6 +1261,10 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
         # supported
         # If execution then the operator is prefix
         is_infix = False
+    elif is_at_time(atom):
+        op_str = type_to_human_readable_str(atom.type)
+        time = TimeNode(str(to_int(atom.out[1])))
+        out = [atom.out[0], time]
     else:
         out = atom.out
         if is_unordered(atom):
@@ -1241,7 +1273,7 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
 
     # Recursively convert outgoings to human readable strings, adding
     # parenthesis if necessary.
-    wrap_parenthesis = lambda child, atom: not (is_infix or syntax_precede(child, atom))
+    wrap_parenthesis = lambda child, atom: is_infix and not syntax_precede(child, atom)
     hrs_out = [
         to_human_readable_str(child, wrap_parenthesis(child, atom)) for child in out
     ]
@@ -1258,31 +1290,89 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
     return "(" + final_str + ")" if parenthesis else final_str
 
 
-def cogscm_to_str(cogscm: Atom, only_id: bool = False) -> str:
-    """Convert a cognitive schematics to string.
+def atom_to_scheme_str(atom: Atom, only_id: bool = False) -> str:
+    """Convert an atom to Scheme format string + human readable form.
 
-    Represent the human readable form of cogscm, then on the next line
-    its Scheme representation.  If only_id is True, then only its ID,
-    instead of the whole Scheme representation, is rendered.
+    The human readable form of atom is commented out according to
+    Scheme format, then on the next line its Scheme representation is
+    appended.  If only_id is True, then only its ID, instead of the
+    whole Scheme representation, is rendered.
+
+    So for instance
+
+    So for instance calling atom_to_scheme_str on
+
+    (AtTime (stv 1 1)
+      (EvaluationLink
+        (PredicateNode "outside")
+        (ListLink
+          (ConceptNode "self")
+          (ConceptNode "house")))
+      (SLink
+        (SLink
+          (ZLink))))
+
+    returns
+
+    "
+    ;; outside(self, house) @ 2
+    (AtTimeLink (stv 1 1)
+      (EvaluationLink
+        (PredicateNode "outside") ; [72730412e28a734][2]
+        (ListLink
+          (ConceptNode "self") ; [40b11d11524bd751][2]
+          (ConceptNode "house") ; [63eb9919f37daa5f][2]
+        ) ; [aadca36fe9d1a468][2]
+      ) ; [ca0c329fb1ab493b][2]
+      (SLink
+        (SLink
+          (ZLink
+          ) ; [800fbffffffe8ce4][2]
+        ) ; [da5f815ba9d4009f][2]
+      ) ; [f5363085cdea2ffe][2]
+    ) ; [b37c7ec68e8c0c81][2]
+    "
 
     """
 
-    msg = ";; " + to_human_readable_str(cogscm) + "\n"
-    msg += cogscm.id_string() if only_id else cogscm.long_string()
+    msg = ";; " + to_human_readable_str(atom) + "\n"
+    msg += atom.id_string() if only_id else atom.long_string()
     return msg
 
 
-def cogscms_to_str(cogscms: set[Atom] | list[Atom], only_id: bool = False) -> str:
-    """Convert a collection of cognitive schematics to string.
+def atoms_to_scheme_str(atoms: set[Atom] | list[Atom], only_id: bool = False) -> str:
+    """Convert a collection of atoms to string in scheme format.
 
-    Apply cogscm_to_str to a collection of cogscms.
+    Apply atom_to_scheme_str to a collection of atoms.
 
     """
 
     msgs = []
-    for cogscm in cogscms:
-        msgs.append(cogscm_to_str(cogscm, only_id))
+    for atom in atoms:
+        msgs.append(atom_to_scheme_str(atom, only_id))
     return "\n".join(msgs)
+
+
+def timed_percepta_to_scheme_str(timed_percepta: set[Atom]) -> str:
+    """Convert percepta at a given cycle into a string in Scheme format.
+
+    Percepta are preceded by a comment in human readable form.
+
+    """
+
+    cmt = "\n".join(";; " + to_human_readable_str(tpm) for tpm in timed_percepta)
+    scm = "\n".join(tpm.long_string() for tpm in timed_percepta)
+    return "\n".join([cmt, scm])
+
+
+def percepta_record_to_scheme_str(percepta_record: list[set[Atom]]) -> str:
+    """Convert a percepta record into a string in Scheme format.
+
+    Each perception is preceded by a comment in human readable form.
+
+    """
+
+    return "\n".join([timed_percepta_to_scheme_str(tp) for tp in percepta_record])
 
 
 class MinerLogger:

@@ -17,7 +17,9 @@ from opencog.type_constructors import (
     SchemaNode,
     NumberNode,
     GreaterThanLink,
+    MemberLink,
 )
+from opencog.spacetime import AtTimeLink
 from opencog.pln import (
     SLink,
     ZLink,
@@ -257,6 +259,26 @@ def test_to_human_readable_str():
     expected_3b = "PoleAngle($angle) ∧ -0.01 > $angle ∧ do(GoLeft) ↝ Reward(1)"
 
     assert cogscm_hrs_3 == expected_3a or cogscm_hrs_3 == expected_3b
+
+    # Perceptum
+    perceptum = AtTimeLink(
+        EvaluationLink(
+            PredicateNode("outside"),
+            ListLink(ConceptNode("self"), ConceptNode("house")),
+        ),
+        SLink(SLink(ZLink())),
+    )
+    perceptum_hrs = to_human_readable_str(perceptum)
+    # Parenthesis is placed around the timed perceptum because Member
+    # has precedence equal to AtTime precedence.
+    expected_perceptum_hrs = "outside(self, house) @ 2"
+    assert expected_perceptum_hrs == perceptum_hrs
+
+    # Member
+    member = MemberLink(perceptum, ConceptNode("PerceptaRecord"))
+    member_hrs = to_human_readable_str(member)
+    expected_member_hrs = "(outside(self, house) @ 2) ∈ PerceptaRecord"
+    assert expected_member_hrs == member_hrs
 
     # Manually call teardown for now (surely pytest can do better)
     teardown()

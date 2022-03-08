@@ -75,17 +75,21 @@ class OpencogAgent:
         self.observation, _, _ = self.env.restart()
         self.cycle_count: int = 0
         self.total_count: int = 0
-        self.accumulated_reward = 0
+        self.accumulated_reward: int = 0
         self.percepta_record_cpt = ConceptNode("Percepta Record")
         # The percepta_record is a list of sets of timestamped
         # percepta.  The list is ordered by timestamp, that each
         # element of that list is a set of percepta at the timestamp
         # corresponding to its index.
-        self.percepta_record: list = []
-        self.action_space = action_space
-        self.positive_goal = p_goal
-        self.negative_goal = n_goal
-        self.cognitive_schematics: set = set()
+        #
+        # In Latin, percepta is the plurial of perceptum (percept in
+        # English), according to
+        # https://en.wiktionary.org/wiki/perceptus#Latin
+        self.percepta_record: list[set[Atom]] = []
+        self.action_space: set[Atom] = action_space
+        self.positive_goal: Atom = p_goal
+        self.negative_goal: Atom = n_goal
+        self.cognitive_schematics: set[Atom] = set()
         self.log_level = log_level
         self.load_opencog_modules()
         self.reset_action_counter()
@@ -456,6 +460,14 @@ class OpencogAgent:
 
         """
 
+        # Log the percepta record in Scheme format, useful for
+        # debugging the pattern miner
+        agent_log.fine(
+            "Percepta record:\n{}".format(
+                percepta_record_to_scheme_str(self.percepta_record)
+            )
+        )
+
         # All resulting cognitive schematics
         cogscms = set()
 
@@ -478,7 +490,7 @@ class OpencogAgent:
             pos_prdi = self.surprises_to_predictive_implications(pos_srps)
             agent_log.fine(
                 "Mined positive goal cognitive schematics [count={}]:\n{}".format(
-                    len(pos_prdi), cogscms_to_str(pos_prdi)
+                    len(pos_prdi), atoms_to_scheme_str(pos_prdi)
                 )
             )
             cogscms.update(set(pos_prdi))
@@ -491,7 +503,7 @@ class OpencogAgent:
             neg_prdi = self.surprises_to_predictive_implications(neg_srps)
             agent_log.fine(
                 "Mined negative goal cognitive schematics [count={}]:\n{}".format(
-                    len(neg_prdi), cogscms_to_str(neg_prdi)
+                    len(neg_prdi), atoms_to_scheme_str(neg_prdi)
                 )
             )
             cogscms.update(set(neg_prdi))
@@ -505,7 +517,7 @@ class OpencogAgent:
                 gen_prdi = self.surprises_to_predictive_implications(gen_srps)
                 agent_log.fine(
                     "Mined general succedent cognitive schematics [count={}]:\n{}".format(
-                        len(gen_prdi), cogscms_to_str(gen_prdi)
+                        len(gen_prdi), atoms_to_scheme_str(gen_prdi)
                     )
                 )
                 cogscms.update(set(gen_prdi))
@@ -525,7 +537,7 @@ class OpencogAgent:
                     )
                     agent_log.fine(
                         "Mined positive goal poly-action cognitive schematics[count={}]\n:{}".format(
-                            len(pos_poly_srps), cogscms_to_str(pos_poly_srps)
+                            len(pos_poly_srps), atoms_to_scheme_str(pos_poly_srps)
                         )
                     )
                     pos_poly_prdi = self.surprises_to_predictive_implications(
@@ -535,7 +547,7 @@ class OpencogAgent:
 
         agent_log.debug(
             "Mined cognitive schematics [count={}]:\n{}".format(
-                len(cogscms), cogscms_to_str(cogscms)
+                len(cogscms), atoms_to_scheme_str(cogscms)
             )
         )
         return cogscms
@@ -698,7 +710,7 @@ class OpencogAgent:
         # Log all inferred cognitive schematics
         agent_log.debug(
             "Inferred cognitive schematics [count={}]:\n{}".format(
-                len(cogscms), cogscms_to_str(cogscms)
+                len(cogscms), atoms_to_scheme_str(cogscms)
             )
         )
 
@@ -1013,7 +1025,7 @@ class OpencogAgent:
         """
 
         # For logging
-        cogscm_str = cogscm_to_str(cogscm) if cogscm else str(cogscm)
+        cogscm_str = atom_to_scheme_str(cogscm) if cogscm else str(cogscm)
         msg = "{} is undesirable because ".format(cogscm_str)
 
         # Check that cogscm is defined
@@ -1303,7 +1315,7 @@ class OpencogAgent:
         agent_log.fine(
             "self.cognitive_schematics [count={}]:\n{}".format(
                 len(self.cognitive_schematics),
-                cogscms_to_str(self.cognitive_schematics),
+                atoms_to_scheme_str(self.cognitive_schematics),
             )
         )
 
@@ -1400,7 +1412,7 @@ class OpencogAgent:
             "Valid cognitive schematics [cycle={}, count={}]:\n{}".format(
                 self.cycle_count,
                 len(valid_cogscms),
-                cogscms_to_str(valid_cogscms, only_id=True),
+                atoms_to_scheme_str(valid_cogscms, only_id=True),
             )
         )
 
@@ -1467,14 +1479,16 @@ class OpencogAgent:
         ]
         agent_log.fine(
             "Timestamped observations [cycle={}]:\n{}".format(
-                self.cycle_count, obs_record
+                self.cycle_count, atoms_to_scheme_str(obs_record)
             )
         )
 
         # Make the goal for that iteration
         goal = self.make_goal()
         agent_log.debug(
-            "Goal for that cycle [cycle={}]:\n{}".format(self.cycle_count, goal)
+            "Goal for that cycle [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(goal)
+            )
         )
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
@@ -1482,7 +1496,7 @@ class OpencogAgent:
         cogscms = self.plan(goal, self.expiry)
         agent_log.debug(
             "Planned cognitive schematics [cycle={}, count={}]:\n{}".format(
-                self.cycle_count, len(cogscms), cogscms_to_str(cogscms)
+                self.cycle_count, len(cogscms), atoms_to_scheme_str(cogscms)
             )
         )
 
@@ -1505,10 +1519,14 @@ class OpencogAgent:
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.cycle_count, tv=TRUE_TV)
         agent_log.fine(
-            "Timestamped action [cycle={}]:\n{}".format(self.cycle_count, action_record)
+            "Timestamped action [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(action_record)
+            )
         )
         agent_log.debug(
-            "Action to execute [cycle={}]:\n{}".format(self.cycle_count, action)
+            "Action to execute [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(action)
+            )
         )
 
         # Increment the counter for that action and log it
@@ -1526,10 +1544,16 @@ class OpencogAgent:
         self.accumulated_reward += int(reward.out[1].name)
         agent_log.debug(
             "Observations [cycle={}, count={}]:\n{}".format(
-                self.cycle_count, len(self.observation), self.observation
+                self.cycle_count,
+                len(self.observation),
+                atoms_to_scheme_str(self.observation),
             )
         )
-        agent_log.debug("Reward [cycle={}]:\n{}".format(self.cycle_count, reward))
+        agent_log.debug(
+            "Reward [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(reward)
+            )
+        )
         agent_log.debug(
             "Accumulated reward [cycle={}] = {}".format(
                 self.cycle_count, self.accumulated_reward
@@ -1538,7 +1562,9 @@ class OpencogAgent:
 
         reward_record = self.record(reward, self.cycle_count, tv=TRUE_TV)
         agent_log.fine(
-            "Timestamped reward [cycle={}]:\n{}".format(self.cycle_count, reward_record)
+            "Timestamped reward [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(reward_record)
+            )
         )
 
         return done
