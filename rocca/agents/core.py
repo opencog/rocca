@@ -460,6 +460,14 @@ class OpencogAgent:
 
         """
 
+        # Log the percepta record in Scheme format, useful for
+        # debugging the pattern miner
+        agent_log.fine(
+            "Percepta record:\n{}".format(
+                percepta_record_to_scheme_str(self.percepta_record)
+            )
+        )
+
         # All resulting cognitive schematics
         cogscms = set()
 
@@ -1471,14 +1479,16 @@ class OpencogAgent:
         ]
         agent_log.fine(
             "Timestamped observations [cycle={}]:\n{}".format(
-                self.cycle_count, obs_record
+                self.cycle_count, atoms_to_scheme_str(obs_record)
             )
         )
 
         # Make the goal for that iteration
         goal = self.make_goal()
         agent_log.debug(
-            "Goal for that cycle [cycle={}]:\n{}".format(self.cycle_count, goal)
+            "Goal for that cycle [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(goal)
+            )
         )
 
         # Plan, i.e. come up with cognitive schematics as plans.  Here the
@@ -1509,10 +1519,14 @@ class OpencogAgent:
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.cycle_count, tv=TRUE_TV)
         agent_log.fine(
-            "Timestamped action [cycle={}]:\n{}".format(self.cycle_count, action_record)
+            "Timestamped action [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(action_record)
+            )
         )
         agent_log.debug(
-            "Action to execute [cycle={}]:\n{}".format(self.cycle_count, action)
+            "Action to execute [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(action)
+            )
         )
 
         # Increment the counter for that action and log it
@@ -1530,10 +1544,16 @@ class OpencogAgent:
         self.accumulated_reward += int(reward.out[1].name)
         agent_log.debug(
             "Observations [cycle={}, count={}]:\n{}".format(
-                self.cycle_count, len(self.observation), self.observation
+                self.cycle_count,
+                len(self.observation),
+                atoms_to_scheme_str(self.observation),
             )
         )
-        agent_log.debug("Reward [cycle={}]:\n{}".format(self.cycle_count, reward))
+        agent_log.debug(
+            "Reward [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(reward)
+            )
+        )
         agent_log.debug(
             "Accumulated reward [cycle={}] = {}".format(
                 self.cycle_count, self.accumulated_reward
@@ -1542,7 +1562,9 @@ class OpencogAgent:
 
         reward_record = self.record(reward, self.cycle_count, tv=TRUE_TV)
         agent_log.fine(
-            "Timestamped reward [cycle={}]:\n{}".format(self.cycle_count, reward_record)
+            "Timestamped reward [cycle={}]:\n{}".format(
+                self.cycle_count, atom_to_scheme_str(reward_record)
+            )
         )
 
         return done
