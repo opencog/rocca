@@ -1117,6 +1117,8 @@ def type_to_human_readable_str(ty) -> str:
 
     The conversion goes as follows
 
+    AtTime                       -> @
+    Member                       -> ∈
     And                          -> ∧
     Or                           -> ∨
     Not                          -> ¬
@@ -1128,6 +1130,8 @@ def type_to_human_readable_str(ty) -> str:
     """
 
     to_hrs = {
+        types.AtTimeLink: "@",
+        types.MemberLink: "∈",
         types.NotLink: "¬",
         types.AndLink: "∧",
         types.OrLink: "∨",
