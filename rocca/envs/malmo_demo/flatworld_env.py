@@ -61,6 +61,20 @@ def GenCuboid(x1, y1, z1, x2, y2, z2, blocktype):
     )
 
 
+def drawItem(x, y, z, item_type):
+    return (
+        '<DrawItem x="'
+        + str(x)
+        + '" y="'
+        + str(y)
+        + '" z="'
+        + str(z)
+        + '" type="'
+        + item_type
+        + '"/>'
+    )
+
+
 def drawLine(x1, y1, z1, x2, y2, z2, blocktype, face):
     return (
         '<DrawLine x1="'
@@ -91,13 +105,13 @@ def build_house(x, y, z, width, length, height, blocktype):
 
     genstring = ""
     y_cur = y
-    for i in range(height):
+    for i in range(height + 1):
         z_cur = z
         x_cur = x
-        for j in range(width):
+        for j in range(width + 1):
             genstring = genstring + drawBlock(x_front, y_cur, z_cur, "glass") + "\n"
             genstring = genstring + drawBlock(x_back, y_cur, z_cur, blocktype) + "\n"
-            if j > 0 and j < width - 1:
+            if j > 0 and j < width:
                 genstring = (
                     genstring
                     + drawBlock(x_back + 1, y_cur, z_cur, "diamond_block")
@@ -106,7 +120,7 @@ def build_house(x, y, z, width, length, height, blocktype):
             z_cur = z_cur + 1 if z_cur >= 0 else z_cur - 1
 
         for k in range(length):
-            if k % 2 == 0:
+            if k % 2 != 0:
                 genstring = genstring + drawBlock(x_cur, y_cur, z_left, "glass") + "\n"
                 genstring = genstring + drawBlock(x_cur, y_cur, z_right, "glass") + "\n"
             else:
@@ -122,12 +136,12 @@ def build_house(x, y, z, width, length, height, blocktype):
 
     # floor
     genstring = genstring + GenCuboid(
-        x_back + 1 if x_back >= 0 else x_back - 1,
+        -15,
         y,
-        z_left + 1 if z_left >= 0 else z_left - 1,
-        x - 1 if x >= 0 else x + 1,
+        15,
+        15,
         y,
-        z - 1 if x >= 0 else z + 1,
+        -15,
         blocktype,
     )
     # ceiling
@@ -140,16 +154,61 @@ def build_house(x, y, z, width, length, height, blocktype):
         z - 1 if x >= 0 else z + 1,
         blocktype,
     )
+    genstring = genstring + GenCuboid(
+        x_back,
+        y_cur + 1,
+        z_left,
+        x,
+        y_cur + 1,
+        z,
+        blocktype,
+    )
+    genstring = genstring + GenCuboid(
+        x_back - 1 if x_back >= 0 else x_back + 1,
+        y_cur + 2,
+        z_left - 1 if z_left >= 0 else z_left + 1,
+        x + 1 if x >= 0 else x - 1,
+        y_cur + 2,
+        z + 1 if x >= 0 else z - 1,
+        blocktype,
+    )
+    genstring = genstring + GenCuboid(
+        x_back,
+        y_cur,
+        z_left,
+        x,
+        y_cur,
+        z,
+        "air",
+    )
+    genstring = genstring + GenCuboid(
+        x_back - 1 if x_back >= 0 else x_back + 1,
+        y_cur + 1,
+        z_left - 1 if z_left >= 0 else z_left + 1,
+        x + 1 if x >= 0 else x - 1,
+        y_cur + 1,
+        z + 1 if x >= 0 else z - 1,
+        "air",
+    )
+    genstring = genstring + GenCuboid(
+        x_back - 2 if x_back >= 0 else x_back + 2,
+        y_cur + 2,
+        z_left - 2 if z_left >= 0 else z_left + 2,
+        x + 2 if x >= 0 else x - 2,
+        y_cur + 2,
+        z + 2 if x >= 0 else z - 2,
+        "glass",
+    )
 
     return genstring
 
 
 # Initialize the location coordinates
-agent_x, agent_y, agent_z, agent_yaw = 19, 230, -2, 90
+agent_x, agent_y, agent_z, agent_yaw = 13, 230, -2, 90
 key_x, key_y, key_z = 7, 228, -10
 door_x, door_y, door_z = -4, 228, -3
 diamond_x, diamond_y, diamond_z = -18, 228, -3
-start_x, start_y, start_z, width, length, height = -4, 226, -1, 6, 15, 5
+start_x, start_y, start_z, width, length, height = -4, 226, -1, 6, 9, 3
 hold_key = False
 
 # relocates the agent to the starting point
@@ -230,21 +289,32 @@ def inside_house(x, z):
     )
 
 
+def get_txt(obs):
+    if obs:
+        return ",".join(
+            ["{}({},{})".format(ob, obs[ob][0], obs[ob][1]) for ob in obs.keys()]
+        )
+    else:
+        return ""
+
+
 # Move the agent towards the key
 # reward=0
 def go_to_key(agent):
+    agent.sendCommand("chat Grab key")
     global hold_key
-    agent.sendCommand("chat go_to_key")
     reward = 0
     observation = {}
     curr_x, curr_y, curr_z = get_curr_loc(agent)
     if inside_house(curr_x, curr_z):
         observation["inside"] = ["self", "house"]
+        agent.sendCommand("chat => {}".format(get_txt(observation)))
         return observation, reward, is_mission_running
     else:
         observation["outside"] = ["self", "house"]
     if hold_key:
         observation["hold"] = ["self", "key"]
+        agent.sendCommand("chat => {}".format(get_txt(observation)))
         return observation, reward, is_mission_running
     turn_to(agent, curr_x, curr_y, curr_z, key_x, key_y, key_z)
     time.sleep(0.2)
@@ -256,20 +326,21 @@ def go_to_key(agent):
         hold_key = True
     else:
         observation = []
-    agent.sendCommand("chat {}".format(observation))
+    agent.sendCommand("chat => {}".format(get_txt(observation)))
     return observation, reward, is_mission_running
 
 
 # Move the agent towards the house and enter the house.
 # reward = 0
 def go_to_house(agent):
+    agent.sendCommand("chat Open door")
     global hold_key
-    agent.sendCommand("chat go_to_house")
     reward = 0
     observation = {}
     curr_x, curr_y, curr_z = get_curr_loc(agent)
     if inside_house(curr_x, curr_z):
         observation["inside"] = ["self", "house"]
+        agent.sendCommand("chat => {}".format(get_txt(observation)))
         return observation, reward, is_mission_running
     turn_to(agent, curr_x, curr_y, curr_z, door_x + 2, door_y, door_z)
     time.sleep(0.2)
@@ -287,14 +358,14 @@ def go_to_house(agent):
             observation["outside"] = ["self", "house"]
             observation["nextto"] = ["self", "closed_door"]
     reward = 0
-    agent.sendCommand("chat {}".format(observation))
+    agent.sendCommand("chat => {}".format(get_txt(observation)))
     return observation, reward, is_mission_running
 
 
 # Move the agent towards the diamond and collect it.
 # reward = 1
 def go_to_diamonds(agent):
-    agent.sendCommand("chat go_to_diamonds")
+    agent.sendCommand("chat Collect diamonds")
     observation = {}
     curr_x, curr_y, curr_z = get_curr_loc(agent)
     turn_to(agent, curr_x, curr_y, curr_z, diamond_x, diamond_y, diamond_z)
@@ -315,10 +386,11 @@ def go_to_diamonds(agent):
         observation["outside"] = ["self", "house"]
     if hold_key:
         observation["hold"] = ["self", "key"]
-    if observation:
-        agent.sendCommand("chat {}".format(observation))
     if reward > 0:
-        agent.sendCommand("chat Reward: {}".format(reward))
+        agent.sendCommand("chat => Reward {}".format(reward))
+    else:
+        agent.sendCommand("chat => {}".format(get_txt(observation)))
+
     return observation, reward, is_mission_running
 
 
@@ -345,12 +417,12 @@ missionXML = (
       <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;1;biome_1"/>
         <DrawingDecorator>
           """
-    + build_house(start_x, start_y, start_z, width, length, height, "planks")
+    + build_house(start_x, start_y, start_z, width, length, height, "brick_block")
     + drawBlock(
         door_x, door_y - 1, door_z, "dark_oak_door", variant="lower", face="WEST"
     )
     + drawBlock(door_x, door_y, door_z, "dark_oak_door", variant="upper", face="WEST")
-    + drawBlock(key_x, key_y - 1, key_z, "command_block")
+    + drawBlock(key_x, key_y - 1, key_z, "stone")
     + drawBlock(key_x, key_y, key_z, "tripwire_hook")
     + """
 
