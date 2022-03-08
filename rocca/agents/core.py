@@ -75,17 +75,21 @@ class OpencogAgent:
         self.observation, _, _ = self.env.restart()
         self.cycle_count: int = 0
         self.total_count: int = 0
-        self.accumulated_reward = 0
+        self.accumulated_reward: int = 0
         self.percepta_record_cpt = ConceptNode("Percepta Record")
         # The percepta_record is a list of sets of timestamped
         # percepta.  The list is ordered by timestamp, that each
         # element of that list is a set of percepta at the timestamp
         # corresponding to its index.
-        self.percepta_record: list = []
-        self.action_space = action_space
-        self.positive_goal = p_goal
-        self.negative_goal = n_goal
-        self.cognitive_schematics: set = set()
+        #
+        # In Latin, percepta is the plurial of perceptum (percept in
+        # English), according to
+        # https://en.wiktionary.org/wiki/perceptus#Latin
+        self.percepta_record: list[set[Atom]] = []
+        self.action_space: set[Atom] = action_space
+        self.positive_goal: Atom = p_goal
+        self.negative_goal: Atom = n_goal
+        self.cognitive_schematics: set[Atom] = set()
         self.log_level = log_level
         self.load_opencog_modules()
         self.reset_action_counter()
