@@ -961,10 +961,14 @@ def to_int(n: Atom) -> int:
 
     """
 
+    # Optimize
+    #
     #    if is_Z(n):
     #        return 0
     #    if is_S(n):
     #        return 1 + to_int(n.out[0])
+    #
+    # to avoid stack overflow
 
     ret = 0
     link = n
