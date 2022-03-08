@@ -262,9 +262,12 @@ def test_to_human_readable_str():
 
     # Perceptum
     perceptum = AtTimeLink(
-        EvaluationLink(PredicateNode("outside"),
-                       ListLink(ConceptNode("self"), ConceptNode("house"))),
-        SLink(SLink(ZLink())))
+        EvaluationLink(
+            PredicateNode("outside"),
+            ListLink(ConceptNode("self"), ConceptNode("house")),
+        ),
+        SLink(SLink(ZLink())),
+    )
     perceptum_hrs = to_human_readable_str(perceptum)
     # Parenthesis is placed around the timed perceptum because Member
     # has precedence equal to AtTime precedence.
