@@ -850,7 +850,7 @@ def get_context_actual_truth(atomspace: AtomSpace, cogscm: Atom, i: int) -> Trut
 
     agent_log.fine(
         "get_context_actual_truth(atomspace={}, cogscm={}, i={}".format(
-            atomspace, cogscm_to_str(cogscm), i
+            atomspace, atom_to_scheme_str(cogscm), i
         )
     )
 
@@ -1290,31 +1290,89 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
     return "(" + final_str + ")" if parenthesis else final_str
 
 
-def cogscm_to_str(cogscm: Atom, only_id: bool = False) -> str:
-    """Convert a cognitive schematics to string.
+def atom_to_scheme_str(atom: Atom, only_id: bool = False) -> str:
+    """Convert an atom to Scheme format string + human readable form.
 
-    Represent the human readable form of cogscm, then on the next line
-    its Scheme representation.  If only_id is True, then only its ID,
-    instead of the whole Scheme representation, is rendered.
+    The human readable form of atom is commented out according to
+    Scheme format, then on the next line its Scheme representation is
+    appended.  If only_id is True, then only its ID, instead of the
+    whole Scheme representation, is rendered.
+
+    So for instance
+
+    So for instance calling atom_to_scheme_str on
+
+    (AtTime (stv 1 1)
+      (EvaluationLink
+        (PredicateNode "outside")
+        (ListLink
+          (ConceptNode "self")
+          (ConceptNode "house")))
+      (SLink
+        (SLink
+          (ZLink))))
+
+    returns
+
+    "
+    ;; outside(self, house) @ 2
+    (AtTimeLink (stv 1 1)
+      (EvaluationLink
+        (PredicateNode "outside") ; [72730412e28a734][2]
+        (ListLink
+          (ConceptNode "self") ; [40b11d11524bd751][2]
+          (ConceptNode "house") ; [63eb9919f37daa5f][2]
+        ) ; [aadca36fe9d1a468][2]
+      ) ; [ca0c329fb1ab493b][2]
+      (SLink
+        (SLink
+          (ZLink
+          ) ; [800fbffffffe8ce4][2]
+        ) ; [da5f815ba9d4009f][2]
+      ) ; [f5363085cdea2ffe][2]
+    ) ; [b37c7ec68e8c0c81][2]
+    "
 
     """
 
-    msg = ";; " + to_human_readable_str(cogscm) + "\n"
-    msg += cogscm.id_string() if only_id else cogscm.long_string()
+    msg = ";; " + to_human_readable_str(atom) + "\n"
+    msg += atom.id_string() if only_id else atom.long_string()
     return msg
 
 
-def cogscms_to_str(cogscms: set[Atom] | list[Atom], only_id: bool = False) -> str:
-    """Convert a collection of cognitive schematics to string.
+def atoms_to_scheme_str(atoms: set[Atom] | list[Atom], only_id: bool = False) -> str:
+    """Convert a collection of atoms to string in scheme format.
 
-    Apply cogscm_to_str to a collection of cogscms.
+    Apply atom_to_scheme_str to a collection of atoms.
 
     """
 
     msgs = []
-    for cogscm in cogscms:
-        msgs.append(cogscm_to_str(cogscm, only_id))
+    for atom in atoms:
+        msgs.append(atom_to_scheme_str(atom, only_id))
     return "\n".join(msgs)
+
+
+def timed_percepta_to_scheme_str(timed_percepta: set[Atom]) -> str:
+    """Convert percepta at a given cycle into a string in Scheme format.
+
+    Percepta are preceded by a comment in human readable form.
+
+    """
+
+    cmt = "\n".join(";; " + to_human_readable_str(tpm) for tpm in timed_percepta)
+    scm = "\n".join(tpm.long_string() for tpm in timed_percepta)
+    return "\n".join([cmt, scm])
+
+
+def percepta_record_to_scheme_str(percepta_record: list[set[Atom]]) -> str:
+    """Convert a percepta record into a string in Scheme format.
+
+    Each perception is preceded by a comment in human readable form.
+
+    """
+
+    return "\n".join([timed_percepta_to_scheme_str(tp) for tp in percepta_record])
 
 
 class MinerLogger:
