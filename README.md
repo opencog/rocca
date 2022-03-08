@@ -64,6 +64,7 @@ OpenCog tools
 Third party tools
 
 - Python 3.10 (or Python 3.8 see below)
+- jupyter notebook
 - python-orderedmultidict https://pypi.org/project/orderedmultidict/
 - fastcore https://fastcore.fast.ai
 - OpenAI Gym https://gym.openai.com/
@@ -95,11 +96,16 @@ pip install -r requirements-dev.txt
 
 ## How to use
 
-A gym agent defined under the `rocca/agents` folder is provided that
-can used to implement agents for given environments.  See the examples
-under the `examples` folder.
+An OpencogAgent defined under the `rocca/agents` folder is provided
+that can used to implement agents for given environments.  See the
+examples under the `examples` folder.
 
-There are Jupyter notebooks provided for experimentation as well.
+There are Jupyter notebooks provided for experimentation as well.  To
+run them call jupyter notebook on a ipynb file, such as
+
+```bash
+jupyter notebook 01_cartpole.ipynb
+```
 
 ### TensorBoard support
 Some experiments, notably the notebooks, use TensorBoard via the `tensorboardX` library to store event files that show certain metrics over time for training / testing (for now it's just rewards).
