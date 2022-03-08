@@ -546,6 +546,12 @@ def is_execution(atom: Atom) -> bool:
     return is_a(atom.type, types.ExecutionLink)
 
 
+def is_at_time(atom: Atom) -> bool:
+    """Return True iff the atom in an AtTimeLink."""
+
+    return is_a(atom.type, get_type("AtTimeLink"))
+
+
 def is_Z(atom: Atom) -> bool:
     """Return True iff the atom is Z."""
 
