@@ -1763,8 +1763,6 @@ class MixtureModel:
 
         """
 
-        agent_log.fine("thompson_sample(mxmdl={})".format(self.mxmdl_to_str(mxmdl)))
-
         # 1. For each action select its TV according its weight
         act_w8d_cogscms = [
             (action, weighted_sampling(w8d_cogscms))
