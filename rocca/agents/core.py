@@ -269,7 +269,7 @@ class OpencogAgent:
             li, "miner_maximum_variables = {}".format(self.miner_maximum_variables)
         )
 
-    def load_opencog_modules(self):
+    def load_opencog_modules(self) -> None:
         # Load miner
         scheme_eval(self.atomspace, "(use-modules (opencog miner))")
 
@@ -285,10 +285,21 @@ class OpencogAgent:
         self.pln_load_rules(rules)
         # scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
-    def reset_action_counter(self):
-        self.action_counter = Counter({action: 0 for action in self.action_space})
+    def reset_action_counter(self) -> None:
+        self.action_counter: Counter[Atom] = Counter(
+            {action: 0 for action in self.action_space}
+        )
 
-    def insert_to_percepta_record(self, timed_atom: Atom, i: int):
+    def action_counter_to_str(self) -> str:
+        """Pretty print self.action_counter."""
+
+        ss: list[str] = [
+            "{}: {}".format(to_human_readable_str(p[0]), p[1])
+            for p in self.action_counter.items()
+        ]
+        return "\n".join(ss)
+
+    def insert_to_percepta_record(self, timed_atom: Atom, i: int) -> None:
         """Insert a timestamped atom into self.percepta_record.
 
         The percepta_record is a list of sets of timestamped percepta.
@@ -1534,7 +1545,9 @@ class OpencogAgent:
         self.action_counter[action] += 1
         agent_log.debug(
             "Action counter [cycle={}, total={}]:\n{}".format(
-                self.cycle_count, self.action_counter.total(), self.action_counter
+                self.cycle_count,
+                self.action_counter.total(),
+                self.action_counter_to_str(),
             )
         )
 
@@ -1791,7 +1804,7 @@ class MixtureModel:
             action = act_w8d_cogscms[0]
             w8d_cogscms = act_w8d_cogscms[1]
             s = indent + to_human_readable_str(action)
-            s += " [size={}]:\n".format(w8d_cogscms)
+            s += " [size={}]:\n".format(len(w8d_cogscms))
             s += self.w8d_cogscms_to_str(w8d_cogscms, indent + "  ")
             ss.append(s)
         return "\n".join(ss)
@@ -1823,7 +1836,7 @@ class MixtureModel:
     def act_pblt_to_str(self, act_pblt: tuple[Atom, float], indent: str = "") -> str:
         action = act_pblt[0]
         pblt = act_pblt[1]
-        return indent + "({}, {})".format(to_human_readable_str(action), pblt)
+        return indent + "{}: {}".format(to_human_readable_str(action), pblt)
 
     def act_pblts_to_str(self, act_pblts: tuple[Atom, float], indent: str = "") -> str:
         """Pretty print a list of pairs (action, probability)."""
