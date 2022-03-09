@@ -1786,14 +1786,15 @@ class MixtureModel:
     def mxmdl_to_str(self, mxmdl: omdict, indent: str = "") -> str:
         """Pretty print the given mixture model of cogscms"""
 
-        s = ""
+        ss: list[str] = []
         for act_w8d_cogscms in mxmdl.listitems():
             action = act_w8d_cogscms[0]
             w8d_cogscms = act_w8d_cogscms[1]
-            # NEXT: improve and use human readable format
-            s += "\n" + indent + str(self.action_to_str(action)) + "\n"
+            s = indent + to_human_readable_str(action)
+            s += " [size={}]:\n".format(w8d_cogscms)
             s += self.w8d_cogscms_to_str(w8d_cogscms, indent + "  ")
-        return s
+            ss.append(s)
+        return "\n".join(ss)
 
     def w8d_cogscm_to_str(
         self, w8d_cogscm: tuple[float, Atom], indent: str = ""
@@ -1814,15 +1815,15 @@ class MixtureModel:
 
         w8d_cogscms_sorted = sorted(w8d_cogscms, key=lambda x: x[0], reverse=True)
 
-        s = indent + "size = " + str(len(w8d_cogscms_sorted)) + "\n"
+        ss: list[str] = []
         for w8d_cogscm in w8d_cogscms_sorted:
-            s += indent + self.w8d_cogscm_to_str(w8d_cogscm, indent + "  ") + "\n"
-        return s
+            ss.append(indent + self.w8d_cogscm_to_str(w8d_cogscm, indent + "  "))
+        return "\n".join(ss)
 
     def act_pblt_to_str(self, act_pblt: tuple[Atom, float], indent: str = "") -> str:
         action = act_pblt[0]
         pblt = act_pblt[1]
-        return indent + "({}, {})".format(self.action_to_str(action), pblt)
+        return indent + "({}, {})".format(to_human_readable_str(action), pblt)
 
     def act_pblts_to_str(self, act_pblts: tuple[Atom, float], indent: str = "") -> str:
         """Pretty print a list of pairs (action, probability)."""
@@ -1840,7 +1841,7 @@ class MixtureModel:
         w8d_cogscm = act_w8d_cogscm[1]
         s = (
             indent
-            + self.action_to_str(action)
+            + to_human_readable_str(action)
             + ": "
             + self.w8d_cogscm_to_str(w8d_cogscm)
         )
