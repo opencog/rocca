@@ -1738,7 +1738,6 @@ class MixtureModel:
             max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
         self.data_set_size = max(max_count, float(total_count))
 
-    # NEXT: find a better name
     def mk_mxmdl(self, valid_cogscms: list[Atom], total_count: int) -> omdict:
         # Infer the size of the complete data set, including all
         # observations used to build the mixture model.  It needs to
