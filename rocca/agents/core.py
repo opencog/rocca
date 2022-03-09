@@ -1491,8 +1491,9 @@ class OpencogAgent:
             )
         )
 
-        # Plan, i.e. come up with cognitive schematics as plans.  Here the
-        # goal expiry is 2, i.e. must be fulfilled set for the next two iterations.
+        # Plan, i.e. come up with cognitive schematics as plans.  Here
+        # the goal expiry is 2, i.e. must be fulfilled set for the
+        # next two iterations.
         cogscms = self.plan(goal, self.expiry)
         agent_log.debug(
             "Planned cognitive schematics [cycle={}, count={}]:\n{}".format(
