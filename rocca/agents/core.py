@@ -1708,10 +1708,6 @@ class MixtureModel:
 
         """
 
-        # NEXT: write unit tests for weight, prior_estimate and
-        # beta_factor for comparing [c7fe1cb2bb48fc37][3] and
-        # [f4dde218e5acedc6][3]
-
         return self.prior_estimate(cogscm) * self.beta_factor(cogscm)
 
     def infer_data_set_size(self, cogscms: list[Atom], total_count: int) -> None:
