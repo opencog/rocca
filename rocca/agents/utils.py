@@ -665,7 +665,6 @@ def get_total_lag(atom: Atom) -> int:
     lag = get_lag(atom)
     ant = get_antecedent(atom)
     tlg = lag + (get_total_lag(ant) if ant else 0)
-    agent_log.fine("get_total_lag(atom={}) = {}".format(atom, tlg))
     return tlg
 
 
