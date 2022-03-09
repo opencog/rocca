@@ -1819,17 +1819,6 @@ class MixtureModel:
             s += indent + self.w8d_cogscm_to_str(w8d_cogscm, indent + "  ") + "\n"
         return s
 
-    # NEXT: remove
-    def action_to_str(self, action: Atom, indent: str = "") -> str:
-        """Pretty print an action.
-
-        For now it just outputs the schema corresponding to the action
-        without the execution link, for conciseness.
-
-        """
-
-        return indent + str(action.out[0])
-
     def act_pblt_to_str(self, act_pblt: tuple[Atom, float], indent: str = "") -> str:
         action = act_pblt[0]
         pblt = act_pblt[1]
