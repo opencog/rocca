@@ -234,6 +234,12 @@ class OpencogAgent:
             ),
         )
         agent_log.log(li, "mixture_model.delta = {}".format(self.mixture_model.delta))
+        agent_log.log(
+            li,
+            "mixture_model.weight_influence = {}".format(
+                self.mixture_model.weight_influence
+            ),
+        )
         agent_log.log(li, "expiry = {}".format(self.expiry))
         agent_log.log(li, "polyaction_mining = {}".format(self.polyaction_mining))
         agent_log.log(
@@ -269,7 +275,7 @@ class OpencogAgent:
             li, "miner_maximum_variables = {}".format(self.miner_maximum_variables)
         )
 
-    def load_opencog_modules(self):
+    def load_opencog_modules(self) -> None:
         # Load miner
         scheme_eval(self.atomspace, "(use-modules (opencog miner))")
 
@@ -285,10 +291,21 @@ class OpencogAgent:
         self.pln_load_rules(rules)
         # scheme_eval(self.atomspace, "(pln-log-atomspace)")
 
-    def reset_action_counter(self):
-        self.action_counter = Counter({action: 0 for action in self.action_space})
+    def reset_action_counter(self) -> None:
+        self.action_counter: Counter[Atom] = Counter(
+            {action: 0 for action in self.action_space}
+        )
 
-    def insert_to_percepta_record(self, timed_atom: Atom, i: int):
+    def action_counter_to_str(self) -> str:
+        """Pretty print self.action_counter."""
+
+        ss: list[str] = [
+            "{}: {}".format(to_human_readable_str(p[0]), p[1])
+            for p in self.action_counter.items()
+        ]
+        return "\n".join(ss)
+
+    def insert_to_percepta_record(self, timed_atom: Atom, i: int) -> None:
         """Insert a timestamped atom into self.percepta_record.
 
         The percepta_record is a list of sets of timestamped percepta.
@@ -1431,11 +1448,11 @@ class OpencogAgent:
 
         """
 
-        # Select the pair of action and its first order probability of
-        # success according to Thompson sampling
-        (action, pblty) = thompson_sample(mxmdl, self.prior_a, self.prior_b)
+        # Select the action alongside its first order probability
+        # estimate of success
+        action, _, pblty, _ = self.mixture_model.thompson_sample(mxmdl)
 
-        # Return the action (we don't need the probability for now)
+        # Return the action with probability of success estimate
         return (action, pblty)
 
     def control_cycle(self) -> bool:
@@ -1491,8 +1508,9 @@ class OpencogAgent:
             )
         )
 
-        # Plan, i.e. come up with cognitive schematics as plans.  Here the
-        # goal expiry is 2, i.e. must be fulfilled set for the next two iterations.
+        # Plan, i.e. come up with cognitive schematics as plans.  Here
+        # the goal expiry is 2, i.e. must be fulfilled set for the
+        # next two iterations.
         cogscms = self.plan(goal, self.expiry)
         agent_log.debug(
             "Planned cognitive schematics [cycle={}, count={}]:\n{}".format(
@@ -1504,15 +1522,16 @@ class OpencogAgent:
         mxmdl = self.deduce(cogscms)
         agent_log.debug(
             "Mixture models [cycle={}]:\n{}".format(
-                self.cycle_count, mxmdl_to_str(mxmdl)
+                self.cycle_count, self.mixture_model.mxmdl_to_str(mxmdl)
             )
         )
 
         # Select the next action
         action, pblty = self.decide(mxmdl)
         agent_log.debug(
-            "Selected action with its probability of success [cycle={}]:\n{}".format(
-                self.cycle_count, act_pblt_to_str((action, pblty))
+            "Selected action with its weight and probability of success [cycle={}]:\n{}".format(
+                self.cycle_count,
+                self.mixture_model.act_pblt_to_str((action, pblty)),
             )
         )
 
@@ -1533,7 +1552,9 @@ class OpencogAgent:
         self.action_counter[action] += 1
         agent_log.debug(
             "Action counter [cycle={}, total={}]:\n{}".format(
-                self.cycle_count, self.action_counter.total(), self.action_counter
+                self.cycle_count,
+                self.action_counter.total(),
+                self.action_counter_to_str(),
             )
         )
 
@@ -1605,6 +1626,18 @@ class MixtureModel:
         # is constant, delta, but ultimately is should be calculated
         # as a rest in the Solomonoff mixture.
         self.delta = 1.0e-5
+
+        # Action selection can be influenced by the weight w of the
+        # model where the first order probability p has been sampled
+        # from, if so then the action that maximizes
+        #
+        # p * w^weight_influence
+        #
+        # is selected.  It is recommended to have weight_influence
+        # range from 0 (weight has no influence) to 1 (weight is
+        # linearly taken into account) but values beyond 1 can also be
+        # used.
+        self.weight_influence = 0.0
 
     def complexity(self, atom: Atom) -> int:
         """Return the count of all unique atoms in atom."""
@@ -1708,11 +1741,12 @@ class MixtureModel:
 
         """
 
-        # NEXT: write unit tests for weight, prior_estimate and
-        # beta_factor for comparing [c7fe1cb2bb48fc37][3] and
-        # [f4dde218e5acedc6][3]
-
         return self.prior_estimate(cogscm) * self.beta_factor(cogscm)
+
+    def weighted_probability(self, w8: float, pblt: float) -> float:
+        """Return the weighted probability using X."""
+
+        return pblt * w8 ** self.weight_influence
 
     def infer_data_set_size(self, cogscms: list[Atom], total_count: int) -> None:
         """Infer the data set size (universe size).
@@ -1728,7 +1762,6 @@ class MixtureModel:
             max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
         self.data_set_size = max(max_count, float(total_count))
 
-    # NEXT: find a better name
     def mk_mxmdl(self, valid_cogscms: list[Atom], total_count: int) -> omdict:
         # Infer the size of the complete data set, including all
         # observations used to build the mixture model.  It needs to
@@ -1748,3 +1781,191 @@ class MixtureModel:
             mxmdl.add(action, (self.delta, None))
 
         return mxmdl
+
+    # NEXT: see if omdict annotation can be improved
+    def thompson_sample(self, mxmdl: omdict) -> tuple[Atom, float, float, float]:
+        """Perform Thompson sampling over the mixture model.
+
+        Meaning, for each action
+
+        1. Select a TV according to its likelihood (derived from its
+        cognitive schematic).
+
+        2. From that TV, sample its second order distribution to
+        obtain a first order probability variate
+
+        3. Calculate the weighted probability
+
+        Then return a tuple with
+
+        1. the selected action
+        2. the weight of the model it is coming from
+        3. its probability estimate of success
+
+        that maximizes the weighted probability.
+
+        """
+
+        # 1. For each action select its TV according its weight
+        act_w8d_cogscms = [
+            (action, weighted_sampling(w8d_cogscms))
+            for (action, w8d_cogscms) in mxmdl.listitems()
+        ]
+        agent_log.fine(
+            "act_w8d_cogscms:\n{}".format(self.act_w8d_cogscms_to_str(act_w8d_cogscms))
+        )
+
+        # 2. For each action select its first order probability given its tv
+        act_w8_pblts = [
+            (
+                action,
+                w8_cogscm[0],
+                tv_rv(get_cogscm_tv(w8_cogscm[1]), self.prior_a, self.prior_b),
+            )
+            for (action, w8_cogscm) in act_w8d_cogscms
+        ]
+        agent_log.fine(
+            "act_w8_pblts:\n{}".format(self.act_w8_pblts_to_str(act_w8_pblts))
+        )
+
+        # 3. For each action calculate the weighted probability
+        act_w8_w8d_pblts = [
+            (action, w8, p, self.weighted_probability(w8, p))
+            for (action, w8, p) in act_w8_pblts
+        ]
+        agent_log.fine(
+            "act_w8_w8d_plbts:\n{}".format(
+                self.act_w8_w8d_pblts_to_str(act_w8_w8d_pblts)
+            )
+        )
+
+        # Return an action with highest probability of success (TODO: take
+        # care of ties)
+        return max(act_w8_w8d_pblts, key=lambda act_w8_w8d_plbt: act_w8_w8d_plbt[3])
+
+    def mxmdl_to_str(self, mxmdl: omdict, indent: str = "") -> str:
+        """Pretty print the given mixture model of cogscms"""
+
+        ss: list[str] = []
+        for act_w8d_cogscms in mxmdl.listitems():
+            action = act_w8d_cogscms[0]
+            w8d_cogscms = act_w8d_cogscms[1]
+            s = indent + to_human_readable_str(action)
+            s += " [size={}]:\n".format(len(w8d_cogscms))
+            s += self.w8d_cogscms_to_str(w8d_cogscms, indent + "  ")
+            ss.append(s)
+        return "\n".join(ss)
+
+    def w8d_cogscm_to_str(
+        self, w8d_cogscm: tuple[float, Atom], indent: str = ""
+    ) -> str:
+        """Pretty print a pair (weight, cogscm)."""
+
+        weight = w8d_cogscm[0]
+        cogscm = w8d_cogscm[1]
+        tv = get_cogscm_tv(cogscm)
+        idstr = atom_to_idstr(cogscm)
+        s = "(weight={}, tv={}, id={})".format(weight, tv, idstr)
+        return s
+
+    def w8d_cogscms_to_str(
+        self, w8d_cogscms: list[tuple[float, Atom]], indent: str = ""
+    ) -> str:
+        """Pretty print the given list of weighted cogscms"""
+
+        w8d_cogscms_sorted = sorted(w8d_cogscms, key=lambda x: x[0], reverse=True)
+
+        ss: list[str] = []
+        for w8d_cogscm in w8d_cogscms_sorted:
+            ss.append(indent + self.w8d_cogscm_to_str(w8d_cogscm, indent + "  "))
+        return "\n".join(ss)
+
+    def act_pblt_to_str(self, act_pblt: tuple[Atom, float], indent: str = "") -> str:
+        action = act_pblt[0]
+        pblt = act_pblt[1]
+        return indent + "{}: {}".format(to_human_readable_str(action), pblt)
+
+    def act_pblts_to_str(
+        self, act_pblts: list[tuple[Atom, float]], indent: str = ""
+    ) -> str:
+        """Pretty print a list of pairs (action, probability)."""
+
+        return "\n".join(
+            [indent + self.act_pblt_to_str(act_pblt) for act_pblt in act_pblts]
+        )
+
+    def act_w8_pblt_to_str(
+        self, act_w8_pblt: tuple[Atom, float, float], indent: str = ""
+    ) -> str:
+        """Pretty print a triple (action, weight, probability)."""
+
+        action = act_w8_pblt[0]
+        weight = act_w8_pblt[1]
+        pblt = act_w8_pblt[2]
+        return indent + "{}: (weight={}, probability={})".format(
+            to_human_readable_str(action), weight, pblt
+        )
+
+    def act_w8_pblts_to_str(
+        self, act_w8_pblts: list[tuple[Atom, float, float]], indent: str = ""
+    ) -> str:
+        """Pretty print a list of triple (action, weight, probability)."""
+
+        return "\n".join(
+            [indent + self.act_w8_pblt_to_str(act_pblt) for act_pblt in act_w8_pblts]
+        )
+
+    def act_w8_w8d_pblt_to_str(
+        self, act_w8_w8d_pblt: tuple[Atom, float, float, float], indent: str = ""
+    ) -> str:
+        """Pretty print a quadruple (action, weight, probability, weighted probability)."""
+
+        action = act_w8_w8d_pblt[0]
+        weight = act_w8_w8d_pblt[1]
+        pblt = act_w8_w8d_pblt[2]
+        w8d_pblt = act_w8_w8d_pblt[3]
+        return (
+            indent
+            + "{}: (weight={}, probability={}, weighted probability={})".format(
+                to_human_readable_str(action), weight, pblt, w8d_pblt
+            )
+        )
+
+    def act_w8_w8d_pblts_to_str(
+        self, act_w8_w8d_pblts: list[tuple[Atom, float, float, float]], indent: str = ""
+    ) -> str:
+        """Pretty print a list of quadruples (action, weight, probability, weighted probability)."""
+
+        return "\n".join(
+            [
+                indent + self.act_w8_w8d_pblt_to_str(act_w8_w8d_pblt)
+                for act_w8_w8d_pblt in act_w8_w8d_pblts
+            ]
+        )
+
+    def act_w8d_cogscm_to_str(
+        self, act_w8d_cogscm: tuple[Atom, tuple[float, Atom]], indent: str = ""
+    ) -> str:
+        """Pretty print a pair (action, (weight, cogscm))."""
+
+        action = act_w8d_cogscm[0]
+        w8d_cogscm = act_w8d_cogscm[1]
+        s = (
+            indent
+            + to_human_readable_str(action)
+            + ": "
+            + self.w8d_cogscm_to_str(w8d_cogscm)
+        )
+        return s
+
+    def act_w8d_cogscms_to_str(
+        self, act_w8d_cogscms: list[tuple[Atom, tuple[float, Atom]]], indent: str = ""
+    ) -> str:
+        """Pretty print a list of pairs (action, (weight, cogscm))."""
+
+        return "\n".join(
+            [
+                indent + self.act_w8d_cogscm_to_str(act_w8d_cogscm)
+                for act_w8d_cogscm in act_w8d_cogscms
+            ]
+        )

@@ -166,7 +166,7 @@ if __name__ == "__main__":
         )
         agent_log.info(
             "Action counter during {}th iteration:\n{}".format(
-                i + 1, cag.action_counter
+                i + 1, cag.action_counter_to_str()
             )
         )
 
