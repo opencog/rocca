@@ -1436,7 +1436,7 @@ class OpencogAgent:
         # Return the mixture model for that cycle
         return self.mixture_model.mk_mxmdl(valid_cogscms, self.total_count)
 
-    def decide(self, mxmdl: omdict) -> tuple[Atom, float, float]:
+    def decide(self, mxmdl: omdict) -> tuple[Atom, float]:
         """Select the next action to enact from a mixture model of cogscms.
 
         The action is selected from the action distribution, a list of
@@ -1448,12 +1448,12 @@ class OpencogAgent:
 
         """
 
-        # Select the action (alongside the weight of its originating
-        # model and its first order probability estimate of success)
-        (action, w8, pblty) = self.mixture_model.thompson_sample(mxmdl)
+        # Select the action alongside its first order probability
+        # estimate of success
+        action, _, pblty, _ = self.mixture_model.thompson_sample(mxmdl)
 
-        # Return the action with its probability of success estimate
-        return (action, w8, pblty)
+        # Return the action with probability of success estimate
+        return (action, pblty)
 
     def control_cycle(self) -> bool:
         """Run one cycle of
@@ -1527,11 +1527,11 @@ class OpencogAgent:
         )
 
         # Select the next action
-        action, w8, pblty = self.decide(mxmdl)
+        action, pblty = self.decide(mxmdl)
         agent_log.debug(
             "Selected action with its weight and probability of success [cycle={}]:\n{}".format(
                 self.cycle_count,
-                self.mixture_model.act_w8_pblt_to_str((action, w8, pblty)),
+                self.mixture_model.act_pblt_to_str((action, pblty)),
             )
         )
 
@@ -1783,7 +1783,7 @@ class MixtureModel:
         return mxmdl
 
     # NEXT: see if omdict annotation can be improved
-    def thompson_sample(self, mxmdl: omdict) -> tuple[Atom, float, float]:
+    def thompson_sample(self, mxmdl: omdict) -> tuple[Atom, float, float, float]:
         """Perform Thompson sampling over the mixture model.
 
         Meaning, for each action
@@ -1792,14 +1792,17 @@ class MixtureModel:
         cognitive schematic).
 
         2. From that TV, sample its second order distribution to
-        obtain a first order probability variate, and return the pair
-        (action, pblty) corresponding to the highest variate.
+        obtain a first order probability variate
+
+        3. Calculate the weighted probability
 
         Then return a tuple with
 
         1. the selected action
         2. the weight of the model it is coming from
         3. its probability estimate of success
+
+        that maximizes the weighted probability.
 
         """
 
@@ -1825,14 +1828,20 @@ class MixtureModel:
             "act_w8_pblts:\n{}".format(self.act_w8_pblts_to_str(act_w8_pblts))
         )
 
+        # 3. For each action calculate the weighted probability
+        act_w8_w8d_pblts = [
+            (action, w8, p, self.weighted_probability(w8, p))
+            for (action, w8, p) in act_w8_pblts
+        ]
+        agent_log.fine(
+            "act_w8_w8d_plbts:\n{}".format(
+                self.act_w8_w8d_pblts_to_str(act_w8_w8d_pblts)
+            )
+        )
+
         # Return an action with highest probability of success (TODO: take
         # care of ties)
-        return max(
-            act_w8_pblts,
-            key=lambda act_w8_pblt: self.weighted_probability(
-                act_w8_pblt[2], act_w8_pblt[2]
-            ),
-        )
+        return max(act_w8_w8d_pblts, key=lambda act_w8_w8d_plbt: act_w8_w8d_plbt[3])
 
     def mxmdl_to_str(self, mxmdl: omdict, indent: str = "") -> str:
         """Pretty print the given mixture model of cogscms"""
@@ -1904,6 +1913,34 @@ class MixtureModel:
 
         return "\n".join(
             [indent + self.act_w8_pblt_to_str(act_pblt) for act_pblt in act_w8_pblts]
+        )
+
+    def act_w8_w8d_pblt_to_str(
+        self, act_w8_w8d_pblt: tuple[Atom, float, float, float], indent: str = ""
+    ) -> str:
+        """Pretty print a quadruple (action, weight, probability, weighted probability)."""
+
+        action = act_w8_w8d_pblt[0]
+        weight = act_w8_w8d_pblt[1]
+        pblt = act_w8_w8d_pblt[2]
+        w8d_pblt = act_w8_w8d_pblt[3]
+        return (
+            indent
+            + "{}: (weight={}, probability={}, weighted probability={})".format(
+                to_human_readable_str(action), weight, pblt, w8d_pblt
+            )
+        )
+
+    def act_w8_w8d_pblts_to_str(
+        self, act_w8_w8d_pblts: list[tuple[Atom, float, float, float]], indent: str = ""
+    ) -> str:
+        """Pretty print a list of quadruples (action, weight, probability, weighted probability)."""
+
+        return "\n".join(
+            [
+                indent + self.act_w8_w8d_pblt_to_str(act_w8_w8d_pblt)
+                for act_w8_w8d_pblt in act_w8_w8d_pblts
+            ]
         )
 
     def act_w8d_cogscm_to_str(
