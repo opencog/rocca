@@ -1746,7 +1746,7 @@ class MixtureModel:
     def weighted_probability(self, w8: float, pblt: float) -> float:
         """Return the weighted probability using X."""
 
-        return pblt * w8 ** self.weight_influence
+        return pblt * w8**self.weight_influence
 
     def infer_data_set_size(self, cogscms: list[Atom], total_count: int) -> None:
         """Infer the data set size (universe size).
