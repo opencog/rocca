@@ -39,6 +39,10 @@ from opencog.type_constructors import (
 )
 from opencog.utilities import get_free_variables, load_file
 
+from requests import post
+import json
+import re
+
 #############
 # Constants #
 #############
@@ -56,6 +60,78 @@ agent_log.set_component("Agent")
 #############
 # Functions #
 #############
+
+
+def pre_process_atoms(exp):
+    # Processing empty variableset
+    exp = re.sub(r"\(VariableSet\)", "", exp)
+    exp = re.sub(r"\(VariableSet\s*\)", "", exp)
+    # exp = re.sub(r'back', '', exp, flags=re.IGNORECASE)
+
+    # Processing szlinks
+    exp = re.sub(r";.*\n", "\n", exp, flags=re.MULTILINE)
+    exp = re.sub(r"\(ZLink\s+", "(ZLink", exp)
+    exp = re.sub(r"\)\s+\)", "))", exp)
+    exp = re.sub(r"\)\s+\)", "))", exp)
+
+    starting_indices_slinks = [m.start() for m in re.finditer("SLink", exp)]
+    starting_indices_zlinks = [m.start() for m in re.finditer("ZLink", exp)]
+
+    for i in range(len(starting_indices_zlinks)):
+        # Get the index of its preceding zlink
+        index_preceding_zlink = -1 if i == 0 else starting_indices_zlinks[i - 1]
+        # Count the number of its parent links and the index of the start of its parent slink
+        parent_count = 0
+        index_parent_slink = 0
+        for p in starting_indices_slinks:
+            if p < starting_indices_zlinks[i] and p > index_preceding_zlink:
+                parent_count += 1
+                if parent_count == 1:
+                    index_parent_slink = p
+            if p > starting_indices_zlinks[i]:
+                break
+        # Form the new string
+        if parent_count == 0:
+            # ='s are added and removed later to keep the length of the string exp the same while other szlinks are processed.
+            # This will keep previously calculated sz indices valid
+            exp = (
+                exp[0 : starting_indices_zlinks[i] - 1]
+                + "=" * 7
+                + exp[starting_indices_zlinks[i] + 6 :]
+            )
+        else:
+            len_szlinks = (
+                (starting_indices_zlinks[i] + 4 + 1 + parent_count + 1 - 1)
+                - (index_parent_slink - 1)
+                + 1
+            )
+            len_time_node = len('(TimeNode "' + str(parent_count) + '")')
+            # "`" is added and removed later to keep the length of the string exp the same while other szlinks are processed.
+            # This will keep previously calculated sz indices valid
+            exp = (
+                exp[0 : index_parent_slink - 1]
+                + '(TimeNode "'
+                + str(parent_count)
+                + '")'
+                + "`" * (len_szlinks - len_time_node)
+                + exp[starting_indices_zlinks[i] + 4 + 1 + parent_count + 1 :]
+            )
+
+    exp = exp.replace("=" * 7, '(TimeNode "0")')
+    exp = exp.replace("`", "")
+    return exp
+
+
+def post_to_restapi_scheme_endpoint(cogscm, PORT=5000, IP_ADDRESS="127.0.0.1"):
+    """Post data to the visualizer"""
+    uri = "http://" + IP_ADDRESS + ":" + str(PORT) + "/api/v1.1/"
+    headers = {"content-type": "application/json"}
+
+    # Execute scheme command
+    # command = {'command': '(ConceptNode "cat")'}
+    if cogscm:
+        command = {"command": pre_process_atoms(str(cogscm))}
+        post_response = post(uri + "scheme", data=json.dumps(command), headers=headers)
 
 
 def add_to_atomspace(atoms: set[Atom] | list[Atom], atomspace: AtomSpace) -> None:

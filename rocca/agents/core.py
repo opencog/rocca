@@ -792,6 +792,7 @@ class OpencogAgent:
 
         add_to_atomspace(new_cogscms, self.cogscms_atomspace)
         self.cognitive_schematics.update(new_cogscms)
+        post_to_restapi_scheme_endpoint(new_cogscms, PORT=5001)
 
     def learn(self):
         """Discover patterns in the world and in itself."""
@@ -1557,6 +1558,7 @@ class OpencogAgent:
                 self.cycle_count, atoms_to_scheme_str(obs_record)
             )
         )
+        post_to_restapi_scheme_endpoint(obs_record)
 
         # Make the goal for that iteration
         goal = self.make_goal()
@@ -1575,6 +1577,7 @@ class OpencogAgent:
                 self.cycle_count, len(cogscms), atoms_to_scheme_str(cogscms)
             )
         )
+        post_to_restapi_scheme_endpoint(cogscms)
 
         # Deduce the action distribution
         mxmdl = self.deduce(cogscms)
@@ -1607,6 +1610,7 @@ class OpencogAgent:
                 self.cycle_count, atom_to_scheme_str(action)
             )
         )
+        post_to_restapi_scheme_endpoint(action_record)
 
         # Increment the counter for that action and log it
         self.action_counter[action] += 1
@@ -1647,6 +1651,7 @@ class OpencogAgent:
                 self.cycle_count, atom_to_scheme_str(reward_record)
             )
         )
+        post_to_restapi_scheme_endpoint(action_record)
 
         return done
 
