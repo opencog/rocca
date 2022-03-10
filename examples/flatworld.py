@@ -69,7 +69,7 @@ class FlatworldAgent(OpencogAgent):
         self.polyaction_mining = False
         self.monoaction_general_succeedent_mining = True
         self.temporal_deduction = True
-        self.cogscm_minimum_strength = 0.9
+        self.cogscm_minimum_strength = 0.75
         self.cogscm_maximum_shannon_entropy = 1
         self.cogscm_maximum_differential_entropy = 0
         self.cogscm_maximum_variables = 0
@@ -77,6 +77,10 @@ class FlatworldAgent(OpencogAgent):
         self.miner_maximum_variables = 9
         self.miner_minimum_support = 3
         self.conditional_conjunction_introduction = False
+        self.expiry = 3
+        self.mixture_model.complexity_penalty = 0.6
+        self.mixture_model.delta = 1.0e-30
+        self.mixture_model.compressiveness = 0.1
 
         # Todo: restart the environment to get an initial reward
         self.initial_reward = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))
