@@ -601,7 +601,7 @@ def get_times(timed_atoms: list[Atom]) -> set[Atom]:
     return set.union(set([get_time(timed_atoms[0])]), get_times(timed_atoms[1:]))
 
 
-def get_events(timed_atoms: list[Atom]) -> list[Atom]:
+def get_events(timed_atoms: set[Atom] | list[Atom]) -> list[Atom]:
     """Given a container of timestamped clauses, return a list of all events."""
 
     return [get_event(ta) for ta in timed_atoms]
