@@ -1350,7 +1350,7 @@ class OpencogAgent:
         )
         return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
 
-    def deduce(self, cogscms: list[Atom]) -> omdict:
+    def deduce(self, cogscms: list[Atom]) -> omdict[Atom, tuple[float, Atom]]:
         """Return an action distribution given a list cognitive schematics.
 
         The action distribution is actually a second order
@@ -1437,13 +1437,14 @@ class OpencogAgent:
         # Return the mixture model for that cycle
         return self.mixture_model.mk_mxmdl(valid_cogscms, self.total_count)
 
-    def decide(self, mxmdl: omdict) -> tuple[Atom, float]:
+    def decide(self, mxmdl: omdict[Atom, tuple[float, Atom]]) -> tuple[Atom, float]:
         """Select the next action to enact from a mixture model of cogscms.
 
-        The action is selected from the action distribution, a list of
-        pairs (action, tv), obtained from deduce.  The selection uses
-        Thompson sampling leveraging the second order distribution to
-        balance exploitation and exploration. See
+        The action is selected from a mixture model, a multimap from
+        action to weighted cognitive schematics obtained from deduce.
+        The selection uses Thompson sampling leveraging the second
+        order distribution to balance exploitation and
+        exploration. See
         http://auai.org/uai2016/proceedings/papers/20.pdf for more
         details about Thompson Sampling.
 
@@ -1763,7 +1764,9 @@ class MixtureModel:
             max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
         self.data_set_size = max(max_count, float(total_count))
 
-    def mk_mxmdl(self, valid_cogscms: list[Atom], total_count: int) -> omdict:
+    def mk_mxmdl(
+        self, valid_cogscms: list[Atom], total_count: int
+    ) -> omdict[Atom, tuple[float, Atom]]:
         # Infer the size of the complete data set, including all
         # observations used to build the mixture model.  It needs to
         # be called before calling MixtureModel.weight
@@ -1783,8 +1786,9 @@ class MixtureModel:
 
         return mxmdl
 
-    # NEXT: see if omdict annotation can be improved
-    def thompson_sample(self, mxmdl: omdict) -> tuple[Atom, float, float, float]:
+    def thompson_sample(
+        self, mxmdl: omdict[Atom, tuple[float, Atom]]
+    ) -> tuple[Atom, float, float, float]:
         """Perform Thompson sampling over the mixture model.
 
         Meaning, for each action
@@ -1844,7 +1848,9 @@ class MixtureModel:
         # care of ties)
         return max(act_w8_w8d_pblts, key=lambda act_w8_w8d_plbt: act_w8_w8d_plbt[3])
 
-    def mxmdl_to_str(self, mxmdl: omdict, indent: str = "") -> str:
+    def mxmdl_to_str(
+        self, mxmdl: omdict[Atom, tuple[float, Atom]], indent: str = ""
+    ) -> str:
         """Pretty print the given mixture model of cogscms"""
 
         ss: list[str] = []
