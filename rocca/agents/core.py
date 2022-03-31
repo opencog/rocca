@@ -1427,7 +1427,7 @@ class OpencogAgent:
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
         agent_log.debug(
-            "Valid cognitive schematics [cycle={}, count={}]:\n{}".format(
+            "[cycle={}] Valid cognitive schematics [count={}]:\n{}".format(
                 self.cycle_count,
                 len(valid_cogscms),
                 atoms_to_scheme_str(valid_cogscms, only_id=True),
@@ -1497,7 +1497,7 @@ class OpencogAgent:
             self.record(o, self.cycle_count, tv=TRUE_TV) for o in self.observation
         ]
         agent_log.fine(
-            "Timestamped observations [cycle={}]:\n{}".format(
+            "[cycle={}] Timestamped observations:\n{}".format(
                 self.cycle_count, atoms_to_scheme_str(obs_record)
             )
         )
@@ -1505,7 +1505,7 @@ class OpencogAgent:
         # Make the goal for that iteration
         goal = self.make_goal()
         agent_log.debug(
-            "Goal for that cycle [cycle={}]:\n{}".format(
+            "[cycle={}] Goal for that cycle:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(goal)
             )
         )
@@ -1515,7 +1515,7 @@ class OpencogAgent:
         # next two iterations.
         cogscms = self.plan(goal, self.expiry)
         agent_log.debug(
-            "Planned cognitive schematics [cycle={}, count={}]:\n{}".format(
+            "[cycle={}] Planned cognitive schematics [count={}]:\n{}".format(
                 self.cycle_count, len(cogscms), atoms_to_scheme_str(cogscms)
             )
         )
@@ -1523,7 +1523,7 @@ class OpencogAgent:
         # Deduce the action distribution
         mxmdl = self.deduce(cogscms)
         agent_log.debug(
-            "Mixture models [cycle={}]:\n{}".format(
+            "[cycle={}] Mixture models:\n{}".format(
                 self.cycle_count, self.mixture_model.mxmdl_to_str(mxmdl)
             )
         )
@@ -1540,12 +1540,12 @@ class OpencogAgent:
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.cycle_count, tv=TRUE_TV)
         agent_log.fine(
-            "Timestamped action [cycle={}]:\n{}".format(
+            "[cycle={}] Timestamped action:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(action_record)
             )
         )
         agent_log.debug(
-            "Action to execute [cycle={}]:\n{}".format(
+            "[cycle={}] Action to execute:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(action)
             )
         )
@@ -1553,7 +1553,7 @@ class OpencogAgent:
         # Increment the counter for that action and log it
         self.action_counter[action] += 1
         agent_log.debug(
-            "Action counter [cycle={}, total={}]:\n{}".format(
+            "[cycle={}] Action counter [total={}]:\n{}".format(
                 self.cycle_count,
                 self.action_counter.total(),
                 self.action_counter_to_str(),
@@ -1566,26 +1566,26 @@ class OpencogAgent:
         self.observation, reward, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
         agent_log.debug(
-            "Observations [cycle={}, count={}]:\n{}".format(
+            "[cycle={}] Observations [count={}]:\n{}".format(
                 self.cycle_count,
                 len(self.observation),
                 atoms_to_scheme_str(self.observation),
             )
         )
         agent_log.debug(
-            "Reward [cycle={}]:\n{}".format(
+            "[cycle={}] Reward:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(reward)
             )
         )
         agent_log.debug(
-            "Accumulated reward [cycle={}] = {}".format(
+            "[cycle={}] Accumulated reward = {}".format(
                 self.cycle_count, self.accumulated_reward
             )
         )
 
         reward_record = self.record(reward, self.cycle_count, tv=TRUE_TV)
         agent_log.fine(
-            "Timestamped reward [cycle={}]:\n{}".format(
+            "[cycle={}] Timestamped reward:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(reward_record)
             )
         )
