@@ -394,7 +394,7 @@ class OpencogAgent:
         agent_log.fine(
             "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={}, rules={})".format(
                 atomspace,
-                source.id_string(),
+                atom_to_idstr(source),
                 maximum_iterations,
                 full_rule_application,
                 rules,
@@ -445,7 +445,7 @@ class OpencogAgent:
 
         agent_log.fine(
             "pln_bc(atomspace={}, target={}, maximum_iterations={}, rules={})".format(
-                atomspace, target.id_string(), maximum_iterations, rules
+                atomspace, atom_to_idstr(target), maximum_iterations, rules
             )
         )
 
@@ -578,7 +578,7 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("directly_evaluate(atom={})".format(atom.id_string()))
+        agent_log.fine("directly_evaluate(atom={})".format(atom_to_idstr(atom)))
 
         # Exit now to avoid division by zero
         if self.total_count == 0:
@@ -868,7 +868,7 @@ class OpencogAgent:
         """Turn a temporal pattern into predictive implicant."""
 
         agent_log.fine(
-            "to_predictive_implicant(pattern={})".format(pattern.id_string())
+            "to_predictive_implicant(pattern={})".format(atom_to_idstr(pattern))
         )
 
         timed_clauses = self.get_pattern_timed_clauses(pattern)
@@ -977,7 +977,7 @@ class OpencogAgent:
         """
 
         agent_log.fine(
-            "to_predictive_implication_scope(pattern={})".format(pattern.id_string())
+            "to_predictive_implication_scope(pattern={})".format(atom_to_idstr(pattern))
         )
 
         # Get the predictive implication implicant and implicand
@@ -985,8 +985,8 @@ class OpencogAgent:
         pt = self.to_predictive_implicant(pattern)
         pd = self.to_predictive_implicand(pattern)
 
-        agent_log.fine("pt = {}".format(pt.id_string()))
-        agent_log.fine("pd = {}".format(pd.id_string()))
+        agent_log.fine("pt = {}".format(atom_to_idstr(pt)))
+        agent_log.fine("pd = {}".format(atom_to_idstr(pd)))
 
         # HACK: big hack, pd is turned into positive goal to create a
         # predictive implication of such positive goal with low
@@ -1698,7 +1698,7 @@ class MixtureModel:
     def prior_estimate(self, cogscm: Atom) -> float:
         """Calculate the prior probability of cogscm."""
 
-        agent_log.fine("prior_estimate(cogscm={})".format(cogscm.id_string()))
+        agent_log.fine("prior_estimate(cogscm={})".format(atom_to_idstr(cogscm)))
 
         # Get the complexity (program size) of cogscm
         partial_complexity = self.complexity(cogscm)
