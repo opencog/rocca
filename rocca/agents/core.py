@@ -1645,7 +1645,7 @@ class OpencogAgent:
             # NEXT: update the cycle count as well
         return success
 
-    def save_cogscm_atomspace(self, filepath: str, overwrite: bool = True) -> bool:
+    def save_cogscms_atomspace(self, filepath: str, overwrite: bool = True) -> bool:
         """Save the cogscm atomspace at the indicated filepath.
 
         The cogscm atomspace is saved in Scheme format.
@@ -1662,7 +1662,7 @@ class OpencogAgent:
             file.write(atoms_to_scheme_str(self.cognitive_schematics) + "\n")
         return True
 
-    def load_cogscm_atomspace(
+    def load_cogscms_atomspace(
         self, filepath: str, overwrite: bool = True, fast: bool = True
     ) -> bool:
         """Load the cogscm atomspace from the given filepath.
