@@ -1597,6 +1597,96 @@ class OpencogAgent:
 
         return done
 
+    def save_percepta_atomspace(self, filepath: str, overwrite: bool = True) -> bool:
+        """Save the percepta atomspace at the indicated filepath.
+
+        If `overwrite` is set to True (the default), then the file is
+        cleared before being written.
+
+        The percepta atomspace is saved in Scheme format.
+
+        Return False if it fails, True otherwise.
+
+        """
+
+        return save_atomspace(self.percepta_atomspace, filepath, overwrite)
+
+    def load_percepta_atomspace(
+        self, filepath: str, overwrite: bool = True, fast: bool = True
+    ) -> bool:
+        """Load the percepta atomspace from the given filepath.
+
+        The file should be in Scheme format.
+
+        If `overwrite` is set to True (the default), then the
+        percepta atomspace is cleared before being written.
+
+        If `fast` is set to True (the default), then the atomspace is
+        loaded with OpenCog's built-in function for fast loading.
+        Note however that in that case the file should not contain any
+        Scheme code beside Atomese constructs.  (WARNING: only
+        fast==True is support for now).
+
+        Return False if it fails, True otherwise.  (WARNING: not
+        supported yet, always return True).  If successful it will
+        automatically update the percepta record and the cycle count
+        so that new percepts do not have the same timestamps as the
+        just loaded ones.
+
+        """
+
+        success = load_atomspace(self.percepta_atomspace, filepath, overwrite)
+        if success:
+            print("TODO")
+            # NEXT: take care of filling the percepta record
+            # NEXT: update the cycle count as well
+        return success
+
+    def save_cogscm_atomspace(self, filepath: str, overwrite: bool = True) -> bool:
+        """Save the cogscm atomspace at the indicated filepath.
+
+        The cogscm atomspace is saved in Scheme format.
+
+        If `overwrite` is set to True (the default), then the file is
+        cleared before being written.
+
+        Return False if it fails, True otherwise. (WARNING: not
+        supported yet, it always returns True).
+
+        """
+
+        with open(filepath, "w" if overwrite else "a") as file:
+            file.write(atoms_to_scheme_str(self.cognitive_schematics) + "\n")
+        return True
+
+    def load_cogscm_atomspace(
+        self, filepath: str, overwrite: bool = True, fast: bool = True
+    ) -> bool:
+        """Load the cogscm atomspace from the given filepath.
+
+        The file should be in Scheme format.
+
+        If `overwrite` is set to True (the default), then the
+        cogscm atomspace is cleared before being written.
+
+        If `fast` is set to True (the default), then the atomspace is
+        loaded with OpenCog's built-in function for fast loading.
+        Note however that in that case the file should not contain any
+        Scheme code beside Atomese constructs.  (WARNING: only
+        fast==True is support for now).
+
+        Return False if it fails, True otherwise.  If successful it
+        will automatically update NEXT
+
+        """
+
+        success = load_atomspace(self.cogscms_atomspace, filepath, overwrite)
+        if success:
+            if overwrite:
+                self.cognitive_schematics.clear()
+            self.cognitive_schematics.update(atomspace_roots(self.cogscms_atomspace))
+        return success
+
 
 class MixtureModel:
     """Class holding a Mixture Model for action decision."""
