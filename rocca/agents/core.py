@@ -1609,6 +1609,9 @@ class OpencogAgent:
 
         """
 
+        # TODO: better print the percepta_record using
+        # percepta_record_to_scheme_str (though the member links
+        # should also be included).
         return save_atomspace(self.percepta_atomspace, filepath, overwrite)
 
     def load_percepta_atomspace(
