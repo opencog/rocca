@@ -67,8 +67,8 @@ class OpencogAgent:
     ):
         # Construct the various atomspaces
         self.atomspace = atomspace  # Working atomspace
-        self.percepta_atomspace = AtomSpace()
-        self.cogscms_atomspace = AtomSpace()
+        self.percepta_atomspace = AtomSpace()  # TODO: make sure contains only percepta
+        self.cogscms_atomspace = AtomSpace()  # TODO: make sure contains only cogscms
         self.working_atomspace = AtomSpace()
         set_default_atomspace(self.atomspace)
 
