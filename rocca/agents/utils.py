@@ -9,7 +9,6 @@ import random
 import math
 from typing import Any
 from functools import cmp_to_key
-from orderedmultidict import omdict
 
 # SciPy
 import scipy.stats as st
@@ -27,7 +26,7 @@ from opencog.atomspace import (
 from opencog.execute import execute_atom
 from opencog.logger import create_logger
 from opencog.pln import ZLink, SLink
-from opencog.scheme import scheme_eval, scheme_eval_h
+from opencog.scheme import scheme_eval, scheme_eval_h, load_scm
 from opencog.spacetime import AtTimeLink, TimeNode
 from opencog.type_constructors import (
     VariableSet,
@@ -38,7 +37,7 @@ from opencog.type_constructors import (
     SatisfactionLink,
     TruthValue,
 )
-from opencog.utilities import get_free_variables
+from opencog.utilities import get_free_variables, load_file
 
 #############
 # Constants #
@@ -602,7 +601,7 @@ def get_times(timed_atoms: list[Atom]) -> set[Atom]:
     return set.union(set([get_time(timed_atoms[0])]), get_times(timed_atoms[1:]))
 
 
-def get_events(timed_atoms: list[Atom]) -> list[Atom]:
+def get_events(timed_atoms: set[Atom] | list[Atom]) -> list[Atom]:
     """Given a container of timestamped clauses, return a list of all events."""
 
     return [get_event(ta) for ta in timed_atoms]
@@ -1246,6 +1245,58 @@ def percepta_record_to_scheme_str(percepta_record: list[set[Atom]]) -> str:
     """
 
     return "\n".join([timed_percepta_to_scheme_str(tp) for tp in percepta_record])
+
+
+def save_atomspace(atomspace: AtomSpace, filepath: str, overwrite: bool = True) -> bool:
+    """Save the given atomspace at the indicated filepath.
+
+    The atomspace is saved in Scheme format.
+
+    If `overwrite` is set to True (the default), then the file is
+    cleared before being written. (WARNING: not supported yet).
+
+    Return False if it fails, True otherwise. (WARNING: not supported
+    yet, always return True).
+
+    """
+
+    # TODO: support overwrite
+    scheme_eval(atomspace, '(export-all-atoms "{}")'.format(filepath))
+    # TODO: support status output
+    return True
+
+
+def load_atomspace(
+    atomspace: AtomSpace, filepath: str, overwrite: bool = True, fast: bool = True
+) -> bool:
+    """Load the given atomspace from the given filepath.
+
+    The file should be in Scheme format.
+
+    If `overwrite` is set to True (the default), then the atomspace is
+    cleared before being written.
+
+    If `fast` is set to True (the default), then the atomspace is
+    loaded with OpenCog's built-in function for fast loading.  Note
+    however that in that case the file should not contain any Scheme
+    code beside Atomese constructs.  (WARNING: only fast==True is
+    support for now).
+
+    Return False if it fails, True otherwise.  (WARNING: not fully
+    support yet).
+
+    """
+
+    if overwrite:
+        atomspace.clear()
+
+    if fast:
+        load_file(filepath, atomspace)
+        return True  # TODO: wrap load_file in a try/catch
+    else:
+        # TODO: support not fast
+        agent_log.warn("Normal loading not implemented!")
+        return False
 
 
 class MinerLogger:

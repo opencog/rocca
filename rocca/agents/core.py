@@ -10,6 +10,7 @@ import math
 import multiprocessing
 from collections import Counter
 from typing import Any
+from orderedmultidict import omdict
 
 # SciPy
 import scipy.special as sp
@@ -66,8 +67,8 @@ class OpencogAgent:
     ):
         # Construct the various atomspaces
         self.atomspace = atomspace  # Working atomspace
-        self.percepta_atomspace = AtomSpace()
-        self.cogscms_atomspace = AtomSpace()
+        self.percepta_atomspace = AtomSpace()  # TODO: make sure contains only percepta
+        self.cogscms_atomspace = AtomSpace()  # TODO: make sure contains only cogscms
         self.working_atomspace = AtomSpace()
         set_default_atomspace(self.atomspace)
 
@@ -393,7 +394,7 @@ class OpencogAgent:
         agent_log.fine(
             "pln_fc(atomspace={}, source={}, maximum_iterations={}, full_rule_application={}, rules={})".format(
                 atomspace,
-                source.id_string(),
+                atom_to_idstr(source),
                 maximum_iterations,
                 full_rule_application,
                 rules,
@@ -444,7 +445,7 @@ class OpencogAgent:
 
         agent_log.fine(
             "pln_bc(atomspace={}, target={}, maximum_iterations={}, rules={})".format(
-                atomspace, target.id_string(), maximum_iterations, rules
+                atomspace, atom_to_idstr(target), maximum_iterations, rules
             )
         )
 
@@ -577,7 +578,7 @@ class OpencogAgent:
 
         """
 
-        agent_log.fine("directly_evaluate(atom={})".format(atom.id_string()))
+        agent_log.fine("directly_evaluate(atom={})".format(atom_to_idstr(atom)))
 
         # Exit now to avoid division by zero
         if self.total_count == 0:
@@ -867,7 +868,7 @@ class OpencogAgent:
         """Turn a temporal pattern into predictive implicant."""
 
         agent_log.fine(
-            "to_predictive_implicant(pattern={})".format(pattern.id_string())
+            "to_predictive_implicant(pattern={})".format(atom_to_idstr(pattern))
         )
 
         timed_clauses = self.get_pattern_timed_clauses(pattern)
@@ -976,7 +977,7 @@ class OpencogAgent:
         """
 
         agent_log.fine(
-            "to_predictive_implication_scope(pattern={})".format(pattern.id_string())
+            "to_predictive_implication_scope(pattern={})".format(atom_to_idstr(pattern))
         )
 
         # Get the predictive implication implicant and implicand
@@ -984,8 +985,8 @@ class OpencogAgent:
         pt = self.to_predictive_implicant(pattern)
         pd = self.to_predictive_implicand(pattern)
 
-        agent_log.fine("pt = {}".format(pt.id_string()))
-        agent_log.fine("pd = {}".format(pd.id_string()))
+        agent_log.fine("pt = {}".format(atom_to_idstr(pt)))
+        agent_log.fine("pd = {}".format(atom_to_idstr(pd)))
 
         # HACK: big hack, pd is turned into positive goal to create a
         # predictive implication of such positive goal with low
@@ -1349,7 +1350,7 @@ class OpencogAgent:
         )
         return [cogscm for cogscm in self.cognitive_schematics if meet(cogscm)]
 
-    def deduce(self, cogscms: list[Atom]) -> omdict:
+    def deduce(self, cogscms: list[Atom]) -> omdict[Atom, tuple[float, Atom]]:
         """Return an action distribution given a list cognitive schematics.
 
         The action distribution is actually a second order
@@ -1426,7 +1427,7 @@ class OpencogAgent:
         )
         valid_cogscms = [cogscm for cogscm in cogscms if 0.9 < ctx_tv(cogscm).mean]
         agent_log.debug(
-            "Valid cognitive schematics [cycle={}, count={}]:\n{}".format(
+            "[cycle={}] Valid cognitive schematics [count={}]:\n{}".format(
                 self.cycle_count,
                 len(valid_cogscms),
                 atoms_to_scheme_str(valid_cogscms, only_id=True),
@@ -1436,13 +1437,16 @@ class OpencogAgent:
         # Return the mixture model for that cycle
         return self.mixture_model.mk_mxmdl(valid_cogscms, self.total_count)
 
-    def decide(self, mxmdl: omdict) -> tuple[Atom, float]:
+    def decide(
+        self, mxmdl: omdict[Atom, tuple[float, Atom]]
+    ) -> tuple[Atom, Atom, float]:
         """Select the next action to enact from a mixture model of cogscms.
 
-        The action is selected from the action distribution, a list of
-        pairs (action, tv), obtained from deduce.  The selection uses
-        Thompson sampling leveraging the second order distribution to
-        balance exploitation and exploration. See
+        The action is selected from a mixture model, a multimap from
+        action to weighted cognitive schematics obtained from deduce.
+        The selection uses Thompson sampling leveraging the second
+        order distribution to balance exploitation and
+        exploration. See
         http://auai.org/uai2016/proceedings/papers/20.pdf for more
         details about Thompson Sampling.
 
@@ -1450,10 +1454,11 @@ class OpencogAgent:
 
         # Select the action alongside its first order probability
         # estimate of success
-        action, _, pblty, _ = self.mixture_model.thompson_sample(mxmdl)
+        action, _, cogscm, pblty, _ = self.mixture_model.thompson_sample(mxmdl)
 
-        # Return the action with probability of success estimate
-        return (action, pblty)
+        # Return the action, the cognitive schematic it comes from,
+        # and it probability estimate of success.
+        return (action, cogscm, pblty)
 
     def control_cycle(self) -> bool:
         """Run one cycle of
@@ -1495,7 +1500,7 @@ class OpencogAgent:
             self.record(o, self.cycle_count, tv=TRUE_TV) for o in self.observation
         ]
         agent_log.fine(
-            "Timestamped observations [cycle={}]:\n{}".format(
+            "[cycle={}] Timestamped observations:\n{}".format(
                 self.cycle_count, atoms_to_scheme_str(obs_record)
             )
         )
@@ -1503,7 +1508,7 @@ class OpencogAgent:
         # Make the goal for that iteration
         goal = self.make_goal()
         agent_log.debug(
-            "Goal for that cycle [cycle={}]:\n{}".format(
+            "[cycle={}] Goal for that cycle:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(goal)
             )
         )
@@ -1513,7 +1518,7 @@ class OpencogAgent:
         # next two iterations.
         cogscms = self.plan(goal, self.expiry)
         agent_log.debug(
-            "Planned cognitive schematics [cycle={}, count={}]:\n{}".format(
+            "[cycle={}] Planned cognitive schematics [count={}]:\n{}".format(
                 self.cycle_count, len(cogscms), atoms_to_scheme_str(cogscms)
             )
         )
@@ -1521,29 +1526,31 @@ class OpencogAgent:
         # Deduce the action distribution
         mxmdl = self.deduce(cogscms)
         agent_log.debug(
-            "Mixture models [cycle={}]:\n{}".format(
+            "[cycle={}] Mixture models:\n{}".format(
                 self.cycle_count, self.mixture_model.mxmdl_to_str(mxmdl)
             )
         )
 
         # Select the next action
-        action, pblty = self.decide(mxmdl)
+        action, cogscm, pblty = self.decide(mxmdl)
         agent_log.debug(
-            "Selected action with its weight and probability of success [cycle={}]:\n{}".format(
+            "[cycle={}] Selected action {} from {} with probability of success {}".format(
                 self.cycle_count,
-                self.mixture_model.act_pblt_to_str((action, pblty)),
+                to_human_readable_str(action),
+                atom_to_idstr(cogscm),
+                pblty,
             )
         )
 
         # Timestamp the action that is about to be executed
         action_record = self.record(action, self.cycle_count, tv=TRUE_TV)
         agent_log.fine(
-            "Timestamped action [cycle={}]:\n{}".format(
+            "[cycle={}] Timestamped action:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(action_record)
             )
         )
         agent_log.debug(
-            "Action to execute [cycle={}]:\n{}".format(
+            "[cycle={}] Action to execute:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(action)
             )
         )
@@ -1551,7 +1558,7 @@ class OpencogAgent:
         # Increment the counter for that action and log it
         self.action_counter[action] += 1
         agent_log.debug(
-            "Action counter [cycle={}, total={}]:\n{}".format(
+            "[cycle={}] Action counter [total={}]:\n{}".format(
                 self.cycle_count,
                 self.action_counter.total(),
                 self.action_counter_to_str(),
@@ -1564,31 +1571,124 @@ class OpencogAgent:
         self.observation, reward, done = self.env.step(action)
         self.accumulated_reward += int(reward.out[1].name)
         agent_log.debug(
-            "Observations [cycle={}, count={}]:\n{}".format(
+            "[cycle={}] Observations [count={}]:\n{}".format(
                 self.cycle_count,
                 len(self.observation),
                 atoms_to_scheme_str(self.observation),
             )
         )
         agent_log.debug(
-            "Reward [cycle={}]:\n{}".format(
+            "[cycle={}] Reward:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(reward)
             )
         )
         agent_log.debug(
-            "Accumulated reward [cycle={}] = {}".format(
+            "[cycle={}] Accumulated reward = {}".format(
                 self.cycle_count, self.accumulated_reward
             )
         )
 
         reward_record = self.record(reward, self.cycle_count, tv=TRUE_TV)
         agent_log.fine(
-            "Timestamped reward [cycle={}]:\n{}".format(
+            "[cycle={}] Timestamped reward:\n{}".format(
                 self.cycle_count, atom_to_scheme_str(reward_record)
             )
         )
 
         return done
+
+    def save_percepta_atomspace(self, filepath: str, overwrite: bool = True) -> bool:
+        """Save the percepta atomspace at the indicated filepath.
+
+        If `overwrite` is set to True (the default), then the file is
+        cleared before being written.
+
+        The percepta atomspace is saved in Scheme format.
+
+        Return False if it fails, True otherwise.
+
+        """
+
+        # TODO: better print the percepta_record using
+        # percepta_record_to_scheme_str (though the member links
+        # should also be included).
+        return save_atomspace(self.percepta_atomspace, filepath, overwrite)
+
+    def load_percepta_atomspace(
+        self, filepath: str, overwrite: bool = True, fast: bool = True
+    ) -> bool:
+        """Load the percepta atomspace from the given filepath.
+
+        The file should be in Scheme format.
+
+        If `overwrite` is set to True (the default), then the
+        percepta atomspace is cleared before being written.
+
+        If `fast` is set to True (the default), then the atomspace is
+        loaded with OpenCog's built-in function for fast loading.
+        Note however that in that case the file should not contain any
+        Scheme code beside Atomese constructs.  (WARNING: only
+        fast==True is support for now).
+
+        Return False if it fails, True otherwise.  (WARNING: not
+        supported yet, always return True).  If successful it will
+        automatically update the percepta record and the cycle count
+        so that new percepts do not have the same timestamps as the
+        just loaded ones.
+
+        """
+
+        success = load_atomspace(self.percepta_atomspace, filepath, overwrite)
+        if success:
+            print("TODO")
+            # NEXT: take care of filling the percepta record
+            # NEXT: update the cycle count as well
+        return success
+
+    def save_cogscm_atomspace(self, filepath: str, overwrite: bool = True) -> bool:
+        """Save the cogscm atomspace at the indicated filepath.
+
+        The cogscm atomspace is saved in Scheme format.
+
+        If `overwrite` is set to True (the default), then the file is
+        cleared before being written.
+
+        Return False if it fails, True otherwise. (WARNING: not
+        supported yet, it always returns True).
+
+        """
+
+        with open(filepath, "w" if overwrite else "a") as file:
+            file.write(atoms_to_scheme_str(self.cognitive_schematics) + "\n")
+        return True
+
+    def load_cogscm_atomspace(
+        self, filepath: str, overwrite: bool = True, fast: bool = True
+    ) -> bool:
+        """Load the cogscm atomspace from the given filepath.
+
+        The file should be in Scheme format.
+
+        If `overwrite` is set to True (the default), then the
+        cogscm atomspace is cleared before being written.
+
+        If `fast` is set to True (the default), then the atomspace is
+        loaded with OpenCog's built-in function for fast loading.
+        Note however that in that case the file should not contain any
+        Scheme code beside Atomese constructs.  (WARNING: only
+        fast==True is support for now).
+
+        Return False if it fails, True otherwise.  If successful it
+        will automatically update NEXT
+
+        """
+
+        success = load_atomspace(self.cogscms_atomspace, filepath, overwrite)
+        if success:
+            if overwrite:
+                self.cognitive_schematics.clear()
+            self.cognitive_schematics.update(atomspace_roots(self.cogscms_atomspace))
+        return success
 
 
 class MixtureModel:
@@ -1696,7 +1796,7 @@ class MixtureModel:
     def prior_estimate(self, cogscm: Atom) -> float:
         """Calculate the prior probability of cogscm."""
 
-        agent_log.fine("prior_estimate(cogscm={})".format(cogscm.id_string()))
+        agent_log.fine("prior_estimate(cogscm={})".format(atom_to_idstr(cogscm)))
 
         # Get the complexity (program size) of cogscm
         partial_complexity = self.complexity(cogscm)
@@ -1762,7 +1862,9 @@ class MixtureModel:
             max_count = max(cogscms, key=lambda x: x.tv.count).tv.count
         self.data_set_size = max(max_count, float(total_count))
 
-    def mk_mxmdl(self, valid_cogscms: list[Atom], total_count: int) -> omdict:
+    def mk_mxmdl(
+        self, valid_cogscms: list[Atom], total_count: int
+    ) -> omdict[Atom, tuple[float, Atom]]:
         # Infer the size of the complete data set, including all
         # observations used to build the mixture model.  It needs to
         # be called before calling MixtureModel.weight
@@ -1782,8 +1884,9 @@ class MixtureModel:
 
         return mxmdl
 
-    # NEXT: see if omdict annotation can be improved
-    def thompson_sample(self, mxmdl: omdict) -> tuple[Atom, float, float, float]:
+    def thompson_sample(
+        self, mxmdl: omdict[Atom, tuple[float, Atom]]
+    ) -> tuple[Atom, float, Atom, float, float]:
         """Perform Thompson sampling over the mixture model.
 
         Meaning, for each action
@@ -1807,43 +1910,50 @@ class MixtureModel:
         """
 
         # 1. For each action select its TV according its weight
-        act_w8d_cogscms = [
+        act_w8d_cogscm_seq = [
             (action, weighted_sampling(w8d_cogscms))
             for (action, w8d_cogscms) in mxmdl.listitems()
         ]
         agent_log.fine(
-            "act_w8d_cogscms:\n{}".format(self.act_w8d_cogscms_to_str(act_w8d_cogscms))
+            "act_w8d_cogscm_seq:\n{}".format(
+                self.act_w8d_cogscm_seq_to_str(act_w8d_cogscm_seq)
+            )
         )
 
         # 2. For each action select its first order probability given its tv
-        act_w8_pblts = [
+        act_w8_cogscm_pblt_seq = [
             (
                 action,
                 w8_cogscm[0],
+                w8_cogscm[1],
                 tv_rv(get_cogscm_tv(w8_cogscm[1]), self.prior_a, self.prior_b),
             )
-            for (action, w8_cogscm) in act_w8d_cogscms
+            for (action, w8_cogscm) in act_w8d_cogscm_seq
         ]
         agent_log.fine(
-            "act_w8_pblts:\n{}".format(self.act_w8_pblts_to_str(act_w8_pblts))
+            "act_w8_cogscm_pblt_seq:\n{}".format(
+                self.act_w8_cogscm_pblt_seq_to_str(act_w8_cogscm_pblt_seq)
+            )
         )
 
         # 3. For each action calculate the weighted probability
-        act_w8_w8d_pblts = [
-            (action, w8, p, self.weighted_probability(w8, p))
-            for (action, w8, p) in act_w8_pblts
+        act_w8_cogscm_w8d_pblt_seq = [
+            (action, w8, cogscm, p, self.weighted_probability(w8, p))
+            for (action, w8, cogscm, p) in act_w8_cogscm_pblt_seq
         ]
         agent_log.fine(
-            "act_w8_w8d_plbts:\n{}".format(
-                self.act_w8_w8d_pblts_to_str(act_w8_w8d_pblts)
+            "act_w8_cogscm_w8d_plbt_seq:\n{}".format(
+                self.act_w8_cogscm_w8d_pblt_seq_to_str(act_w8_cogscm_w8d_pblt_seq)
             )
         )
 
         # Return an action with highest probability of success (TODO: take
         # care of ties)
-        return max(act_w8_w8d_pblts, key=lambda act_w8_w8d_plbt: act_w8_w8d_plbt[3])
+        return max(act_w8_cogscm_w8d_pblt_seq, key=lambda t: t[4])
 
-    def mxmdl_to_str(self, mxmdl: omdict, indent: str = "") -> str:
+    def mxmdl_to_str(
+        self, mxmdl: omdict[Atom, tuple[float, Atom]], indent: str = ""
+    ) -> str:
         """Pretty print the given mixture model of cogscms"""
 
         ss: list[str] = []
@@ -1852,7 +1962,7 @@ class MixtureModel:
             w8d_cogscms = act_w8d_cogscms[1]
             s = indent + to_human_readable_str(action)
             s += " [size={}]:\n".format(len(w8d_cogscms))
-            s += self.w8d_cogscms_to_str(w8d_cogscms, indent + "  ")
+            s += self.w8d_cogscm_seq_to_str(w8d_cogscms, indent + "  ")
             ss.append(s)
         return "\n".join(ss)
 
@@ -1868,15 +1978,15 @@ class MixtureModel:
         s = "(weight={}, tv={}, id={})".format(weight, tv, idstr)
         return s
 
-    def w8d_cogscms_to_str(
-        self, w8d_cogscms: list[tuple[float, Atom]], indent: str = ""
+    def w8d_cogscm_seq_to_str(
+        self, w8d_cogscm_seq: list[tuple[float, Atom]], indent: str = ""
     ) -> str:
         """Pretty print the given list of weighted cogscms"""
 
-        w8d_cogscms_sorted = sorted(w8d_cogscms, key=lambda x: x[0], reverse=True)
+        w8d_cogscm_seq_sorted = sorted(w8d_cogscm_seq, key=lambda x: x[0], reverse=True)
 
         ss: list[str] = []
-        for w8d_cogscm in w8d_cogscms_sorted:
+        for w8d_cogscm in w8d_cogscm_seq_sorted:
             ss.append(indent + self.w8d_cogscm_to_str(w8d_cogscm, indent + "  "))
         return "\n".join(ss)
 
@@ -1885,13 +1995,13 @@ class MixtureModel:
         pblt = act_pblt[1]
         return indent + "{}: {}".format(to_human_readable_str(action), pblt)
 
-    def act_pblts_to_str(
-        self, act_pblts: list[tuple[Atom, float]], indent: str = ""
+    def act_pblt_seq_to_str(
+        self, act_pblt_seq: list[tuple[Atom, float]], indent: str = ""
     ) -> str:
         """Pretty print a list of pairs (action, probability)."""
 
         return "\n".join(
-            [indent + self.act_pblt_to_str(act_pblt) for act_pblt in act_pblts]
+            [indent + self.act_pblt_to_str(act_pblt) for act_pblt in act_pblt_seq]
         )
 
     def act_w8_pblt_to_str(
@@ -1906,13 +2016,43 @@ class MixtureModel:
             to_human_readable_str(action), weight, pblt
         )
 
-    def act_w8_pblts_to_str(
-        self, act_w8_pblts: list[tuple[Atom, float, float]], indent: str = ""
+    def act_w8_pblt_seq_to_str(
+        self, act_w8_pblt_seq: list[tuple[Atom, float, float]], indent: str = ""
     ) -> str:
         """Pretty print a list of triple (action, weight, probability)."""
 
         return "\n".join(
-            [indent + self.act_w8_pblt_to_str(act_pblt) for act_pblt in act_w8_pblts]
+            [
+                indent + self.act_w8_pblt_to_str(act_w8_pblt)
+                for act_w8_pblt in act_w8_pblt_seq
+            ]
+        )
+
+    def act_w8_cogscm_pblt_to_str(
+        self, act_w8_cogscm_pblt: tuple[Atom, float, Atom, float], indent: str = ""
+    ) -> str:
+        """Pretty print a triple (action, weight, probability)."""
+
+        action = act_w8_cogscm_pblt[0]
+        weight = act_w8_cogscm_pblt[1]
+        cogscm = act_w8_cogscm_pblt[2]
+        pblt = act_w8_cogscm_pblt[3]
+        return indent + "{}: (weight={}, cogscm={}, probability={})".format(
+            to_human_readable_str(action), weight, atom_to_idstr(cogscm), pblt
+        )
+
+    def act_w8_cogscm_pblt_seq_to_str(
+        self,
+        act_w8_cogscm_pblt_seq: list[tuple[Atom, float, Atom, float]],
+        indent: str = "",
+    ) -> str:
+        """Pretty print a list of tuple (action, weight, cogscm, probability)."""
+
+        return "\n".join(
+            [
+                indent + self.act_w8_cogscm_pblt_to_str(act_w8_cogscm_pblt)
+                for act_w8_cogscm_pblt in act_w8_cogscm_pblt_seq
+            ]
         )
 
     def act_w8_w8d_pblt_to_str(
@@ -1931,15 +2071,54 @@ class MixtureModel:
             )
         )
 
-    def act_w8_w8d_pblts_to_str(
-        self, act_w8_w8d_pblts: list[tuple[Atom, float, float, float]], indent: str = ""
+    def act_w8_w8d_pblt_seq_to_str(
+        self,
+        act_w8_w8d_pblt_seq: list[tuple[Atom, float, float, float]],
+        indent: str = "",
     ) -> str:
         """Pretty print a list of quadruples (action, weight, probability, weighted probability)."""
 
         return "\n".join(
             [
                 indent + self.act_w8_w8d_pblt_to_str(act_w8_w8d_pblt)
-                for act_w8_w8d_pblt in act_w8_w8d_pblts
+                for act_w8_w8d_pblt in act_w8_w8d_pblt_seq
+            ]
+        )
+
+    def act_w8_cogscm_w8d_pblt_to_str(
+        self,
+        act_w8_cogscm_w8d_pblt: tuple[Atom, float, Atom, float, float],
+        indent: str = "",
+    ) -> str:
+        """Pretty print a tuple (action, weight, cogscm, probability, weighted probability)."""
+
+        action = act_w8_cogscm_w8d_pblt[0]
+        weight = act_w8_cogscm_w8d_pblt[1]
+        cogscm = act_w8_cogscm_w8d_pblt[2]
+        pblt = act_w8_cogscm_w8d_pblt[3]
+        w8d_pblt = act_w8_cogscm_w8d_pblt[4]
+        return (
+            indent
+            + "{}: (weight={}, cogscm={}, probability={}, weighted probability={})".format(
+                to_human_readable_str(action),
+                weight,
+                atom_to_idstr(cogscm),
+                pblt,
+                w8d_pblt,
+            )
+        )
+
+    def act_w8_cogscm_w8d_pblt_seq_to_str(
+        self,
+        act_w8_cogscm_w8d_pblt_seq: list[tuple[Atom, float, Atom, float, float]],
+        indent: str = "",
+    ) -> str:
+        """Pretty print a list of tuples (action, weight, cogscm, probability, weighted probability)."""
+
+        return "\n".join(
+            [
+                indent + self.act_w8_cogscm_w8d_pblt_to_str(act_w8_cogscm_w8d_pblt)
+                for act_w8_cogscm_w8d_pblt in act_w8_cogscm_w8d_pblt_seq
             ]
         )
 
@@ -1958,14 +2137,16 @@ class MixtureModel:
         )
         return s
 
-    def act_w8d_cogscms_to_str(
-        self, act_w8d_cogscms: list[tuple[Atom, tuple[float, Atom]]], indent: str = ""
+    def act_w8d_cogscm_seq_to_str(
+        self,
+        act_w8d_cogscm_seq: list[tuple[Atom, tuple[float, Atom]]],
+        indent: str = "",
     ) -> str:
         """Pretty print a list of pairs (action, (weight, cogscm))."""
 
         return "\n".join(
             [
                 indent + self.act_w8d_cogscm_to_str(act_w8d_cogscm)
-                for act_w8d_cogscm in act_w8d_cogscms
+                for act_w8d_cogscm in act_w8d_cogscm_seq
             ]
         )
