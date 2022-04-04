@@ -81,6 +81,7 @@ class FlatworldAgent(OpencogAgent):
         self.mixture_model.complexity_penalty = 0.6
         self.mixture_model.delta = 1.0e-30
         self.mixture_model.compressiveness = 0.1
+        self.mixture_model.weight_influence = 1.0
 
         # Todo: restart the environment to get an initial reward
         self.initial_reward = EvaluationLink(PredicateNode("Reward"), NumberNode("0"))

@@ -8,6 +8,7 @@ import json
 import math
 import signal
 from contextlib import contextmanager
+import random
 
 
 @contextmanager
@@ -97,6 +98,23 @@ def drawLine(x1, y1, z1, x2, y2, z2, blocktype, face):
     )
 
 
+def draw_fence(x, y, z):
+    fence = ""
+    xy_coord = [(-x, z), (x, z), (x, -z), (-x, -z)]
+    for i in range(4):
+        fence += drawLine(
+            x1=xy_coord[i][0],
+            y1=y,
+            z1=xy_coord[i][1],
+            x2=xy_coord[i + 1][0] if i < 3 else xy_coord[0][0],
+            y2=y,
+            z2=xy_coord[i + 1][1] if i < 3 else xy_coord[0][1],
+            blocktype="fence",
+            face="WEST",
+        )
+    return fence
+
+
 def build_house(x, y, z, width, length, height, blocktype):
     x_front = x
     x_back = x + length if x >= 0 else x - length
@@ -114,7 +132,7 @@ def build_house(x, y, z, width, length, height, blocktype):
             if j > 0 and j < width:
                 genstring = (
                     genstring
-                    + drawBlock(x_back + 1, y_cur, z_cur, "diamond_block")
+                    + drawBlock(x_back + 1, y_cur, z_cur, "diamond_ore")
                     + "\n"
                 )
             z_cur = z_cur + 1 if z_cur >= 0 else z_cur - 1
@@ -142,7 +160,7 @@ def build_house(x, y, z, width, length, height, blocktype):
         15,
         y,
         -15,
-        blocktype,
+        "obsidian",
     )
     # ceiling
     genstring = genstring + GenCuboid(
@@ -207,21 +225,47 @@ def build_house(x, y, z, width, length, height, blocktype):
 agent_x, agent_y, agent_z, agent_yaw = 13, 230, -2, 90
 key_x, key_y, key_z = 7, 228, -10
 door_x, door_y, door_z = -4, 228, -3
+exit_x, exit_y, exit_z = -9, 228, -1
 diamond_x, diamond_y, diamond_z = -18, 228, -3
-start_x, start_y, start_z, width, length, height = -4, 226, -1, 6, 9, 3
+start_x, start_y, start_z, width, length, height = -4, 226, -1, 6, 9, 4
 hold_key = False
+fence_max = 15
+
+place_count = 0
+pitch_adjusted = False
+total_reward = 0
+
+
+def adjust_pitch(agent):
+    global pitch_adjusted
+    if not pitch_adjusted:
+        agent.sendCommand("pitch 0.5")
+        time.sleep(0.5)
+        agent.sendCommand("pitch 0")
+        pitch_adjusted = True
+
 
 # relocates the agent to the starting point
-def relocate_agent(agent):
-    print("Agent relocated to original place")
+def relocate_agent(agent, msg=""):
+    print(msg)
     agent.sendCommand("tp {} {} {}".format(agent_x, agent_y, agent_z))
+    if not hold_key:
+        agent.sendCommand("hotbar.4 1")
     agent.sendCommand("setYaw {}".format(agent_yaw))
     time.sleep(0.2)
 
 
+blocks = {
+    "gold_block": "key",
+    "dark_oak_door": "house",
+    "diamond_block": "diamonds",
+    "planks": "planks",
+    "diamond_ore": "diamonds",
+}
+
 # stop the agent
 def stop_condition(agent, blocktype, sec=10):
-    print("Moving to the {}".format(blocktype))
+    print("Moving to the {}".format(blocks[blocktype]))
 
     def stop(agent, blocktype):
         done = False
@@ -239,9 +283,8 @@ def stop_condition(agent, blocktype, sec=10):
             stop(agent, blocktype)
             return True
         except TimeoutError:
-            print("*********** Time out **************")
             agent.sendCommand("move 0")
-            relocate_agent(agent)
+            relocate_agent(agent, msg="*** RELOCATE: Unable to reach the target ***")
             return False
 
 
@@ -253,13 +296,14 @@ def get_curr_loc(agent):
         world_state = agent.peekWorldState()
         if world_state.number_of_observations_since_last_state > 0:
             ob = json.loads(world_state.observations[-1].text)
-            loc = (int(ob[u"XPos"]), int(ob[u"YPos"]), int(ob[u"ZPos"]))
+            yaw = int(ob["Yaw"])
+            loc = (int(ob[u"XPos"]), int(ob[u"YPos"]), int(ob[u"ZPos"]), yaw)
             break
     return loc
 
 
 # Turns the agent towards the location given
-def turn_to(agent, x1, y1, z1, x2, y2, z2):
+def turn_to(agent, x1, y1, z1, x2, y2, z2, curr_yaw=False):
     def get_angle(x1, y1, z1, x2, y2, z2):
         x_dist = abs(x1 - x2)
         z_dist = abs(z1 - z2)
@@ -272,7 +316,22 @@ def turn_to(agent, x1, y1, z1, x2, y2, z2):
         angle = yaw - angle if z1 < z2 else yaw + angle
     else:
         angle = yaw + angle if z1 < z2 else yaw - angle
-    agent.sendCommand("setYaw {}".format(angle))
+    if curr_yaw:
+        if curr_yaw < angle:
+            agent.sendCommand("turn 0.5")
+        else:
+            agent.sendCommand("turn -0.5")
+        while is_mission_running:
+            world_state = agent.peekWorldState()
+            if world_state.number_of_observations_since_last_state > 0:
+                ob = json.loads(world_state.observations[-1].text)
+                yaw = int(ob["Yaw"])
+                if abs(yaw - angle) < 5:
+                    agent.sendCommand("turn 0")
+                    agent.sendCommand("setYaw {}".format(angle))
+                    break
+    else:
+        agent.sendCommand("setYaw {}".format(angle))
 
 
 def is_mission_running(agent):
@@ -301,48 +360,50 @@ def get_txt(obs):
 # Move the agent towards the key
 # reward=0
 def go_to_key(agent):
-    agent.sendCommand("chat Grab key")
+    adjust_pitch(agent)
     global hold_key
     reward = 0
     observation = {}
-    curr_x, curr_y, curr_z = get_curr_loc(agent)
+    curr_x, curr_y, curr_z, curr_yaw = get_curr_loc(agent)
     if inside_house(curr_x, curr_z):
         observation["inside"] = ["self", "house"]
-        agent.sendCommand("chat => {}".format(get_txt(observation)))
+        print("Observation => {}".format(get_txt(observation)))
         return observation, reward, is_mission_running
     else:
         observation["outside"] = ["self", "house"]
     if hold_key:
         observation["hold"] = ["self", "key"]
-        agent.sendCommand("chat => {}".format(get_txt(observation)))
+        print("Observation => {}".format(get_txt(observation)))
         return observation, reward, is_mission_running
-    turn_to(agent, curr_x, curr_y, curr_z, key_x, key_y, key_z)
+    turn_to(agent, curr_x, curr_y, curr_z, key_x, key_y, key_z, curr_yaw=curr_yaw)
     time.sleep(0.2)
     agent.sendCommand("move 1")
-    action_complete = stop_condition(agent, "tripwire_hook")
+    action_complete = stop_condition(agent, "gold_block")
     if action_complete:
         observation["hold"] = ["self", "key"]
         agent.sendCommand("hotbar.2 1")
         hold_key = True
     else:
         observation = []
-    agent.sendCommand("chat => {}".format(get_txt(observation)))
+    print("Observation => {}".format(get_txt(observation)))
     return observation, reward, is_mission_running
 
 
 # Move the agent towards the house and enter the house.
 # reward = 0
 def go_to_house(agent):
-    agent.sendCommand("chat Open door")
+    adjust_pitch(agent)
     global hold_key
     reward = 0
     observation = {}
-    curr_x, curr_y, curr_z = get_curr_loc(agent)
+    curr_x, curr_y, curr_z, curr_yaw = get_curr_loc(agent)
     if inside_house(curr_x, curr_z):
         observation["inside"] = ["self", "house"]
-        agent.sendCommand("chat => {}".format(get_txt(observation)))
+        print("Observation => {}".format(get_txt(observation)))
         return observation, reward, is_mission_running
-    turn_to(agent, curr_x, curr_y, curr_z, door_x + 2, door_y, door_z)
+    turn_to(
+        agent, curr_x, curr_y, curr_z, door_x + 2, door_y, door_z, curr_yaw=curr_yaw
+    )
     time.sleep(0.2)
     agent.sendCommand("move 1")
     action_complete = stop_condition(agent, "dark_oak_door")
@@ -350,7 +411,7 @@ def go_to_house(agent):
         if hold_key:
             time.sleep(0.2)
             agent.sendCommand("tp {} {} {}".format(door_x, door_y, door_z))
-            time.sleep(0.2)
+            time.sleep(0.1)
             observation["inside"] = ["self", "house"]
             agent.sendCommand("hotbar.1 1")
             hold_key = False
@@ -358,27 +419,100 @@ def go_to_house(agent):
             observation["outside"] = ["self", "house"]
             observation["nextto"] = ["self", "closed_door"]
     reward = 0
-    agent.sendCommand("chat => {}".format(get_txt(observation)))
+    print("Observation => {}".format(get_txt(observation)))
     return observation, reward, is_mission_running
+
+
+def place_diamonds(agent):
+    global place_count
+    curr_x, curr_y, curr_z, curr_yaw = get_curr_loc(agent)
+    turn_to(
+        agent,
+        curr_x,
+        curr_y,
+        curr_z,
+        (exit_x + 2) + (2 * place_count),
+        exit_y,
+        fence_max,
+    )
+    agent.sendCommand("move 1")
+    time.sleep(2 - (place_count * 0.01))
+    placed = False
+    while not placed:
+        world_state = agent.getWorldState()
+        if world_state.number_of_observations_since_last_state > 0:
+            msg = world_state.observations[-1].text
+            ob = json.loads(msg)
+            # Use the line-of-sight observation to determine where to place:
+            if u"LineOfSight" in ob:
+                agent.sendCommand("turn {}".format(random.choice([0.05, -0.05])))
+                los = ob[u"LineOfSight"]
+                x = int(math.floor(los["x"]))
+                z = int(math.floor(los["z"]))
+                if los["inRange"]:
+                    agent.sendCommand("move 0")
+                    time.sleep(2)
+                    agent.sendCommand("use")
+                    agent.sendCommand("turn 0")
+                    agent.sendCommand("hotbar.5 1")
+                    time.sleep(2)
+                    place_count += 1
+                    placed = True
+
+
+def exit(agent):
+    curr_x, curr_y, curr_z, curr_yaw = get_curr_loc(agent)
+    turn_to(agent, curr_x, curr_y, curr_z, exit_x, exit_y, exit_z)
+    agent.sendCommand("move 1")
+    agent.sendCommand("use 1")
+    time.sleep(0.2)
+    while is_mission_running(agent):
+        curr_x, curr_y, curr_z, _ = get_curr_loc(agent)
+        if not inside_house(curr_x, curr_z):
+            agent.sendCommand("move 0")
+            agent.sendCommand("tp {} {} {}".format(exit_x + 0.5, curr_y, exit_z + 1))
+            time.sleep(0.1)
+            curr_x, curr_y, curr_z, _ = get_curr_loc(agent)
+            turn_to(agent, curr_x, curr_y, curr_z, exit_x, exit_y, exit_z)
+            agent.sendCommand("use 1")
+            time.sleep(0.05)
+            agent.sendCommand("use 0")
+            break
+    agent.sendCommand("hotbar.3 1")
+    place_diamonds(agent)
 
 
 # Move the agent towards the diamond and collect it.
 # reward = 1
 def go_to_diamonds(agent):
-    agent.sendCommand("chat Collect diamonds")
+    global total_reward
+    adjust_pitch(agent)
+    # agent.sendCommand("chat Collect diamonds")
     observation = {}
-    curr_x, curr_y, curr_z = get_curr_loc(agent)
-    turn_to(agent, curr_x, curr_y, curr_z, diamond_x, diamond_y, diamond_z)
+    curr_x, curr_y, curr_z, curr_yaw = get_curr_loc(agent)
+    turn_to(
+        agent,
+        curr_x,
+        curr_y,
+        curr_z,
+        diamond_x,
+        diamond_y,
+        diamond_z,
+        curr_yaw=curr_yaw,
+    )
     time.sleep(0.2)
     agent.sendCommand("move 1")
-    action_complete = stop_condition(agent, "diamond_block")
+    action_complete = stop_condition(agent, "diamond_ore")
     if action_complete:
         agent.sendCommand("attack 1")
         time.sleep(0.2)
         agent.sendCommand("attack 0")
         time.sleep(0.2)
         reward = 1
+        total_reward += 1
+        exit(agent)
         relocate_agent(agent)
+        time.sleep(0.3)
         observation["outside"] = ["self", "house"]
     else:
         reward = 0
@@ -387,9 +521,13 @@ def go_to_diamonds(agent):
     if hold_key:
         observation["hold"] = ["self", "key"]
     if reward > 0:
-        agent.sendCommand("chat => Reward {}".format(reward))
+        agent.sendCommand("chat Reward = {}".format(reward))
+        agent.sendCommand("chat => Total Reward of {} diamonds!".format(total_reward))
+        print("Reward = {}".format(reward))
+        print("Total Reward of {} diamonds!".format(total_reward))
+
     else:
-        agent.sendCommand("chat => {}".format(get_txt(observation)))
+        print("Observation => {}".format(get_txt(observation)))
 
     return observation, reward, is_mission_running
 
@@ -414,16 +552,22 @@ missionXML = (
             <AllowSpawning>true</AllowSpawning>
     </ServerInitialConditions>
     <ServerHandlers>
-      <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;1;biome_1"/>
+      <FlatWorldGenerator generatorString="3;7,220*1,5*3,2;1;village,decoration"/>
         <DrawingDecorator>
           """
     + build_house(start_x, start_y, start_z, width, length, height, "brick_block")
+    + drawBlock(diamond_x + 5, diamond_y, diamond_z - 1, "diamond_block")
     + drawBlock(
         door_x, door_y - 1, door_z, "dark_oak_door", variant="lower", face="WEST"
     )
     + drawBlock(door_x, door_y, door_z, "dark_oak_door", variant="upper", face="WEST")
+    + drawBlock(exit_x, exit_y, exit_z, "dark_oak_door", variant="upper", face="NORTH")
+    + drawBlock(
+        exit_x, exit_y - 1, exit_z, "dark_oak_door", variant="lower", face="NORTH"
+    )
     + drawBlock(key_x, key_y - 1, key_z, "stone")
-    + drawBlock(key_x, key_y, key_z, "tripwire_hook")
+    + drawBlock(key_x, key_y, key_z, "gold_block")
+    + draw_fence(fence_max, start_y + 1, fence_max)
     + """
 
         </DrawingDecorator>
@@ -442,6 +586,7 @@ missionXML = (
         <Inventory>
             <InventoryItem slot="0" type="diamond_pickaxe"/>
             <InventoryItem slot="1" type="tripwire_hook"/>
+            <InventoryBlock slot="2" type="diamond_block" quantity="63"/>
         </Inventory>
     </AgentStart>
     <AgentHandlers>
@@ -452,9 +597,11 @@ missionXML = (
           <max x="1" y="1" z="1"/>
         </Grid>
       </ObservationFromGrid>
+      <ObservationFromRay/>
       <ObservationFromRecentCommands/>
-      <ContinuousMovementCommands turnSpeedDegs="180"/>
+      <ContinuousMovementCommands turnSpeedDegs="80"/>
       <AbsoluteMovementCommands />
+      <DiscreteMovementCommands />
       <InventoryCommands/>
       <ChatCommands/>
       <RewardForTouchingBlockType>
@@ -484,23 +631,30 @@ if __name__ == "__main__":
     total_reward = 0
     agent = malmoWrapper.agent_host
     world_state = agent.getWorldState()
-    relocate_agent(agent)
+    # relocate_agent(agent)
+    adjust_pitch(agent)
     while world_state.is_mission_running:
+        # curr_x, curr_y, curr_z = get_curr_loc(agent)
+        # print(curr_x, curr_y, curr_z)
+        # nb = input("Enter command: ")
+
+        # nx, ny, nz = nb.split(",")
+        # turn_to(agent, curr_x, curr_y, curr_z, int(nx), int(ny), int(nz))
+
+        #     agent.sendCommand(nb)
+
         world_state = agent.getWorldState()
         if world_state.number_of_rewards_since_last_state > 0:
             total_reward += world_state.rewards[-1].getValue()
             print("total reward minecraft = {}".format(total_reward))
         ob, rw, _ = go_to_key(agent)
         print("Observation: {}, reward: {}".format(ob, rw))
-        total_reward += rw
 
         ob, rw, _ = go_to_house(agent)
         print("Observation: {}, reward: {}".format(ob, rw))
-        total_reward += rw
 
         ob, rw, _ = go_to_diamonds(agent)
         print("Observation: {}, reward: {}".format(ob, rw))
-        total_reward += rw
 
         time.sleep(2)
         print("total reward = {}".format(total_reward))
