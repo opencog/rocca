@@ -18,8 +18,8 @@ building more complex plans out of simpler plans using temporal
 deduction.  The optimal strategy is achieved with the following 2
 plans:
 
-1. `PelletPosition(None)∧AgentPosition(LeftSquare)∧GoRight≺Eat↝Reward`
-2. `PelletPosition(None)∧AgentPosition(RightSquare)∧GoLeft≺Eat↝Reward`
+1. `PelletPosition(None) ∧ AgentPosition(LeftSquare) ∧ do(GoRight) ⩘ do(Eat) ↝ Reward(1)`
+2. `PelletPosition(None) ∧ AgentPosition(RightSquare) ∧ do(GoLeft) ⩘ do(Eat) ↝ Reward(1)`
 
 represented in Atomese as
 

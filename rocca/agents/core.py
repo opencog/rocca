@@ -140,7 +140,7 @@ class OpencogAgent:
         # C ∧ A₁ ↝ D
         # D ∧ A₂ ↝ E
         # ⊢
-        # (C ∧ A₁) ≺ A₂ ↝ E
+        # (C ∧ A₁) ⩘ A₂ ↝ E
         #
         # Useful to string together cognitive schematics into larger
         # ones.
@@ -656,7 +656,7 @@ class OpencogAgent:
         C ∧ A₁ ↝ D
         D ∧ A₂ ↝ E
         ⊢
-        (C ∧ A₁) ≺ A₂ ↝ E
+        (C ∧ A₁) ⩘ A₂ ↝ E
 
         """
 

@@ -995,7 +995,8 @@ def type_to_human_readable_str(ty) -> str:
     Or                           -> ∨
     Not                          -> ¬
     GreaterThan                  -> >
-    SequentialAnd                -> ≺
+    SequentialAnd                -> ⩘
+    SequentialOr                 -> ⩗
     PredictiveImplication[Scope] -> ↝
     Execution                    -> do
 
@@ -1009,7 +1010,8 @@ def type_to_human_readable_str(ty) -> str:
         types.OrLink: "∨",
         types.GreaterThanLink: ">",
         types.ExecutionLink: "do",
-        get_type("BackSequentialAndLink"): "≺",
+        get_type("BackSequentialAndLink"): "⩘",
+        get_type("BackSequentialOrLink"): "⩗",
         get_type("BackPredictiveImplicationScope"): "↝",
         get_type("BackPredictiveImplicationScopeLink"): "↝",
     }
@@ -1069,21 +1071,21 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
 
     Precedence order is defined in the syntax_precede function, so that
 
-    C ∧ A₁ ≺ A₂ ↝ G
+    C ∧ A₁ ⩘ A₂ ↝ G
 
     is equivalent to
 
-    ((C ∧ A₁) ≺ A₂) ↝ G
+    ((C ∧ A₁) ⩘ A₂) ↝ G
 
-    Additionally ≺ is left-associative (due to being a
+    Additionally ⩘ is left-associative (due to being a
     BackSequentialAnd, we would probably want it to be
     right-associative if it were a ForeSequentialAnd) so that
 
-    A₁ ≺ A₂ ≺ A₃
+    A₁ ⩘ A₂ ⩘ A₃
 
     is equivalent to
 
-    (A₁ ≺ A₂) ≺ A₃
+    (A₁ ⩘ A₂) ⩘ A₃
 
     TODO: support action with arguments.
 

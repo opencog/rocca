@@ -316,7 +316,7 @@ def test_get_context():
     assert context_1[0] == expected_1
 
     # 2. Dioaction plan:
-    #    outside(self, house) ∧ do(go_to_key) ≺ do(go_to_house) ↝ inside(self, house)
+    #    outside(self, house) ∧ do(go_to_key) ⩘ do(go_to_house) ↝ inside(self, house)
     cogscm_2 = BackPredictiveImplicationScopeLink(
         VariableSet(),
         SLink(ZLink()),
@@ -345,7 +345,7 @@ def test_get_context():
     assert context_2[0] == expected_2
 
     # 3. Triaction plan
-    #    outside(self, house) ∧ do(go_to_key) ≺ do(go_to_house) ≺ do(go_to_diamonds) ↝ Reward(1)
+    #    outside(self, house) ∧ do(go_to_key) ⩘ do(go_to_house) ⩘ do(go_to_diamonds) ↝ Reward(1)
     cogscm_3 = BackPredictiveImplicationScopeLink(
         VariableSet(),
         SLink(ZLink()),

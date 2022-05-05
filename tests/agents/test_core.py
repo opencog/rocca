@@ -62,7 +62,7 @@ def test_weight():
     mm.complexity_penalty = 0.5
     mm.compressiveness = 0.1
 
-    # 1. hold(self, key) ∧ do(go_to_house) ≺ do(go_to_diamonds) ↝ Reward(1)
+    # 1. hold(self, key) ∧ do(go_to_house) ⩘ do(go_to_diamonds) ↝ Reward(1)
     cogscm_1 = BackPredictiveImplicationScopeLink(
         VariableSet(),
         SLink(ZLink()),
@@ -81,7 +81,7 @@ def test_weight():
         tv=createTruthValue(1.0, 0.00780669),
     )
 
-    # 2. hold(self, key) ∧ do(go_to_house) ≺ do(go_to_house) ≺ do(go_to_diamonds) ↝ Reward(1)
+    # 2. hold(self, key) ∧ do(go_to_house) ⩘ do(go_to_house) ⩘ do(go_to_diamonds) ↝ Reward(1)
     cogscm_2 = BackPredictiveImplicationScopeLink(
         VariableSet(),
         SLink(ZLink()),
