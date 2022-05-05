@@ -83,7 +83,8 @@ maintained as the master.
 
 ## Install
 
-In the root folder enter the following command:
+In the root folder enter the following command (you might need to be
+root depending on your system):
 
 ```bash
 pip install -e .
