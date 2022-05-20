@@ -326,7 +326,9 @@ class OpencogAgent:
             self.percepta_record.append(set())
         self.percepta_record[i].add(timed_atom)
 
-    def timed_percepta_to_scheme_str(self, timed_percepta: set[Atom], with_member: bool = False) -> str:
+    def timed_percepta_to_scheme_str(
+        self, timed_percepta: set[Atom], with_member: bool = False
+    ) -> str:
         """Convert percepta at a given cycle into a string in Scheme format.
 
         Percepta are preceded by a comment in human readable form.
@@ -338,8 +340,10 @@ class OpencogAgent:
 
         # Wrap member to percepta record concept around each perceptum
         if with_member:
-            timed_percepta = {self.add_to_percepta_atomspace(timed_perceptum)
-                              for timed_perceptum in timed_percepta}
+            timed_percepta = {
+                self.add_to_percepta_atomspace(timed_perceptum)
+                for timed_perceptum in timed_percepta
+            }
         cmt = "\n".join(";; " + to_human_readable_str(tpm) for tpm in timed_percepta)
         scm = "\n".join(tpm.long_string() for tpm in timed_percepta)
         return "\n".join([cmt, scm])
@@ -351,8 +355,12 @@ class OpencogAgent:
 
         """
 
-        return "\n\n".join([self.timed_percepta_to_scheme_str(tp, with_member)
-                            for tp in self.percepta_record])
+        return "\n\n".join(
+            [
+                self.timed_percepta_to_scheme_str(tp, with_member)
+                for tp in self.percepta_record
+            ]
+        )
 
     def add_to_percepta_atomspace(self, timed_atom: Atom) -> Atom:
         """Add member link around timestamped atom to Percepta Atomspace.
@@ -524,9 +532,7 @@ class OpencogAgent:
         # Log the percepta record in Scheme format, useful for
         # debugging the pattern miner
         agent_log.fine(
-            "Percepta record:\n{}".format(
-                self.percepta_record_to_scheme_str()
-            )
+            "Percepta record:\n{}".format(self.percepta_record_to_scheme_str())
         )
 
         # All resulting cognitive schematics
