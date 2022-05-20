@@ -320,10 +320,48 @@ class OpencogAgent:
             self.percepta_record.append(set())
         self.percepta_record[i].add(timed_atom)
 
+    def timed_percepta_to_scheme_str(self, timed_percepta: set[Atom], with_member: bool = False) -> str:
+        """Convert percepta at a given cycle into a string in Scheme format.
+
+        Percepta are preceded by a comment in human readable form.
+
+        If with_member is set to True then each perceptum is wrapped with
+        a member link from it to the percepta record concept.
+
+        """
+
+        # Wrap member to percepta record concept around each perceptum
+        if with_member:
+            timed_percepta = {self.add_to_percepta_atomspace(timed_perceptum)
+                              for timed_perceptum in timed_percepta}
+        cmt = "\n".join(";; " + to_human_readable_str(tpm) for tpm in timed_percepta)
+        scm = "\n".join(tpm.long_string() for tpm in timed_percepta)
+        return "\n".join([cmt, scm])
+
+    def percepta_record_to_scheme_str(self, with_member: bool = False) -> str:
+        """Convert a percepta record into a string in Scheme format.
+
+        Each perception is preceded by a comment in human readable form.
+
+        """
+
+        return "\n\n".join([self.timed_percepta_to_scheme_str(tp, with_member)
+                            for tp in self.percepta_record])
+
+    def add_to_percepta_atomspace(self, timed_atom: Atom) -> Atom:
+        """Add member link around timestamped atom to Percepta Atomspace.
+
+        Return the added member link.
+
+        """
+
+        mbr = MemberLink(timed_atom, self.percepta_record_cpt, tv=TRUE_TV)
+        return self.percepta_atomspace.add_atom(mbr)
+
     def record(self, atom: Atom, i: int, tv=None) -> Atom:
         """Timestamp and record an atom to the Percepta Record.
 
-        That is add the following in the atomspace
+        That is add the following in the percepta atomspace
 
         MemberLink (stv 1 1)
           AtTimeLink <tv>
@@ -337,9 +375,8 @@ class OpencogAgent:
         """
 
         timed_atom = timestamp(atom, i, tv)
-        mbr = MemberLink(timed_atom, self.percepta_record_cpt, tv=TRUE_TV)
         self.insert_to_percepta_record(timed_atom, i)
-        return self.percepta_atomspace.add_atom(mbr)
+        return self.add_to_percepta_atomspace(timed_atom)
 
     def make_goal(self) -> Atom:
         """Define the goal of the current iteration.
@@ -482,7 +519,7 @@ class OpencogAgent:
         # debugging the pattern miner
         agent_log.fine(
             "Percepta record:\n{}".format(
-                percepta_record_to_scheme_str(self.percepta_record)
+                self.percepta_record_to_scheme_str()
             )
         )
 
@@ -1609,10 +1646,9 @@ class OpencogAgent:
 
         """
 
-        # TODO: better print the percepta_record using
-        # percepta_record_to_scheme_str (though the member links
-        # should also be included).
-        return save_atomspace(self.percepta_atomspace, filepath, overwrite)
+        with open(filepath, "w" if overwrite else "a") as file:
+            file.write(self.percepta_record_to_scheme_str(with_member=True) + "\n")
+        return True
 
     def load_percepta_atomspace(
         self, filepath: str, overwrite: bool = True, fast: bool = True
@@ -1636,10 +1672,17 @@ class OpencogAgent:
         so that new percepts do not have the same timestamps as the
         just loaded ones.
 
+        It is assumed that the percepta record concept is
+
+        Concept "Percepta Record"
+
         """
 
         success = load_atomspace(self.percepta_atomspace, filepath, overwrite)
         if success:
+            pas_roots = atomspace_roots(self.percepta_atomspace)
+            if overwrite:
+                self.percepta_record.clear()
             print("TODO")
             # NEXT: take care of filling the percepta record
             # NEXT: update the cycle count as well

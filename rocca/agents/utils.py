@@ -1227,28 +1227,6 @@ def atoms_to_scheme_str(atoms: set[Atom] | list[Atom], only_id: bool = False) ->
     return "\n".join(msgs)
 
 
-def timed_percepta_to_scheme_str(timed_percepta: set[Atom]) -> str:
-    """Convert percepta at a given cycle into a string in Scheme format.
-
-    Percepta are preceded by a comment in human readable form.
-
-    """
-
-    cmt = "\n".join(";; " + to_human_readable_str(tpm) for tpm in timed_percepta)
-    scm = "\n".join(tpm.long_string() for tpm in timed_percepta)
-    return "\n".join([cmt, scm])
-
-
-def percepta_record_to_scheme_str(percepta_record: list[set[Atom]]) -> str:
-    """Convert a percepta record into a string in Scheme format.
-
-    Each perception is preceded by a comment in human readable form.
-
-    """
-
-    return "\n".join([timed_percepta_to_scheme_str(tp) for tp in percepta_record])
-
-
 def save_atomspace(atomspace: AtomSpace, filepath: str, overwrite: bool = True) -> bool:
     """Save the given atomspace at the indicated filepath.
 
