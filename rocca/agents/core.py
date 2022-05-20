@@ -306,7 +306,7 @@ class OpencogAgent:
         ]
         return "\n".join(ss)
 
-    def insert_to_percepta_record(self, timed_atom: Atom, i: int) -> None:
+    def insert_to_percepta_record(self, timed_atom: Atom, i: int = -1) -> None:
         """Insert a timestamped atom into self.percepta_record.
 
         The percepta_record is a list of sets of timestamped percepta.
@@ -314,7 +314,13 @@ class OpencogAgent:
         list is a set of percepta at the timestamp corresponding to
         its index.
 
+        If it's index i is not provided (or is negative), then it is
+        extracted from the timestamp.
+
         """
+
+        if i < 0:
+            i = to_int(get_time(timed_atom))
 
         while len(self.percepta_record) <= i:
             self.percepta_record.append(set())
@@ -1680,12 +1686,13 @@ class OpencogAgent:
 
         success = load_atomspace(self.percepta_atomspace, filepath, overwrite)
         if success:
-            pas_roots = atomspace_roots(self.percepta_atomspace)
             if overwrite:
                 self.percepta_record.clear()
-            print("TODO")
-            # NEXT: take care of filling the percepta record
-            # NEXT: update the cycle count as well
+            pas_roots = atomspace_roots(self.percepta_atomspace)
+            for mbr in pas_roots:
+                self.insert_to_percepta_record(mbr.out[0])
+            new_count = len(self.percepta_record)
+            self.cycle_count = new_count - 1 if 0 < new_count else 0
         return success
 
     def save_cogscms_atomspace(self, filepath: str, overwrite: bool = True) -> bool:
