@@ -212,6 +212,9 @@ class OpencogAgent:
         # patterns).
         self.miner_maximum_variables = 8
 
+        # Enable posting cogscms and selected action to the visualizer.
+        self.visualize_cogscm = False
+
     def __del__(self):
         self.env.close()
 
@@ -792,7 +795,6 @@ class OpencogAgent:
 
         add_to_atomspace(new_cogscms, self.cogscms_atomspace)
         self.cognitive_schematics.update(new_cogscms)
-        post_to_restapi_scheme_endpoint(new_cogscms, PORT=5001)
 
     def learn(self):
         """Discover patterns in the world and in itself."""
@@ -1558,7 +1560,6 @@ class OpencogAgent:
                 self.cycle_count, atoms_to_scheme_str(obs_record)
             )
         )
-        post_to_restapi_scheme_endpoint(obs_record)
 
         # Make the goal for that iteration
         goal = self.make_goal()
@@ -1577,7 +1578,6 @@ class OpencogAgent:
                 self.cycle_count, len(cogscms), atoms_to_scheme_str(cogscms)
             )
         )
-        post_to_restapi_scheme_endpoint(cogscms)
 
         # Deduce the action distribution
         mxmdl = self.deduce(cogscms)
@@ -1610,7 +1610,6 @@ class OpencogAgent:
                 self.cycle_count, atom_to_scheme_str(action)
             )
         )
-        post_to_restapi_scheme_endpoint(action_record)
 
         # Increment the counter for that action and log it
         self.action_counter[action] += 1
@@ -1621,6 +1620,25 @@ class OpencogAgent:
                 self.action_counter_to_str(),
             )
         )
+        if self.visualize_cogscm:
+            obs = " ".join([str(i) for i in obs_record]) if self.cycle_count > 0 else ""
+            if cogscm:
+                msg = "cogscm: {} \r\nSelected Action: {}".format(
+                    to_human_readable_str(cogscm), to_human_readable_str(action)
+                )
+                obs_cogscm_act = obs + str(cogscm) + str(action_record)
+            else:
+                msg = "cogscm: N/A \r\nSelected Action: {}".format(
+                    to_human_readable_str(action)
+                )
+                obs_cogscm_act = obs + str(action_record)
+
+            vis_cogscm_info = {
+                "cogscm": obs_cogscm_act,
+                "cycle": self.cycle_count,
+                "msg": msg,
+            }
+            post_to_restapi_scheme_endpoint(vis_cogscm_info)
 
         # Increase the step count and run the next step of the environment
         self.cycle_count += 1
@@ -1651,7 +1669,6 @@ class OpencogAgent:
                 self.cycle_count, atom_to_scheme_str(reward_record)
             )
         )
-        post_to_restapi_scheme_endpoint(action_record)
 
         return done
 
@@ -1911,7 +1928,7 @@ class MixtureModel:
     def weighted_probability(self, w8: float, pblt: float) -> float:
         """Return the weighted probability using X."""
 
-        return pblt * w8**self.weight_influence
+        return pblt * w8 ** self.weight_influence
 
     def infer_data_set_size(self, cogscms: list[Atom], total_count: int) -> None:
         """Infer the data set size (universe size).
@@ -2162,15 +2179,12 @@ class MixtureModel:
         cogscm = act_w8_cogscm_w8d_pblt[2]
         pblt = act_w8_cogscm_w8d_pblt[3]
         w8d_pblt = act_w8_cogscm_w8d_pblt[4]
-        return (
-            indent
-            + "{}: (weight={}, cogscm={}, probability={}, weighted probability={})".format(
-                to_human_readable_str(action),
-                weight,
-                atom_to_idstr(cogscm),
-                pblt,
-                w8d_pblt,
-            )
+        return indent + "{}: (weight={}, cogscm={}, probability={}, weighted probability={})".format(
+            to_human_readable_str(action),
+            weight,
+            atom_to_idstr(cogscm),
+            pblt,
+            w8d_pblt,
         )
 
     def act_w8_cogscm_w8d_pblt_seq_to_str(
