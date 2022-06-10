@@ -535,6 +535,10 @@ class OpencogAgent:
             "Percepta record:\n{}".format(self.percepta_record_to_scheme_str())
         )
 
+        # TODO: hack, copy self.percepta_atomspace into self.atomspace
+        # till we use self.percepta_atomspace
+        copy_atomspace(self.percepta_atomspace, self.atomspace)
+
         # All resulting cognitive schematics
         cogscms = set()
 
