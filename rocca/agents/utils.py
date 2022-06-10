@@ -65,6 +65,16 @@ def add_to_atomspace(atoms: set[Atom] | list[Atom], atomspace: AtomSpace) -> Non
         atomspace.add_atom(atom)
 
 
+def copy_atomspace(src: AtomSpace, dst: AtomSpace) -> None:
+    """Copy the content of src into the dst.
+
+    The copy does not clean dst.
+
+    """
+
+    add_to_atomspace(atomspace_roots(src), dst)
+
+
 def fetch_cogscms(atomspace: AtomSpace) -> set[Atom]:
     """Fetch all cognitive schematics from an given atomspace."""
 
@@ -995,7 +1005,8 @@ def type_to_human_readable_str(ty) -> str:
     Or                           -> ∨
     Not                          -> ¬
     GreaterThan                  -> >
-    SequentialAnd                -> ≺
+    SequentialAnd                -> ⩘
+    SequentialOr                 -> ⩗
     PredictiveImplication[Scope] -> ↝
     Execution                    -> do
 
@@ -1009,7 +1020,8 @@ def type_to_human_readable_str(ty) -> str:
         types.OrLink: "∨",
         types.GreaterThanLink: ">",
         types.ExecutionLink: "do",
-        get_type("BackSequentialAndLink"): "≺",
+        get_type("BackSequentialAndLink"): "⩘",
+        get_type("BackSequentialOrLink"): "⩗",
         get_type("BackPredictiveImplicationScope"): "↝",
         get_type("BackPredictiveImplicationScopeLink"): "↝",
     }
@@ -1069,21 +1081,21 @@ def to_human_readable_str(atom: Atom, parenthesis: bool = False) -> str:
 
     Precedence order is defined in the syntax_precede function, so that
 
-    C ∧ A₁ ≺ A₂ ↝ G
+    C ∧ A₁ ⩘ A₂ ↝ G
 
     is equivalent to
 
-    ((C ∧ A₁) ≺ A₂) ↝ G
+    ((C ∧ A₁) ⩘ A₂) ↝ G
 
-    Additionally ≺ is left-associative (due to being a
+    Additionally ⩘ is left-associative (due to being a
     BackSequentialAnd, we would probably want it to be
     right-associative if it were a ForeSequentialAnd) so that
 
-    A₁ ≺ A₂ ≺ A₃
+    A₁ ⩘ A₂ ⩘ A₃
 
     is equivalent to
 
-    (A₁ ≺ A₂) ≺ A₃
+    (A₁ ⩘ A₂) ⩘ A₃
 
     TODO: support action with arguments.
 
@@ -1223,28 +1235,6 @@ def atoms_to_scheme_str(atoms: set[Atom] | list[Atom], only_id: bool = False) ->
     for atom in atoms:
         msgs.append(atom_to_scheme_str(atom, only_id))
     return "\n".join(msgs)
-
-
-def timed_percepta_to_scheme_str(timed_percepta: set[Atom]) -> str:
-    """Convert percepta at a given cycle into a string in Scheme format.
-
-    Percepta are preceded by a comment in human readable form.
-
-    """
-
-    cmt = "\n".join(";; " + to_human_readable_str(tpm) for tpm in timed_percepta)
-    scm = "\n".join(tpm.long_string() for tpm in timed_percepta)
-    return "\n".join([cmt, scm])
-
-
-def percepta_record_to_scheme_str(percepta_record: list[set[Atom]]) -> str:
-    """Convert a percepta record into a string in Scheme format.
-
-    Each perception is preceded by a comment in human readable form.
-
-    """
-
-    return "\n".join([timed_percepta_to_scheme_str(tp) for tp in percepta_record])
 
 
 def save_atomspace(atomspace: AtomSpace, filepath: str, overwrite: bool = True) -> bool:

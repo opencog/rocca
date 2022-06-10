@@ -141,9 +141,15 @@ if __name__ == "__main__":
     # Log all parameters of cag, useful for debugging
     cag.log_parameters(level="debug")
 
+    # Uncomment to load previously saved percepta or cogscms
+    # atomspaces.
+    # cag.load_cogscms_atomspace("chase_cogscms_atomspace.scm")
+    # cag.load_percepta_atomspace("chase_percepta_atomspace.scm")
+
     # Training/learning loop
     lt_iterations = 2  # Number of learning-training iterations
     lt_period = 200  # Duration of a learning-training iteration
+    max_cycle_count = cag.cycle_count + lt_iterations * lt_period
     for i in range(lt_iterations):
         wrapped_env.restart()
         cag.reset_action_counter()
@@ -161,7 +167,7 @@ if __name__ == "__main__":
             time.sleep(0.1)
             agent_log.info(
                 "Control cycle ({}/{})".format(
-                    cag.cycle_count, lt_iterations * lt_period
+                    cag.cycle_count, max_cycle_count
                 )
             )
         nar = cag.accumulated_reward - par
@@ -179,3 +185,7 @@ if __name__ == "__main__":
     agent_log_atomspace(cag.percepta_atomspace, "fine", "cag.percepta_atomspace")
     agent_log_atomspace(cag.cogscms_atomspace, "fine", "cag.cogscms_atomspace")
     agent_log_atomspace(cag.working_atomspace, "fine", "cag.working_atomspace")
+
+    # Uncomment to save percepta or cogscms atomspaces
+    # cag.save_percepta_atomspace("chase_percepta_atomspace.scm")
+    # cag.save_cogscms_atomspace("chase_cogscms_atomspace.scm")
