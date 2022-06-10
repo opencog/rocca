@@ -149,6 +149,7 @@ if __name__ == "__main__":
     # Training/learning loop
     lt_iterations = 2  # Number of learning-training iterations
     lt_period = 200  # Duration of a learning-training iteration
+    max_cycle_count = cag.cycle_count + lt_iterations * lt_period
     for i in range(lt_iterations):
         wrapped_env.restart()
         cag.reset_action_counter()
@@ -166,7 +167,7 @@ if __name__ == "__main__":
             time.sleep(0.1)
             agent_log.info(
                 "Control cycle ({}/{})".format(
-                    cag.cycle_count, lt_iterations * lt_period
+                    cag.cycle_count, max_cycle_count
                 )
             )
         nar = cag.accumulated_reward - par
