@@ -1735,7 +1735,7 @@ class OpencogAgent:
         fast==True is support for now).
 
         Return False if it fails, True otherwise.  If successful it
-        will automatically update NEXT
+        will automatically update the cognitive_schematics attribute.
 
         """
 
