@@ -65,6 +65,16 @@ def add_to_atomspace(atoms: set[Atom] | list[Atom], atomspace: AtomSpace) -> Non
         atomspace.add_atom(atom)
 
 
+def copy_atomspace(src: AtomSpace, dst: AtomSpace) -> None:
+    """Copy the content of src into the dst.
+
+    The copy does not clean dst.
+
+    """
+
+    add_to_atomspace(atomspace_roots(src), dst)
+
+
 def fetch_cogscms(atomspace: AtomSpace) -> set[Atom]:
     """Fetch all cognitive schematics from an given atomspace."""
 
