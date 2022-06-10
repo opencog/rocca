@@ -141,6 +141,11 @@ if __name__ == "__main__":
     # Log all parameters of cag, useful for debugging
     cag.log_parameters(level="debug")
 
+    # Uncomment to load previously saved percepta or cogscms
+    # atomspaces.
+    # cag.load_cogscms_atomspace("chase_cogscms_atomspace.scm")
+    # cag.load_percepta_atomspace("chase_percepta_atomspace.scm")
+
     # Training/learning loop
     lt_iterations = 2  # Number of learning-training iterations
     lt_period = 200  # Duration of a learning-training iteration
@@ -179,3 +184,7 @@ if __name__ == "__main__":
     agent_log_atomspace(cag.percepta_atomspace, "fine", "cag.percepta_atomspace")
     agent_log_atomspace(cag.cogscms_atomspace, "fine", "cag.cogscms_atomspace")
     agent_log_atomspace(cag.working_atomspace, "fine", "cag.working_atomspace")
+
+    # Uncomment to save percepta or cogscms atomspaces
+    # cag.save_percepta_atomspace("chase_percepta_atomspace.scm")
+    # cag.save_cogscms_atomspace("chase_cogscms_atomspace.scm")
