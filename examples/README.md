@@ -321,7 +321,11 @@ The three optimal action plans required to get a reward are:
 2. Launch `<MALMO>/Minecraft/launchClient.sh`.
 
 3. Launch collect diamonds `python collect_diamonds.py`.
-  Note: If there is a need to visualize mined cognitive schematics, do the following before step 3. 
-  a. Build and run atompace-explorer here https://github.com/tanksha/atomspace-explorer rocca_demo branch.
-  b. Start the RESTAPI `python start_rest_service.py` 
-  c. Open `collect_diamonds.py` and set `self.visualize_cogscm = True`
+
+  - Note: If there is a need to visualize mined cognitive schematics, do the following before step 3.
+  
+    - Build and run atompace-explorer here https://github.com/tanksha/atomspace-explorer rocca_demo branch.
+  
+    - Start the RESTAPI `python start_rest_service.py` 
+  
+    - Open `collect_diamonds.py` and set `self.visualize_cogscm = True`
