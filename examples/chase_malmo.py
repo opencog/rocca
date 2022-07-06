@@ -19,6 +19,7 @@ from rocca.agents import OpencogAgent
 from rocca.agents.utils import agent_log
 from rocca.envs.malmo_demo.chase_env import mission_xml
 from rocca.envs.wrappers import MalmoWrapper
+from opencog.ure import ure_logger
 
 ###############
 # Chase Agent #
@@ -27,8 +28,8 @@ from rocca.envs.wrappers.utils import mk_action
 
 
 class ChaseAgent(OpencogAgent):
-    def __init__(self, env, action_space, p_goal, n_goal):
-        OpencogAgent.__init__(self, env, action_space, p_goal, n_goal)
+    def __init__(self, env, atomspace, action_space, p_goal, n_goal):
+        OpencogAgent.__init__(self, env, atomspace, action_space, p_goal, n_goal)
         env.step(mk_action("hotbar.9", 1))  # Press the hotbar key
         env.step(
             mk_action("hotbar.9", 0)
@@ -49,6 +50,14 @@ class ChaseAgent(OpencogAgent):
 if __name__ == "__main__":
     atomspace = AtomSpace()
     set_default_atomspace(atomspace)
+
+    # Init loggers
+    log.set_level("info")
+    # log.set_sync(True)
+    agent_log.set_level("debug")
+    # agent_log.set_sync(True)
+    ure_logger().set_level("debug")
+
     # Wrap environment
     wrapped_env = MalmoWrapper(missionXML=mission_xml, validate=True)
 
@@ -68,7 +77,7 @@ if __name__ == "__main__":
     }
 
     # ChaseAgent
-    ca = ChaseAgent(wrapped_env, action_space, pgoal, ngoal)
+    ca = ChaseAgent(wrapped_env, atomspace, action_space, pgoal, ngoal)
 
     # Eat some food.
     ca.eat(4)

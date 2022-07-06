@@ -6,7 +6,7 @@ import sys
 import time
 import json
 
-from malmo import MalmoPython
+from rocca.malmo import MalmoPython
 
 from .utils import *
 from .wrapper import Wrapper

@@ -1,8 +1,8 @@
 import os
 import time
 
-from envs.wrappers.malmo_wrapper import MalmoWrapper
-from envs.wrappers.utils import *
+from rocca.envs.wrappers.malmo_wrapper import MalmoWrapper
+from rocca.envs.wrappers.utils import *
 
 DIR_NAME = os.path.dirname(__file__)
 mission_file = os.path.join(DIR_NAME, "chase_mission.xml")

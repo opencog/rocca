@@ -212,6 +212,9 @@ class OpencogAgent:
         # patterns).
         self.miner_maximum_variables = 8
 
+        # Enable posting cogscms and selected action to the visualizer.
+        self.visualize_cogscm = False
+
     def __del__(self):
         self.env.close()
 
@@ -1617,6 +1620,25 @@ class OpencogAgent:
                 self.action_counter_to_str(),
             )
         )
+        if self.visualize_cogscm:
+            obs = " ".join([str(i) for i in obs_record]) if self.cycle_count > 0 else ""
+            if cogscm:
+                msg = "cogscm: {} \r\nSelected Action: {}".format(
+                    to_human_readable_str(cogscm), to_human_readable_str(action)
+                )
+                obs_cogscm_act = obs + str(cogscm) + str(action_record)
+            else:
+                msg = "cogscm: N/A \r\nSelected Action: {}".format(
+                    to_human_readable_str(action)
+                )
+                obs_cogscm_act = obs + str(action_record)
+
+            vis_cogscm_info = {
+                "cogscm": obs_cogscm_act,
+                "cycle": self.cycle_count,
+                "msg": msg,
+            }
+            post_to_restapi_scheme_endpoint(vis_cogscm_info)
 
         # Increase the step count and run the next step of the environment
         self.cycle_count += 1
@@ -1906,7 +1928,7 @@ class MixtureModel:
     def weighted_probability(self, w8: float, pblt: float) -> float:
         """Return the weighted probability using X."""
 
-        return pblt * w8**self.weight_influence
+        return pblt * w8 ** self.weight_influence
 
     def infer_data_set_size(self, cogscms: list[Atom], total_count: int) -> None:
         """Infer the data set size (universe size).
@@ -2157,15 +2179,12 @@ class MixtureModel:
         cogscm = act_w8_cogscm_w8d_pblt[2]
         pblt = act_w8_cogscm_w8d_pblt[3]
         w8d_pblt = act_w8_cogscm_w8d_pblt[4]
-        return (
-            indent
-            + "{}: (weight={}, cogscm={}, probability={}, weighted probability={})".format(
-                to_human_readable_str(action),
-                weight,
-                atom_to_idstr(cogscm),
-                pblt,
-                w8d_pblt,
-            )
+        return indent + "{}: (weight={}, cogscm={}, probability={}, weighted probability={})".format(
+            to_human_readable_str(action),
+            weight,
+            atom_to_idstr(cogscm),
+            pblt,
+            w8d_pblt,
         )
 
     def act_w8_cogscm_w8d_pblt_seq_to_str(
