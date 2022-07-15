@@ -118,7 +118,7 @@ The following are optimal action plans the agent learned to get a reward:
 
 2. Polyaction plans
 
-2.1.`(outside(self, house) ∧ do(go_to_key) ≺ do(go_to_house)) ≺ do(go_to_diamonds) ↝ Reward(1)`
+2.1.`(outside(self, house) ∧ do(go_to_key) ⩘ do(go_to_house)) ⩘ do(go_to_diamonds) ↝ Reward(1)`
 
 ```scheme
 (BackPredictiveImplicationScopeLink (stv 1 0.00503106)
@@ -165,7 +165,7 @@ The following are optimal action plans the agent learned to get a reward:
 ) ; [bd6c515d92fe0be1][3]
 ```
 
-2.2. `outside(self, house) ∧ do(go_to_key) ≺ do(go_to_house) ↝ inside(self, house)`
+2.2. `outside(self, house) ∧ do(go_to_key) ⩘ do(go_to_house) ↝ inside(self, house)`
 
 ```scheme
 (BackPredictiveImplicationScopeLink (stv 1 0.00559006)
@@ -206,7 +206,7 @@ The following are optimal action plans the agent learned to get a reward:
 ) ; [c4a99a11fb34aeb2][3]
 ```
 
-2.3 `hold(self, key) ∧ do(go_to_house) ≺ do(go_to_diamonds) ↝ Reward(1)`
+2.3 `hold(self, key) ∧ do(go_to_house) ⩘ do(go_to_diamonds) ↝ Reward(1)`
 
 ```scheme
 (BackPredictiveImplicationScopeLink (stv 1 0.00559006)
