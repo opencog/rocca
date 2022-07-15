@@ -13,9 +13,11 @@ The Rocca agent is able to learn and plan the desired cognitive
 schematics leading to getting/accumulating a reward via pattern mining
 and temporal deduction.
 
-The three optimal action plans required to get a reward are:
+The following are optimal action plans the agent learned to get a reward:
 
-1. `outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)`
+1. Monoaction plans: 
+
+1.1. `outside(self, house) ∧ do(go_to_key) ↝ hold(self, key)`
 
 ```scheme
 (BackPredictiveImplicationScopeLink (stv 1 0.0111248)
@@ -46,7 +48,7 @@ The three optimal action plans required to get a reward are:
   ) ; [e6a8f21e6b37d8f0][1]
 ) ; [ff069058911f0233][1]
 ```
-2. `outside(self, house) ∧ hold(self, key) ∧ do(go_to_house) ↝ inside(self, house)`
+1.2. `outside(self, house) ∧ hold(self, key) ∧ do(go_to_house) ↝ inside(self, house)`
 
 ```scheme
 (BackPredictiveImplicationScopeLink (stv 1 0.00621118)
@@ -85,7 +87,7 @@ The three optimal action plans required to get a reward are:
 ) ; [a2984b519c1ddc4f][1]
 ```
 
-3. `inside(self, house) ∧ do(go_to_diamonds) ↝ Reward(1)`
+1.3. `inside(self, house) ∧ do(go_to_diamonds) ↝ Reward(1)`
 
 ```scheme
 (BackPredictiveImplicationScopeLink (stv 1 0.00621118)
@@ -112,6 +114,134 @@ The three optimal action plans required to get a reward are:
     (NumberNode "1") ; [2cf0956d543cff8e][1]
   ) ; [d3cee8bdda06ffcb][1]
 ) ; [8a298365b46b204b][1]
+```
+
+2. Polyaction plans
+
+2.1.`(outside(self, house) ∧ do(go_to_key) ≺ do(go_to_house)) ≺ do(go_to_diamonds) ↝ Reward(1)`
+
+```scheme
+(BackPredictiveImplicationScopeLink (stv 1 0.00503106)
+  (VariableSet
+  ) ; [80075fffffff523a][3]
+  (SLink
+    (ZLink
+    ) ; [800fbffffffe8ce4][3]
+  ) ; [da5f815ba9d4009f][3]
+  (BackSequentialAndLink
+    (SLink
+      (ZLink
+      ) ; [800fbffffffe8ce4][3]
+    ) ; [da5f815ba9d4009f][3]
+    (BackSequentialAndLink
+      (SLink
+        (ZLink
+        ) ; [800fbffffffe8ce4][3]
+      ) ; [da5f815ba9d4009f][3]
+      (AndLink (stv 0.18 0.0588235)
+        (EvaluationLink (stv 0.64 0.0588235)
+          (PredicateNode "outside") ; [72730412e28a734][3]
+          (ListLink
+            (ConceptNode "self") ; [40b11d11524bd751][3]
+            (ConceptNode "house") ; [63eb9919f37daa5f][3]
+          ) ; [aadca36fe9d1a468][3]
+        ) ; [ca0c329fb1ab493b][3]
+        (ExecutionLink
+          (SchemaNode "go_to_key") ; [7f46c329a5e57604][3]
+        ) ; [f8086e6fdf73cdf4][3]
+      ) ; [ddda31153cf2aa6d][3]
+      (ExecutionLink
+        (SchemaNode "go_to_house") ; [7e1737e3e117d059][3]
+      ) ; [93427319ec122fff][3]
+    ) ; [d526b02a321df7c7][3]
+    (ExecutionLink
+      (SchemaNode "go_to_diamonds") ; [7aee74cf6bad6442][3]
+    ) ; [a2630f96ffbe0861][3]
+  ) ; [b0235094e5713353][3]
+  (EvaluationLink (stv 0.1 0.0588235)
+    (PredicateNode "Reward") ; [155bb4d713db0d51][3]
+    (NumberNode "1") ; [2cf0956d543cff8e][3]
+  ) ; [d3cee8bdda06ffcb][3]
+) ; [bd6c515d92fe0be1][3]
+```
+
+2.2. `outside(self, house) ∧ do(go_to_key) ≺ do(go_to_house) ↝ inside(self, house)`
+
+```scheme
+(BackPredictiveImplicationScopeLink (stv 1 0.00559006)
+  (VariableSet
+  ) ; [80075fffffff523a][3]
+  (SLink
+    (ZLink
+    ) ; [800fbffffffe8ce4][3]
+  ) ; [da5f815ba9d4009f][3]
+  (BackSequentialAndLink
+    (SLink
+      (ZLink
+      ) ; [800fbffffffe8ce4][3]
+    ) ; [da5f815ba9d4009f][3]
+    (AndLink (stv 0.18 0.0588235)
+      (EvaluationLink (stv 0.64 0.0588235)
+        (PredicateNode "outside") ; [72730412e28a734][3]
+        (ListLink
+          (ConceptNode "self") ; [40b11d11524bd751][3]
+          (ConceptNode "house") ; [63eb9919f37daa5f][3]
+        ) ; [aadca36fe9d1a468][3]
+      ) ; [ca0c329fb1ab493b][3]
+      (ExecutionLink
+        (SchemaNode "go_to_key") ; [7f46c329a5e57604][3]
+      ) ; [f8086e6fdf73cdf4][3]
+    ) ; [ddda31153cf2aa6d][3]
+    (ExecutionLink
+      (SchemaNode "go_to_house") ; [7e1737e3e117d059][3]
+    ) ; [93427319ec122fff][3]
+  ) ; [d526b02a321df7c7][3]
+  (EvaluationLink (stv 0.34 0.0588235)
+    (PredicateNode "inside") ; [63398dcfcf85c8a3][3]
+    (ListLink
+      (ConceptNode "self") ; [40b11d11524bd751][3]
+      (ConceptNode "house") ; [63eb9919f37daa5f][3]
+    ) ; [aadca36fe9d1a468][3]
+  ) ; [871c182b52e89756][3]
+) ; [c4a99a11fb34aeb2][3]
+```
+
+2.3 `hold(self, key) ∧ do(go_to_house) ≺ do(go_to_diamonds) ↝ Reward(1)`
+
+```scheme
+(BackPredictiveImplicationScopeLink (stv 1 0.00559006)
+  (VariableSet
+  ) ; [80075fffffff523a][3]
+  (SLink
+    (ZLink
+    ) ; [800fbffffffe8ce4][3]
+  ) ; [da5f815ba9d4009f][3]
+  (BackSequentialAndLink
+    (SLink
+      (ZLink
+      ) ; [800fbffffffe8ce4][3]
+    ) ; [da5f815ba9d4009f][3]
+    (AndLink (stv 0.1 0.0588235)
+      (ExecutionLink
+        (SchemaNode "go_to_house") ; [7e1737e3e117d059][3]
+      ) ; [93427319ec122fff][3]
+      (EvaluationLink (stv 0.32 0.0588235)
+        (PredicateNode "hold") ; [4b1b7a8b0a4d2853][3]
+        (ListLink
+          (ConceptNode "self") ; [40b11d11524bd751][3]
+          (ConceptNode "key") ; [4d0844146f96d3][3]
+        ) ; [e7a9c95ae7484b28][3]
+      ) ; [e6a8f21e6b37d8f0][3]
+    ) ; [876645d6528a6fbb][3]
+    (ExecutionLink
+      (SchemaNode "go_to_diamonds") ; [7aee74cf6bad6442][3]
+    ) ; [a2630f96ffbe0861][3]
+  ) ; [c6e23df43eb8fbe6][3]
+  (EvaluationLink (stv 0.1 0.0588235)
+    (PredicateNode "Reward") ; [155bb4d713db0d51][3]
+    (NumberNode "1") ; [2cf0956d543cff8e][3]
+  ) ; [d3cee8bdda06ffcb][3]
+) ; [f4dde218e5acedc6][3]
 ```
 
 ## Usage
