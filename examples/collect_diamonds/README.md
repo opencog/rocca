@@ -246,22 +246,31 @@ The following are optimal action plans the agent learned to get a reward:
 
 ## Usage
 
-1. Clone malmo https://github.com/Microsoft/malmo
+1. Clone Malmo
+  ```bash
+    git clone https://github.com/Microsoft/malmo
+  ```
+  NOTE: No need to compile Malmo, as a pre-built version (MalmoPython) is already 
+  included in the directory `../rocca/malmo`. All that is required is to install 
+  the necessary dependencies ([Windows](https://github.com/microsoft/malmo/blob/master/doc/install_windows.md), [Linux](https://github.com/microsoft/malmo/blob/master/doc/install_linux.md), [MacOSX](https://github.com/microsoft/malmo/blob/master/doc/install_macosx.md)) in order to launch Minecraft.
 
-   Note: No need to compile malmo as a pre-built version (MalmoPython)
-   has been included under `../rocca/malmo`. Only install the required
-   dependencies to launch minecraft.
+2. Once the dependencies are installed, launch Minecraft at `port 10000`
+  ```bash
+    cd Minecraft
+    .launchClient.sh -port 10000
+ ```
 
-2. Launch `<MALMO>/Minecraft/launchClient.sh`.
+3. Launch the example 
+  ```bash
+    python collect_diamonds.py
+```
 
-3. Launch collect diamonds `python collect_diamonds.py`.
+Note: If there is a need to visualize mined cognitive schematics using atompace-explorer,
+    the following steps are required before launching the example.
 
-  - Note: If there is a need to visualize mined cognitive schematics,
-    do the following before step 3.
-
-    - Build and run atompace-explorer here
-      https://github.com/tanksha/atomspace-explorer rocca_demo branch.
-
-    - Start the RESTAPI `python start_rest_service.py`
-
-    - Open `collect_diamonds.py` and set `self.visualize_cogscm = True`
+    a. Build and run atompace-explorer [here] (https://github.com/tanksha/atomspace-explorer rocca_demo branch).
+    b. Start the RESTAPI client (which creates an atomspace to store cognitive schematics to be visualized) 
+    ```bash 
+      python start_rest_service.py
+    ```
+    c. Set `self.visualize_cogscm = True` in `collect_diamonds.py`

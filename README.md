@@ -51,15 +51,13 @@ The next steps are
 
 OpenCog tools
 
-- cogutil
-- atomspace (revision b15826224, others have a bug in the pattern matcher)
-- ure
-- spacetime
-- pln
-- miner
-- [optional] cogserver
-- [optional] attention
-- [optional] opencog
+- cogutil (tested with revision 555a003)
+- atomspace (tested with revision 396e1e7)
+- unify (tested with revision 1e93141)
+- ure (tested with revision 4e01b02)
+- spacetime (tested with revision 962862c)
+- pln (tested with revision 08c100f)
+- miner (tested with revision 15befc4)
 
 Third party tools
 
